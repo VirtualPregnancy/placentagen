@@ -9,7 +9,8 @@ with open('LICENSE') as f:
 setup(
     name='placentagen',
     version='0.1.0',
-    packages=find_packages(exclude=('tests', 'docs')),
+    packages=find_packages('source', exclude=['tests', 'tests.*', 'docs']),
+    package_dir={'': 'source'},
     url='https://github.com/alysclark/placentagen.git',
     license=license,
     author='Alys Clark',
