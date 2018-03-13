@@ -2,13 +2,15 @@
 import numpy as np
 import math
 
-def equispaced_data_in_ellipsoid():
-    # Set problem parameters:
-    volume = float(428)
-    thickness = float(2.68)
-    ellipse = float(1.68)
-    n = input('no. of grid nodes (682000 for optimal mesh):')
-    estimated_spacing=(volume/n)^(1/3)
+def equispaced_data_in_ellipsoid(n,volume,thickness,ellipticity):
+    #Generates equally sapced data points in an ellipsoid with the following inputs
+    #n=number of data points which we aim to generate
+    #volume=volume of ellipsoid
+    #thickness = placental thickness (z-dimension)
+    #ellipticity = ratio of y to x axis dimensions
+    estimated_spacing=(volume/n)**(1./3)
+    print(volume)
+    print(n)
     print(estimated_spacing)
 
 
