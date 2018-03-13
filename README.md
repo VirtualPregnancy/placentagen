@@ -1,4 +1,4 @@
-# Placenta Generator
+# Placenta Generator ![Build Status](https://travis-ci.org/alysclark/placentagen.svg?branch=master)
 # Python library to generate meshes representing placentas!
 
 Aim:
