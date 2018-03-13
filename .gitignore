@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#Stupid mac stuff
+.DS_Storre
+
 # Distribution / packaging
 .Python
 env/
