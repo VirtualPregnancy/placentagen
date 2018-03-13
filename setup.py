@@ -7,7 +7,7 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    name='genericplacentas',
+    name=u'genericplacentas',
     version='0.1.0',
     packages=find_packages(exclude=('tests', 'docs')),
     url='https://github.com/alysclark/generic_placentas.git',
@@ -15,7 +15,8 @@ setup(
     author='Alys Clark',
     author_email='alys.clark@auckland.ac.nz',
     entry_points={
-        'console_scripts': ['genericplacentas=generic_placentas.application:main']
+        'console_scripts': ['genericplacentas=genericplacentas.application:main']
     },
+    package_dir={'': 'lib'},
     description=''
 )
