@@ -14,5 +14,8 @@ setup(
     license=license,
     author='Alys Clark',
     author_email='alys.clark@auckland.ac.nz',
+    entry_points={
+        'console_scripts': ['genericplacentas=genericplacentas.application:main']
+    },
     description=''
 )
