@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+import unittest
 
 with open('README.md') as f:
     readme = f.read()
@@ -15,5 +16,7 @@ setup(
     license=license,
     author='Alys Clark',
     author_email='alys.clark@auckland.ac.nz',
+    test_suite='nose.collector',
+    tests_require=['nose'],
     description=''
 )
