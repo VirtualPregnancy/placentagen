@@ -1,7 +1,9 @@
-from unittest import TestCase
 import os
-import placentagen
+from unittest import TestCase
+
 import numpy as np
+
+import placentagen
 
 TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'TestData/Small.exnode')
 
@@ -20,11 +22,10 @@ class Test_import_exnode_tree(TestCase):
 
         list_files(os.path.dirname(__file__))
         list_files(os.path.realpath(os.path.dirname(__file__)))
-        nodedata=placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        nodedata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
         self.assertTrue(nodedata['total_nodes'] is 4)
 
     def test_node_array_setup(self):
         nodedata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
         node_array = nodedata['node_array']
-        self.assertTrue(np.isclose(node_array[2][2],-0.5000000000000000E+01))
-
+        self.assertTrue(np.isclose(node_array[2][2], -0.5000000000000000E+01))

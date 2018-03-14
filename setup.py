@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import unittest
 
 with open('README.md') as f:
     readme = f.read()
