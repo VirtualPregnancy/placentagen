@@ -1,7 +1,2 @@
 numpy
-os
-unittest
-setuptools
-math
 nose
-sys
