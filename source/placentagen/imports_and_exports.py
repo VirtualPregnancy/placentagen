@@ -31,9 +31,6 @@ def import_exnode_tree(filename):
                         count_atribute = count_atribute + 1
                         node_array[count_node - 1][count_atribute] = float(str.split(line)[0])
 
-    print 'Total nodes ' + str(count_node)
-
-    print node_array
     total_nodes = count_node
     return {'total_nodes': total_nodes, 'node_array': node_array}
 
