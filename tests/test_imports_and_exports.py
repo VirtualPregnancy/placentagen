@@ -5,7 +5,7 @@ import numpy as np
 
 import placentagen
 
-TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'TestData/Small.exnode')
+TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exnode')
 
 
 class Test_import_exnode_tree(TestCase):
