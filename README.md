@@ -20,6 +20,10 @@ Once installed the libraries can called from python
 ```
 
 ### Expected output
+To run tests
+```
+    python setup.py test
+```
 
 ## Implementation and architecture
 
