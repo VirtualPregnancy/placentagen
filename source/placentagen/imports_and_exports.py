@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import numpy as np
+import os
 
 def import_exnode_tree(filename):
     print(filename)
+    print(os.getcwd())
     #count nodes for check of correct number for the user, plus use in future arrays
     count_node=0
     #Initialise array of node numbers and values
