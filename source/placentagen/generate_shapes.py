@@ -32,7 +32,7 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     data_coords = np.vstack(np.meshgrid(x_coord, y_coord, z_coord)).reshape(3, -1).T
 
     # Store nodes that lie within ellipsoid
-    Edata = np.zeros((nd_x * nd_y * nd_z, 3))
+    Edata = np.zeros(nd_x * nd_y * nd_z, 3)
     count = 0
     for i in range(len(data_coords)):  # Loop through grid
         coord_check = (data_coords[i][0] / x_radius) ** 2 + (data_coords[i][1] / y_radius) ** 2 + (
