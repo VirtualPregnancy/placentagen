@@ -12,17 +12,6 @@ TESTDATA_FILENAME1 = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exe
 class Test_import_exnode_exelem(TestCase):
 
     def test_num_nodes(self):
-        def list_files(startpath):
-            for root, dirs, files in os.walk(startpath):
-                level = root.replace(startpath, '').count(os.sep)
-                indent = ' ' * 4 * (level)
-                print('{}{}/'.format(indent, os.path.basename(root)))
-                subindent = ' ' * 4 * (level + 1)
-                for f in files:
-                    print('{}{}'.format(subindent, f))
-
-        list_files(os.path.dirname(__file__))
-        list_files(os.path.realpath(os.path.dirname(__file__)))
         nodedata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
         self.assertTrue(nodedata['total_nodes'] is 4)
 
