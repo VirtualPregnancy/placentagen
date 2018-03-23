@@ -61,37 +61,37 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     node_loc[0][1] = insertion_x
     node_loc[0][2] = insertion_y
     node_loc[0][3] = z_radius * np.sqrt(
-        1.0 - (node_loc[0][0] / x_radius) ** 2 - (node_loc[0][1] / y_radius) ** 2) + 23.0
+        1.0 - (node_loc[0][1] / x_radius) ** 2 - (node_loc[0][2] / y_radius) ** 2) + 23.0
 
     # node 2 is 3 mm up from node 1 in the z direction
     node_loc[1][0] = 2
     node_loc[1][1] = insertion_x
     node_loc[1][2] = insertion_y
     node_loc[1][3] = z_radius * np.sqrt(
-        1.0 - (node_loc[0][0] / x_radius ** 2) - (node_loc[0][1] / y_radius) ** 2) + 20.0
+        1.0 - (node_loc[0][1] / x_radius ** 2) - (node_loc[0][2] / y_radius) ** 2) + 20.0
 
     # node 3 & 4 is the start of the 'umbilical artery'
     node_loc[2][0] = 3
     node_loc[2][1] = insertion_x
     node_loc[2][2] = insertion_y - umb_artery_distance / 2.0
     node_loc[2][3] = z_radius * np.sqrt(
-        1.0 - (node_loc[0][0] / x_radius) ** 2 - (node_loc[0][1] / y_radius) ** 2) + 20.0
+        1.0 - (node_loc[0][1] / x_radius) ** 2 - (node_loc[0][2] / y_radius) ** 2) + 20.0
     node_loc[3][0] = 4
     node_loc[3][1] = insertion_x
     node_loc[3][2] = insertion_y + umb_artery_distance / 2.0
     node_loc[3][3] = z_radius * np.sqrt(
-        1.0 - (node_loc[0][0] / x_radius) ** 2 - (node_loc[0][1] / y_radius) ** 2) + 20.0
+        1.0 - (node_loc[0][1] / x_radius) ** 2 - (node_loc[0][2] / y_radius) ** 2) + 20.0
 
     # node 5 and 6 'hit' the chorionic plate.
     node_loc[4][0] = 5
     node_loc[4][1] = insertion_x
     node_loc[4][2] = insertion_y - umb_artery_distance / 2.0
-    node_loc[4][3] = z_radius * np.sqrt(1.0 - (node_loc[4][0] / x_radius) ** 2 - (node_loc[4][1] / y_radius) ** 2)
+    node_loc[4][3] = z_radius * np.sqrt(1.0 - (node_loc[4][1] / x_radius) ** 2 - (node_loc[4][2] / y_radius) ** 2)
     node_loc[5][0] = 6
     node_loc[5][1] = insertion_x
     node_loc[5][2] = insertion_y + umb_artery_distance / 2.0
-    node_loc[5][3] = z_radius * np.sqrt(1.0 - (node_loc[5][0] / x_radius) ** 2 - (node_loc[5][1] / y_radius) ** 2)
-
+    node_loc[5][3] = z_radius * np.sqrt(1.0 - (node_loc[5][1] / x_radius) ** 2 - (node_loc[5][2] / y_radius) ** 2)
+    print(x_radius)
     elems[0, :] = [1, 1, 2]
     elems[1, :] = [2, 2, 3]
     elems[2, :] = [3, 2, 4]
