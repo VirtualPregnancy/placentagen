@@ -50,6 +50,58 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     return Edata
 
 
+def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
+    # Generates equally spaced data points on the surface of an ellipsoid with the following inputs
+    # n=number of data points which we aim to generate
+    # volume=volume of ellipsoid
+    # thickness = placental thickness (z-dimension)
+    # ellipticity = ratio of y to x axis dimensions
+    radii = calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+    area_estimate = np.pi * x_radius * y_radius
+    data_spacing = 0.85 * np.sqrt(area_estimate / n)
+
+    chorion_data = np.zeros((n, 3))
+    np.random.seed(random_seed)
+    generated_seed = 0
+    acceptable_attempts = n * 10  # try not to have too many failures
+    attempts=0
+
+    while generated_seed < n and attempts < acceptable_attempts:
+        # generate random x-y coordinates between -1 and 1
+        random_number = np.random.uniform(-1.0, 1.0, 2)
+        new_x = random_number[0] * x_radius
+        new_y = random_number[1] * y_radius
+        # check if new coordinate is on the ellipse
+        if ((new_x / x_radius) ** 2 + (new_y / y_radius) ** 2) < 1:  # on the surface
+            if (generated_seed) == 0:
+                generated_seed = generated_seed + 1
+                new_z = z_from_xy(new_x, new_y, x_radius, y_radius, z_radius)
+                chorion_data[generated_seed - 1][:] = [new_x, new_y, new_z]
+            else:
+                reject = False
+                for j in range(0, generated_seed):
+                    distance = 0.0
+                    for i in range(0, 3):
+                        distance = distance + (chorion_data[j - 1][i] - new_x) ** 2
+                    distance = np.sqrt(distance)
+                    if distance <= data_spacing:
+                        reject = True
+                        break
+                if reject == False:
+                    generated_seed = generated_seed + 1
+                    new_z = z_from_xy(new_x, new_y, x_radius, y_radius, z_radius)
+                    chorion_data[generated_seed - 1][:] = [new_x, new_y, new_z]
+
+        attempts = attempts + 1
+    chorion_data.resize(generated_seed, 3)  # resize data array to correct size
+    print('Data points on ellipsoid allocated. Total = ' + str(len(chorion_data)))
+
+    return chorion_data
+
+
 def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, insertion_y, umb_artery_distance):
     radii = calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -98,7 +150,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elems[3, :] = [4, 3, 5]
     elems[4, :] = [5, 4, 6]
 
-    return{'umb_nodes':node_loc, 'umb_elems':elems}
+    return {'umb_nodes': node_loc, 'umb_elems': elems}
 
 
 def calculate_ellipse_radii(volume, thickness, ellipticity):
@@ -108,3 +160,8 @@ def calculate_ellipse_radii(volume, thickness, ellipticity):
     y_radius = ellipticity * x_radius
 
     return {'x_radius': x_radius, 'y_radius': y_radius, 'z_radius': z_radius}
+
+
+def z_from_xy(x, y, x_radius, y_radius, z_radius):
+    z = z_radius * np.sqrt(1.0 - (x / x_radius) ** 2 - (y / y_radius) ** 2)
+    return z
