@@ -115,7 +115,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     node_loc[0][2] = insertion_y
     node_loc[0][3] = z_radius * np.sqrt(
         1.0 - (node_loc[0][1] / x_radius) ** 2 - (
-                    node_loc[0][2] / y_radius) ** 2) + umb_artery_length + 3.0  # dummy branch 3mm long by default
+                node_loc[0][2] / y_radius) ** 2) + umb_artery_length + 3.0  # dummy branch 3mm long by default
 
     # node 2 is 3 mm up from node 1 in the z direction
     node_loc[1][0] = 2
@@ -167,3 +167,22 @@ def calculate_ellipse_radii(volume, thickness, ellipticity):
 def z_from_xy(x, y, x_radius, y_radius, z_radius):
     z = z_radius * np.sqrt(1.0 - (x / x_radius) ** 2 - (y / y_radius) ** 2)
     return z
+
+
+def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    in_ellipsoid = False  # default to false
+    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    if coord_check < 1.0:
+        in_ellipsoid = True
+
+    return in_ellipsoid
+
+
+def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    zero_tol = 1e-14
+    on_ellipsoid = False  # default to false
+    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    if abs(coord_check - 1.0) < zero_tol:
+        on_ellipsoid = True
+
+    return on_ellipsoid
