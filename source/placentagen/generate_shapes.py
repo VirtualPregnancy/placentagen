@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-import pg_utilities
+from . import pg_utilities
 
 
 # Contains code to generate placental shapes for generic placental models (i.e. from literature measures without
