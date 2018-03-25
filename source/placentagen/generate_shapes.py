@@ -3,7 +3,7 @@ import numpy as np
 import pg_utilities
 
 def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
-    # Generates equally sapced data points in an ellipsoid with the following inputs
+    # Generates equally spaced data points in an ellipsoid with the following inputs
     # n=number of data points which we aim to generate
     # volume=volume of ellipsoid
     # thickness = placental thickness (z-dimension)
