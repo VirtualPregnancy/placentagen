@@ -70,31 +70,28 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     chorion_data = np.zeros((n, 3))
     np.random.seed(random_seed)
     generated_seed = 0
-    acceptable_attempts = n * 10  # try not to have too many failures
+    acceptable_attempts = n * 1000  # try not to have too many failures
     attempts = 0
 
     while generated_seed < n and attempts < acceptable_attempts:
-        # generate random x-y coordinates between -1 and 1
-        random_number = np.random.uniform(-1.0, 1.0, 2)
-        new_x = random_number[0] * x_radius
-        new_y = random_number[1] * y_radius
+        # generate random x-y coordinates between negative and positive radii
+        new_x = np.random.uniform(-x_radius, x_radius)
+        new_y = np.random.uniform(-y_radius, y_radius)
         # check if new coordinate is on the ellipse
         if ((new_x / x_radius) ** 2 + (new_y / y_radius) ** 2) < 1:  # on the surface
-            if (generated_seed) == 0:
+            if generated_seed == 0:
                 generated_seed = generated_seed + 1
                 new_z = pg_utilities.z_from_xy(new_x, new_y, x_radius, y_radius, z_radius)
                 chorion_data[generated_seed - 1][:] = [new_x, new_y, new_z]
             else:
                 reject = False
-                for j in range(0, generated_seed):
-                    distance = 0.0
-                    for i in range(0, 3):
-                        distance = distance + (chorion_data[j - 1][i] - new_x) ** 2
+                for j in range(0, generated_seed+1):
+                    distance = (chorion_data[j - 1][0] - new_x) ** 2 + (chorion_data[j - 1][1] - new_y) ** 2
                     distance = np.sqrt(distance)
                     if distance <= data_spacing:
                         reject = True
                         break
-                if reject == False:
+                if reject is False:
                     generated_seed = generated_seed + 1
                     new_z = pg_utilities.z_from_xy(new_x, new_y, x_radius, y_radius, z_radius)
                     chorion_data[generated_seed - 1][:] = [new_x, new_y, new_z]
