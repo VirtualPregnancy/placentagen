@@ -40,15 +40,14 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
 
     # Store nodes that lie within ellipsoid
     Edata = np.zeros((nd_x * nd_y * nd_z, 3))
-    count = 0
     for i in range(len(data_coords)):  # Loop through grid
         coord_check = pg_utilities.check_in_ellipsoid(data_coords[i][0], data_coords[i][1], data_coords[i][2], x_radius,
                                                       y_radius, z_radius)
 
         if coord_check is True:  # Has to be strictly in the ellipsoid
-            Edata[count, :] = data_coords[i, :]  # add to data array
-            count = count + 1
-    Edata.resize(count, 3)  # resize data array to correct size
+            Edata[num_data, :] = data_coords[i, :]  # add to data array
+            num_data = num_data + 1
+    Edata.resize(num_data, 3)  # resize data array to correct size
 
     print('Data points within ellipsoid allocated. Total = ' + str(len(Edata)))
 
