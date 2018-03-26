@@ -85,7 +85,7 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
                 chorion_data[generated_seed - 1][:] = [new_x, new_y, new_z]
             else:
                 reject = False
-                for j in range(0, generated_seed+1):
+                for j in range(0, generated_seed + 1):
                     distance = (chorion_data[j - 1][0] - new_x) ** 2 + (chorion_data[j - 1][1] - new_y) ** 2
                     distance = np.sqrt(distance)
                     if distance <= data_spacing:
@@ -115,6 +115,9 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     # initialise node and element arrays
     node_loc = np.zeros((6, 4))
     elems = np.zeros((5, 3))
+    elem_upstream = np.zeros((5, 3))
+    elem_downstream = np.zeros((5, 3))
+
     # basic umbilical artery structure
     node_loc[0][0] = 1
     node_loc[0][1] = insertion_x
@@ -152,9 +155,31 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     node_loc[5][3] = pg_utilities.z_from_xy(node_loc[5][1], node_loc[5][2], x_radius, y_radius, z_radius)
     # element locations
     elems[0, :] = [1, 1, 2]
-    elems[1, :] = [2, 2, 3]
-    elems[2, :] = [3, 2, 4]
-    elems[3, :] = [4, 3, 5]
-    elems[4, :] = [5, 4, 6]
+    elem_upstream[0][0] = 0
+    elem_downstream[0][0] = 2
+    elem_downstream[0][1] = 2
+    elem_downstream[0][2] = 3
 
-    return {'umb_nodes': node_loc, 'umb_elems': elems}
+    elems[1, :] = [2, 2, 3]
+    elem_upstream[1][0] = 1
+    elem_upstream[1][1] = 1
+    elem_downstream[1][0] = 1
+    elem_downstream[1][1] = 4
+
+    elems[2, :] = [3, 2, 4]
+    elem_upstream[2][0] = 1
+    elem_upstream[2][1] = 1
+    elem_downstream[2][0] = 1
+    elem_downstream[2][0] = 5
+
+    elems[3, :] = [4, 3, 5]
+    elem_upstream[3][0] = 1
+    elem_upstream[3][1] = 2
+    elem_downstream[3][0] = 0
+
+    elems[4, :] = [5, 4, 6]
+    elem_upstream[4][0] = 1
+    elem_upstream[3][1] = 4
+    elem_downstream[4][0] = 0
+
+    return {'umb_nodes': node_loc, 'umb_elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
