@@ -32,10 +32,10 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
         if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
             elem_order[ne][0] = 1
         else:
-            ne0 = elem_upstream[ne][1] - 1  # should elements and nodes be numbered from 0 until export?
+            ne0 = elem_upstream[ne][1]
             elem_order[ne][0] = elem_order[ne0][0] + 1
-        node_in = elems[ne][1] - 1  # should elements and nodes be numbered from 0 until export?
-        node_out = elems[ne][2] - 1  # should elements and nodes be numbered from 0 until export?
+        node_in = elems[ne][1]
+        node_out = elems[ne][2]
         elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
 
     parentlist=group_elem_parent_term(0, initial_geom['elem_down'])
@@ -80,11 +80,11 @@ def group_elem_parent_term(ne_parent, elem_downstream):
                 ne_count=ne_count+1
                 ntemp_list[ne_count]=ne_temp[n]
 
-    for noelem in range(0,ne_count):
-        ne=ntemp_list[noelem]
-        if elem_downstream[ne][0] == 0:
-            parentlist[0]=parentlist[0]+1
-            parentlist[parentlist[0]]=ne
+        for noelem in range(0,ne_count):
+            ne=ntemp_list[noelem]
+            if elem_downstream[ne][0] == 0:
+                parentlist[0]=parentlist[0]+1
+                parentlist[parentlist[0]]=ne
 
 
 

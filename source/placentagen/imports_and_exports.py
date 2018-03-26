@@ -75,9 +75,9 @@ def export_exelem_1d(data,groupname,filename):
     f.write("       Value indices:     1\n")
     f.write("       Scale factor indices:   2\n")
     for x in range(0, data_num):
-        f.write(" Element:            %s 0 0\n" % int(data[x][0]))
+        f.write(" Element:            %s 0 0\n" % int(data[x][0]+1))
         f.write("   Nodes:")
-        f.write("                %s            %s\n" % (int(data[x][1]), int(data[x][2])))
+        f.write("                %s            %s\n" % (int(data[x][1]+1), int(data[x][2]+1)))
         f.write("   Scale factors:\n")
         f.write("       0.1000000000000000E+01   0.1000000000000000E+01\n")
     f.close()

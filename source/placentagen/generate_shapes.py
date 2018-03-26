@@ -119,67 +119,67 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elem_downstream = np.zeros((5, 3))
 
     # basic umbilical artery structure
-    node_loc[0][0] = 1
+    node_loc[0][0] = 0
     node_loc[0][1] = insertion_x
     node_loc[0][2] = insertion_y
     node_loc[0][3] = pg_utilities.z_from_xy(node_loc[0][1], node_loc[0][2], x_radius, y_radius,
                                             z_radius) + umb_artery_length + 3.0  # dummy branch 3mm long by default
 
     # node 2 is 3 mm up from node 1 in the z direction
-    node_loc[1][0] = 2
+    node_loc[1][0] = 1
     node_loc[1][1] = insertion_x
     node_loc[1][2] = insertion_y
     node_loc[1][3] = pg_utilities.z_from_xy(node_loc[0][1], node_loc[0][2], x_radius, y_radius,
                                             z_radius) + umb_artery_length
 
     # node 3 & 4 is the start of the 'umbilical artery'
-    node_loc[2][0] = 3
+    node_loc[2][0] = 2
     node_loc[2][1] = insertion_x
     node_loc[2][2] = insertion_y - umb_artery_distance / 2.0
     node_loc[2][3] = pg_utilities.z_from_xy(node_loc[0][1], node_loc[0][2], x_radius, y_radius,
                                             z_radius) + umb_artery_length
-    node_loc[3][0] = 4
+    node_loc[3][0] = 3
     node_loc[3][1] = insertion_x
     node_loc[3][2] = insertion_y + umb_artery_distance / 2.0
     node_loc[3][3] = pg_utilities.z_from_xy(node_loc[0][1], node_loc[0][2], x_radius, y_radius,
                                             z_radius) + umb_artery_length
 
     # node 5 and 6 'hit' the chorionic plate.
-    node_loc[4][0] = 5
+    node_loc[4][0] = 4
     node_loc[4][1] = insertion_x
     node_loc[4][2] = insertion_y - umb_artery_distance / 2.0
     node_loc[4][3] = pg_utilities.z_from_xy(node_loc[4][1], node_loc[4][2], x_radius, y_radius, z_radius)
-    node_loc[5][0] = 6
+    node_loc[5][0] = 5
     node_loc[5][1] = insertion_x
     node_loc[5][2] = insertion_y + umb_artery_distance / 2.0
     node_loc[5][3] = pg_utilities.z_from_xy(node_loc[5][1], node_loc[5][2], x_radius, y_radius, z_radius)
     # element locations
-    elems[0, :] = [1, 1, 2]
+    elems[0, :] = [0, 0, 1]
     elem_upstream[0][0] = 0
     elem_downstream[0][0] = 2
-    elem_downstream[0][1] = 2
-    elem_downstream[0][2] = 3
+    elem_downstream[0][1] = 1
+    elem_downstream[0][2] = 2
 
-    elems[1, :] = [2, 2, 3]
+    elems[1, :] = [1, 1, 2]
     elem_upstream[1][0] = 1
-    elem_upstream[1][1] = 1
+    elem_upstream[1][1] = 0
     elem_downstream[1][0] = 1
-    elem_downstream[1][1] = 4
+    elem_downstream[1][1] = 3
 
-    elems[2, :] = [3, 2, 4]
+    elems[2, :] = [2, 1, 3]
     elem_upstream[2][0] = 1
-    elem_upstream[2][1] = 1
+    elem_upstream[2][1] = 0
     elem_downstream[2][0] = 1
-    elem_downstream[2][1] = 5
+    elem_downstream[2][1] = 4
 
-    elems[3, :] = [4, 3, 5]
+    elems[3, :] = [3, 2, 4]
     elem_upstream[3][0] = 1
-    elem_upstream[3][1] = 2
+    elem_upstream[3][1] = 1
     elem_downstream[3][0] = 0
 
-    elems[4, :] = [5, 4, 6]
+    elems[4, :] = [4, 3, 5]
     elem_upstream[4][0] = 1
-    elem_upstream[4][1] = 3
+    elem_upstream[4][1] = 2
     elem_downstream[4][0] = 0
 
     return {'umb_nodes': node_loc, 'umb_elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
