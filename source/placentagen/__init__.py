@@ -5,3 +5,4 @@ from .imports_and_exports import export_ex_coords
 from .imports_and_exports import export_exelem_1d
 from .imports_and_exports import import_exnode_tree
 from .imports_and_exports import import_exelem_tree
+from .grow_tree import grow_chorionic_surface

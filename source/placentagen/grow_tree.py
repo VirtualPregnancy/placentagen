@@ -1,5 +1,5 @@
 #!/usr/bin/env python
 
-def get_hmm():
-    """Get a thought."""
+def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_geom):
+    print(initial_geom)
     return 'hmmm...'

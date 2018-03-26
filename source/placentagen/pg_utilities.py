@@ -33,3 +33,4 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
         on_ellipsoid = True
 
     return on_ellipsoid
+
