@@ -170,7 +170,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elem_upstream[2][0] = 1
     elem_upstream[2][1] = 1
     elem_downstream[2][0] = 1
-    elem_downstream[2][0] = 5
+    elem_downstream[2][1] = 5
 
     elems[3, :] = [4, 3, 5]
     elem_upstream[3][0] = 1
@@ -179,7 +179,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
 
     elems[4, :] = [5, 4, 6]
     elem_upstream[4][0] = 1
-    elem_upstream[3][1] = 4
+    elem_upstream[4][1] = 3
     elem_downstream[4][0] = 0
 
     return {'umb_nodes': node_loc, 'umb_elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
