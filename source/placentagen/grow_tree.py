@@ -26,6 +26,11 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
     elem_downstream = np.zeros((num_elems_new, 3))
     elem_downstream[0:num_elems_old][:] = initial_geom['elem_down']
 
+    # local arrays
+    nstem = np.zeros((num_elems_new, 2))
+    ld = np.zeros(len(datapoints))
+    ld_np = np.zeros(len(datapoints))
+
     # Calculate the generations for the initial branches
     # Calculate the direction of the initial branches
     for ne in range(0, num_elems_old):
@@ -37,8 +42,18 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
         node_in = elems[ne][1]
         node_out = elems[ne][2]
         elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
+    # initialise ne_old (list of old terminals) to list of terminals in current geometry
+    ne_old = group_elem_parent_term(0, initial_geom['elem_down'])
+    # nt_bns = len(ne_old)  # Curerent number of terminals
+    # n_elm = nt_bns
 
-    parentlist = group_elem_parent_term(0, initial_geom['elem_down'])
+    # Initialise LD array to map each seed point to a parent branch.
+    # For a single parent, all seed points will initially be mapped to
+    # it; for multiple parents data_to_mesh is called to calculate
+    # the closest parent end-point to each seed point.
+    ld = ld + ne_old[0]
+    ld_np = ld
+    ld = data_to_mesh(ld, datapoints, ne_old, node_loc, elems)
 
 
 def calc_branch_direction(vector):
@@ -50,6 +65,12 @@ def calc_branch_direction(vector):
     branch_direction = vector / length
 
     return branch_direction
+
+
+def dist_two_vectors(vector1, vector2):
+    dist = np.sqrt((vector1[0] - vector2[0]) ** 2 + (vector1[1] - vector2[1]) ** 2 + (vector1[2] - vector2[2]) ** 2)
+
+    return dist
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
@@ -86,3 +107,20 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     print('Grouped by parent,' + str(ne_parent) + ' No in parent list,' + str(num_in_list))
 
     return parentlist
+
+
+def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
+    # Assigns data(seed) points to the closest ending of branches in the current generation.
+    for nd in range(0, len(datapoints)):
+        if ld[nd] != 0:
+            min_dist = 1e10
+            for noelem in range(0, len(parentlist)):
+                ne = parentlist[noelem]
+                np = elems[ne][2]
+                dist = dist_two_vectors(node_loc[np][1:4], datapoints[nd])
+                if dist < min_dist:
+                    ne_min = ne
+                    min_dist = dist
+            ld[nd] = ne_min
+
+    return ld
