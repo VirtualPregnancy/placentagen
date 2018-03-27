@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
 
+from . import pg_utilities
+
 
 def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_geom):
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
@@ -96,7 +98,7 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
             num_tb = num_tb + 1
     n_elm = n_elm_temp
 
-    #START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
+    # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
 
     print('         gen       #brn       total#       #term      #data')
 
@@ -170,8 +172,9 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
 
     return ld
 
+
 def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, insertion_y, umb_artery_distance,
-                            umb_artery_length):
+                            umb_artery_length, datapoints):
     # Creating a basis for a branching geometry which assumes a simple umbilical cord structure, with two arteries,
 
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
@@ -242,11 +245,87 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elems[3, :] = [3, 2, 4]
     elem_upstream[3][0] = 1
     elem_upstream[3][1] = 1
-    elem_downstream[3][0] = 0
+    elem_downstream[3][0] = 2
+    elem_downstream[3][1] = 5
+    elem_downstream[3][2] = 6
 
     elems[4, :] = [4, 3, 5]
     elem_upstream[4][0] = 1
     elem_upstream[4][1] = 2
-    elem_downstream[4][0] = 0
+    elem_downstream[4][0] = 2
+    elem_downstream[4][1] = 7
+    elem_downstream[4][2] = 8
+
+    # split datapoints by x and y insertion points
+    ld = np.zeros(len(datapoints))
+    for nd in range(0, len(datapoints)):
+        if (datapoints[nd][0] > insertion_x) and (datapoints[nd][1] > insertion_y):
+            ld[nd] = 1
+        elif (datapoints[nd][0] > insertion_x) and (datapoints[nd][1] < insertion_y):
+            ld[nd] = 2
+        elif (datapoints[nd][0] < insertion_x) and (datapoints[nd][1] < insertion_y):
+            ld[nd] = 3
+        else:
+            ld[nd] = 4
+
+    # Calculate centre of mass for each seedpoint set
+    com1 = mesh_com(1, ld, datapoints)
+    com2 = mesh_com(2, ld, datapoints)
+    com3 = mesh_com(3, ld, datapoints)
+    com4 = mesh_com(4, ld, datapoints)
+
+    ##CREATE NEW NODES ON CHORION SURFACE HALF WAY TO GROUP COM
+
+    node_loc = np.append(node_loc, np.zeros((4, 4)), axis=0)
+    elems = np.append(elems, np.zeros((4, 3)), axis=0)
+    elem_upstream = np.append(elem_upstream, np.zeros((4, 3)), axis=0)
+    elem_downstream = np.append(elem_downstream, np.zeros((4, 3)), axis=0)
+    node_loc[6][0] = 6
+    node_loc[6][1:4] = com1 / 2.0
+
+    elems[7, :] = [7, 5, 6]
+    elem_upstream[7][0] = 1
+    elem_upstream[7][1] = 4
+    elem_downstream[7][0] = 0
+
+    node_loc[7][0] = 7
+    node_loc[7][1:4] = com2 / 2.0
+
+    elems[5, :] = [5, 4, 7]
+    elem_upstream[5][0] = 1
+    elem_upstream[5][1] = 3
+    elem_downstream[5][0] = 0
+
+    node_loc[8][0] = 8
+    node_loc[8][1:4] = com3 / 2.0
+
+    elems[6, :] = [6, 4, 8]
+    elem_upstream[6][0] = 1
+    elem_upstream[6][1] = 3
+    elem_downstream[6][0] = 0
+
+    node_loc[9][0] = 9
+    node_loc[9][1:4] = com4 / 2.0
+
+    elems[8, :] = [8, 5, 9]
+    elem_upstream[8][0] = 1
+    elem_upstream[8][1] = 4
+    elem_downstream[8][0] = 0
 
     return {'umb_nodes': node_loc, 'umb_elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+
+
+def mesh_com(ld_val, ld, datapoints):
+    dat = 0
+
+    com = np.zeros(3)
+    for nd in range(0, len(datapoints)):
+        nsp = ld[nd]
+        if nsp == ld_val:
+            dat = dat + 1
+            for nj in range(0, 3):
+                com[nj] = com[nj] + datapoints[nd][nj]
+    if dat != 0:
+        com = com / dat
+
+    return com
