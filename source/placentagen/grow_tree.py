@@ -4,7 +4,14 @@ import numpy as np
 from . import pg_utilities
 
 
-def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_geom):
+def grow_chorionic_surface(length_limit, angle_max, angle_min, fraction, min_length, point_limit,
+                           volume, thickness, ellipticity, datapoints, initial_geom, sorv):
+    # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
     est_generation = int(np.ceil(np.log(len(datapoints)) / np.log(2)))
@@ -30,9 +37,13 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
 
     # local arrays
     nstem = np.zeros((num_elems_new, 2))
+    ne_temp = np.zeros(num_elems_new)
+    ne_old = np.zeros(1000)
     ld = np.zeros(len(datapoints))
     ld_np = np.zeros(len(datapoints))
     ldtmp1 = np.zeros(len(datapoints))
+
+    numtbsum = 0
 
     # Calculate the generations for the initial branches
     # Calculate the direction of the initial branches
@@ -47,7 +58,7 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
         elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
     # initialise ne_old (list of old terminals) to list of terminals in current geometry
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])
-    ne_old = parentlist
+    ne_old[0:len(parentlist)] = parentlist
     nt_bns = len(ne_old)  # Curerent number of terminals
     n_elm = nt_bns
     for n in range(0, len(parentlist)):
@@ -95,12 +106,247 @@ def grow_chorionic_surface(volume, thickness, ellipticity, datapoints, initial_g
                 i = i + 1
             for m in range(n, n_elm - 1):
                 ne_old[m] = ne_old[m + i]
-            num_tb = num_tb + 1
+            numtb = numtb + 1
     n_elm = n_elm_temp
 
+    ld_num = 0
+    for nd in range(0, len(datapoints)):
+        if ld[nd] > 0:
+            ld_num = ld_num + 1
     # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
 
     print('         gen       #brn       total#       #term      #data')
+
+    # Set initial values for local and global nodes and elements
+    ne = num_elems_old - 1  # current maximum element number
+    nnod = num_nodes_old - 1  # current maximum node number
+    ne_start = ne
+
+    ne_parent = parentlist[0]
+    ngen = 3
+    ne_min = ne
+
+    while n_elm != 0:
+        ngen = ngen + 1  # increment generation from parent
+        nt_bns = n_elm
+        n_elm = 0
+        numzero = 0
+        noelem_gen = 0
+        max_dist = 0.0
+
+        for m in range(0, nt_bns):
+            ne_parent = ne_old[m]
+            com = mesh_com(ne_parent, ld, datapoints)
+            ne_grnd_parent = elem_upstream[ne_parent][1]  # Assumes only one parent, true in diverging tree
+            np_start = elems[ne_parent][2]
+            np_prt_start = elems[ne_parent][1]
+            np_grnd_start = elems[ne_grnd_parent][1]
+            if elem_downstream[ne_grnd_parent][1] == ne_parent:
+                if elem_downstream[ne_grnd_parent][2] == 0:
+                    np4 = elems[elem_upstream[ne_grnd_parent][1]][1]
+                else:
+                    np4 = elems[elem_downstream[ne_grnd_parent][2]][2]
+            else:
+                np4 = elems[elem_downstream[ne_grnd_parent][1]][2]
+
+            length_parent = dist_two_vectors(node_loc[elems[ne_parent][1]][1:4], node_loc[elems[ne_parent][2]][1:4])
+
+
+            # Split the seed points by the plane defined by the parent branch and the com of the
+            # seedpoints attached to it
+            if sorv is 'surface':
+                split_data = data_splitby_xy(ld, datapoints, com, node_loc[np_start][1:3], ne_parent, ne, point_limit)
+            else:
+                # data_splitby_plane
+                print('hello')
+            # Check that you are going to grow two branches
+            if split_data['ss'][0] and split_data['ss'][1]:
+                for n in range(0, 2):
+                    com = mesh_com(ne + 1, ld, datapoints)
+
+                    start_node_loc = node_loc[np_start][1:4]
+                    length_new = np.linalg.norm(fraction * (com - start_node_loc))
+                    if length_new <  min_length:
+                        print('lengthening',length_new,length_parent)
+                        end_node_loc = start_node_loc + min_length * (com - start_node_loc)/np.linalg.norm((com - start_node_loc))
+                    else:
+                        end_node_loc = start_node_loc + fraction * (com - start_node_loc)
+                    if sorv is 'surface':
+                        end_node_loc[2] = pg_utilities.z_from_xy(end_node_loc[0], end_node_loc[1], x_radius, y_radius,
+                                                                 z_radius)
+                    # insert checks that the branches are valid here
+                    branch = True
+                    print('nodelocin',end_node_loc)
+                    if sorv is 'surface':
+                        node1=np.array([node_loc[ne_parent][1], node_loc[ne_parent][2], 0])
+                        print(node1,start_node_loc)
+                        node2=np.array([start_node_loc[0], start_node_loc[1], 0])
+                        node3=np.array([end_node_loc[0], end_node_loc[1], 0])
+                        end_node=mesh_check_angle(angle_min,angle_max,node1,node2,node3)
+                        end_node_loc[0:2] = end_node[0:2]
+                        end_node_loc[2] = pg_utilities.z_from_xy(end_node[0],end_node[1],x_radius,y_radius,z_radius)
+                    print('nodelocout',end_node_loc)
+                    # Create new elements and nodes
+                    elems[ne + 1][0] = ne + 1
+                    elems[ne + 1][1] = np_start
+                    elems[ne + 1][2] = nnod + 1
+                    elem_upstream[ne + 1][0] = 1
+                    elem_upstream[ne + 1][1] = ne_parent
+                    elem_downstream[ne + 1][0] = 0
+
+                    elem_downstream[ne_parent][0] = elem_downstream[ne_parent][0] + 1
+                    elem_downstream[ne_parent][elem_downstream[ne_parent][0]] = ne + 1
+
+                    node_loc[nnod + 1][0] = nnod + 1
+                    node_loc[nnod + 1][1:4] = end_node_loc
+                    ne = ne + 1
+                    nnod = nnod + 1
+
+                    elem_order[ne][0] = elem_order[ne][0] + 1
+                    noelem_gen = noelem_gen + 1 #Only used for runtime output
+
+                    nstem[ne][0] = nstem[ne_parent][0]
+
+                    if branch and split_data['ss'][n]:
+                        ne_temp[n_elm] = ne
+                        n_elm = n_elm + 1
+                    else:
+                        numtb = numtb + 1
+
+
+            else:  # Not ss so no splitting
+                # Not enough seed points in the set during the split so ne_parent becomes a terminal branch
+                # Find teh closest seed point and remove
+                numtb = numtb + 1
+                min_dist = 1.0e10
+                for nd in range(0, len(datapoints)):
+                    if ld[nd] != 0:
+                        if ld[nd] == ne + 1:
+                            ld[nd] = ne_parent #give back to parent
+                        if ld[nd] == ne + 2:
+                            ld[nd] = ne_parent
+                        dist = dist_two_vectors(datapoints[nd][:], node_loc[elems[ne_parent][2]][1:4])
+                        if dist < min_dist:
+                            if ld[nd] == ne_parent:
+                                nd_min = nd
+                                min_dist = dist
+                ldtmp1[nd_min] = ne_parent
+                ld[nd_min] = 0
+                ld_num = ld_num - 1
+
+        # .......Copy the temporary list of branches to NE_OLD. These become the
+        # .......parent elements for the next branching
+
+        for n in range(0, n_elm):
+            ne_old[n] = ne_temp[n]
+            nstem[ne_old[n]][1] = 0  # initialaw count of data points
+
+        # reallocate datapoints
+        ld = data_to_mesh(ld, datapoints, ne_old[0:n_elm], node_loc, elems)
+
+
+        print('   ' +str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+              '   ' + str(numtb) + '   ' + str(ld_num) + '   ' + str(
+            numtb + ld_num + numtbsum))
+        numtbsum = numtbsum + numtb
+
+    elems.resize(ne + 1, 3, refcheck=False)
+    elem_upstream.resize(ne + 1, 3, refcheck=False)
+    elem_downstream.resize(ne + 1, 3, refcheck=False)
+    node_loc.resize(nnod + 1, 4, refcheck=False)
+
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+
+def mesh_check_angle(angle_min,angle_max,node1,node2,node3):
+    vector1=(node2-node1)
+    vector2=(node3-node2)
+    angle=pg_utilities.angle_two_vectors(vector1,vector2)
+    if angle < angle_min:
+        print(angle)
+        # Need to adjust node3 to get a angle equal to  angle_min
+        angle0=angle
+        angle=angle_min-angle0 #amount of angle to add
+        nu_vec=np.cross(vector1,vector2)
+        nu_vec=nu_vec/np.linalg.norm(nu_vec)
+
+        a = np.array([[nu_vec[0], nu_vec[1],nu_vec[2]], [vector1[0], vector1[1],vector1[2]],[vector2[0], vector2[1],vector2[2]]])
+        b = np.array([0.0, np.cos(angle_min), np.cos(angle)])
+
+        x = np.linalg.solve(a, b)
+        x=x/np.linalg.norm(x)
+        print(x)
+        print(node3)
+        node3 = node2 + np.linalg.norm(node3-node2)*x
+
+        print(node3)
+    elif angle > angle_max:
+        print(angle)
+        # Need to adjust node3 to get a angle equal to  angle_min
+        angle0=angle
+        angle=angle0-angle_max #amount of angle to add
+        nu_vec=np.cross(vector1,vector2)
+        nu_vec=nu_vec/np.linalg.norm(nu_vec)
+
+        a = np.array([[nu_vec[0], nu_vec[1],nu_vec[2]], [vector1[0], vector1[1],vector1[2]],[vector2[0], vector2[1],vector2[2]]])
+        b = np.array([0.0, np.cos(angle_min), np.cos(angle)])
+
+        x = np.linalg.solve(a, b)
+        x=x/np.linalg.norm(x)
+        print(x)
+        print(node3)
+        node3 = node2 + np.linalg.norm(node3-node2)*x
+
+        print(node3)
+
+    return node3
+
+
+
+
+def data_splitby_xy(ld, datapoints, x0, x1, ne_parent, ne_current, point_limit):
+    # Decides which side of a line a random point is on.
+    # !Given a directed line from point p0(x0, y0) to p1(x1, y1), you can use the following condition to decide whether a point p2(x2, y2) is on the left of the line, on the right, or on the same line:
+    # value = (x1 - x0)(y2 - y0) - (x2 - x0)(y1 - y0)
+    # if value > 0, p2 is on the left side of the line.
+    #
+    npoints = 0
+    dat1 = 0
+    dat2 = 0
+    ss = [True, True]
+    nd1_1st = 0
+    nd2_1st = 0
+    nde_change1 = 0
+    nde_change2 = 0
+    for nd in range(0, len(datapoints)):
+        nsp = ld[nd]
+
+        if nsp == ne_parent:  # data point belongs to this element
+            npoints = npoints + 1
+            checkvalue = (x1[0] - x0[0]) * (datapoints[nd][1] - x0[1]) - (datapoints[nd][0] - x0[0]) * (x1[1] - x0[1])
+            if checkvalue >= 0:
+                if dat1 == 0:
+                    nd1_1st = nd
+                dat1 = dat1 + 1
+                ld[nd] = ne_current + 1
+                nde_change1 = ne_current + 1
+            else:
+                if dat2 == 0:
+                    nd2_1st = nd
+                dat2 = dat2 + 1
+                ld[nd] = ne_current + 2
+                nde_change2 = ne_current + 2
+    if npoints < point_limit:
+        ss[0] = False
+        ss[1] = False
+    else:
+        ss[0] = True
+        ss[1] = True
+        if dat1 < point_limit:
+            ss[0] = False
+        if dat2 < point_limit:
+            ss[0] = False
+
+    return {'nde_change1': nde_change1, 'nde_change2': nde_change2, 'ss': ss}
 
 
 def calc_branch_direction(vector):
@@ -282,6 +528,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elem_downstream = np.append(elem_downstream, np.zeros((4, 3)), axis=0)
     node_loc[6][0] = 6
     node_loc[6][1:4] = com1 / 2.0
+    node_loc[6][3] = pg_utilities.z_from_xy(node_loc[6][1], node_loc[6][2], x_radius, y_radius, z_radius)
 
     elems[7, :] = [7, 5, 6]
     elem_upstream[7][0] = 1
@@ -290,6 +537,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
 
     node_loc[7][0] = 7
     node_loc[7][1:4] = com2 / 2.0
+    node_loc[7][3] = pg_utilities.z_from_xy(node_loc[7][1], node_loc[7][2], x_radius, y_radius, z_radius)
 
     elems[5, :] = [5, 4, 7]
     elem_upstream[5][0] = 1
@@ -298,6 +546,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
 
     node_loc[8][0] = 8
     node_loc[8][1:4] = com3 / 2.0
+    node_loc[8][3] = pg_utilities.z_from_xy(node_loc[8][1], node_loc[8][2], x_radius, y_radius, z_radius)
 
     elems[6, :] = [6, 4, 8]
     elem_upstream[6][0] = 1
@@ -306,6 +555,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
 
     node_loc[9][0] = 9
     node_loc[9][1:4] = com4 / 2.0
+    node_loc[9][3] = pg_utilities.z_from_xy(node_loc[9][1], node_loc[9][2], x_radius, y_radius, z_radius)
 
     elems[8, :] = [8, 5, 9]
     elem_upstream[8][0] = 1

@@ -34,3 +34,14 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
     return on_ellipsoid
 
+
+def angle_two_vectors(vector1,vector2):
+    vector1_u=vector1 / np.linalg.norm(vector1)
+    vector2_u=vector2 / np.linalg.norm(vector2)
+
+    dotprod = np.dot(vector1_u,vector2_u)
+
+    angle = np.arccos(dotprod)
+
+    return angle
+
