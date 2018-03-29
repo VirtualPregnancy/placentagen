@@ -39,9 +39,16 @@ def angle_two_vectors(vector1,vector2):
     vector1_u=vector1 / np.linalg.norm(vector1)
     vector2_u=vector2 / np.linalg.norm(vector2)
 
-    dotprod = np.dot(vector1_u,vector2_u)
+    if(np.equal(vector1_u,vector2_u)).all():
+        print('true')
+        angle = 0.0
+    else:
+        dotprod = np.dot(vector1_u,vector2_u)
+        if np.isclose(1.0,dotprod):
+            angle = 0
+        else:
+            angle = np.arccos(dotprod)
 
-    angle = np.arccos(dotprod)
 
     return angle
 
