@@ -330,6 +330,51 @@ def refine_1D(initial_geom, from_elem):
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
             'elem_down': elem_connectivity['elem_down']}
 
+def add_stem_villi(initial_geom, from_elem,sv_length):
+    # Estimate new number of nodes and elements
+    num_elems_old = len(initial_geom['elems'])
+    num_nodes_old = len(initial_geom['nodes'])
+
+    elems_old = initial_geom['elems']
+    node_loc_old = initial_geom['nodes']
+    elem_upstream_old = initial_geom['elem_up']
+    elem_downstream_old = initial_geom['elem_down']
+
+    #calculate number pf new elements to add
+    num_2_add = 0
+    for ne in range(from_elem, num_elems_old):
+        if elem_downstream_old[ne][0] == 1:
+            num_2_add = num_2_add + 1
+    #Allocate arrays
+    num_elems_new = num_elems_old + num_2_add
+    num_nodes_new = num_nodes_old + num_2_add
+    elems = np.zeros((num_elems_new, 3), dtype=int)
+    node_loc = np.zeros((num_nodes_new, 4))
+
+    node_loc[0:num_nodes_old][:] = initial_geom['nodes']
+    elems[0:num_elems_old][:] = initial_geom['elems']
+
+    #Create new elements
+    nnod = num_nodes_old - 1
+    ne0 = num_elems_old - 1
+    for ne in range(from_elem,num_elems_old):
+        if elem_downstream_old[ne][0] == 1:
+            nnod = nnod+1
+            ne0 = ne0+1
+            node_loc[nnod][0] = nnod
+            elems[ne0][0] = ne0
+            elems[ne0][1] = elems[ne][2]
+            elems[ne0][2] = nnod
+
+            node_loc[nnod][1:3] = node_loc[elems[ne][2]][1:3]
+            node_loc[nnod][3] = node_loc[elems[ne][2]][3] - sv_length
+
+
+    elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
+
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
+            'elem_down': elem_connectivity['elem_down']}
+
 
 def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno):
     normal_to_plane = np.zeros(3)
