@@ -83,7 +83,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     # Dealing with cases when there are no datapoints assigned with an element
     nt_bns = 0
     for n in range(0, len(parentlist)):
-        if nstem[parentlist[n]][1] != 0:
+        if nstem[int(parentlist[n])][1] != 0:
             ne_old[nt_bns] = parentlist[n]
             nt_bns = nt_bns + 1
     n_elm = nt_bns
