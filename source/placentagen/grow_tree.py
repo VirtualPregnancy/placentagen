@@ -47,6 +47,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
     # Calculate the generations for the initial branches
     # Calculate the direction of the initial branches
+
     for ne in range(0, num_elems_old):
         if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
             elem_order[ne][0] = 1
@@ -418,7 +419,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
         num_nodes = NT_BNS
         NT_BNS = 0
         for m in range(1, num_nodes + 1):
-            ne0 = ne_old[m]
+            ne0 = int(ne_old[m])
             for n in range(0, int(elem_downstream[ne0][0])):
                 NT_BNS = NT_BNS + 1
                 ne_temp[NT_BNS] = elem_downstream[ne0][n + 1]
@@ -429,7 +430,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     ntemp_list[0] = ne_count
     num_in_list = 0
     for noelem in range(1, ne_count + 1):
-        ne = ntemp_list[noelem]
+        ne = int(ntemp_list[noelem])
         if elem_downstream[ne][0] == 0:
             num_in_list = num_in_list + 1
             parentlist[num_in_list - 1] = ne
@@ -444,6 +445,7 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
     # Assigns data(seed) points to the closest ending of branches in the current generation.
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
+            ne_min = 0
             min_dist = 1e10
             for noelem in range(0, len(parentlist)):
                 ne = parentlist[noelem]
