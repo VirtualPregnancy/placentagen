@@ -52,7 +52,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
             elem_order[ne][0] = 1
         else:
-            ne0 = elem_upstream[ne][1]
+            ne0 = int(elem_upstream[ne][1])
             elem_order[ne][0] = elem_order[ne0][0] + 1
         node_in = int(elems[ne][1])
         node_out = int(elems[ne][2])
