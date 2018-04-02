@@ -76,7 +76,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     # Assign temporary arrays
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
-            ne_min = ld[nd]
+            ne_min = int(ld[nd])
             nstem[ne_min][1] = nstem[ne_min][1] + 1
             ldtmp1[nd] = ld[nd]
 
@@ -92,7 +92,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     # remove terminal elements with only one data point associated and corresponding data pomt
     # from the group
     for n in range(0, n_elm):
-        ne_min = ne_old[n]
+        ne_min = int(ne_old[n])
         if nstem[ne_min][1] < 2:
             for nd in range(0, len(datapoints)):
                 ldtmp1[nd] = ld[nd]
