@@ -47,14 +47,15 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
     # Calculate the generations for the initial branches
     # Calculate the direction of the initial branches
+
     for ne in range(0, num_elems_old):
         if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
             elem_order[ne][0] = 1
         else:
-            ne0 = elem_upstream[ne][1]
+            ne0 = int(elem_upstream[ne][1])
             elem_order[ne][0] = elem_order[ne0][0] + 1
-        node_in = elems[ne][1]
-        node_out = elems[ne][2]
+        node_in = int(elems[ne][1])
+        node_out = int(elems[ne][2])
         elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
     # initialise ne_old (list of old terminals) to list of terminals in current geometry
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])
@@ -75,14 +76,14 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     # Assign temporary arrays
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
-            ne_min = ld[nd]
+            ne_min = int(ld[nd])
             nstem[ne_min][1] = nstem[ne_min][1] + 1
             ldtmp1[nd] = ld[nd]
 
     # Dealing with cases when there are no datapoints assigned with an element
     nt_bns = 0
     for n in range(0, len(parentlist)):
-        if nstem[parentlist[n]][1] != 0:
+        if nstem[int(parentlist[n])][1] != 0:
             ne_old[nt_bns] = parentlist[n]
             nt_bns = nt_bns + 1
     n_elm = nt_bns
@@ -91,7 +92,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     # remove terminal elements with only one data point associated and corresponding data pomt
     # from the group
     for n in range(0, n_elm):
-        ne_min = ne_old[n]
+        ne_min = int(ne_old[n])
         if nstem[ne_min][1] < 2:
             for nd in range(0, len(datapoints)):
                 ldtmp1[nd] = ld[nd]
@@ -122,7 +123,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     nnod = num_nodes_old - 1  # current maximum node number
     ne_start = ne
 
-    ne_parent = parentlist[0]
+    ne_parent = int(parentlist[0])
     ngen = 3
     ne_min = ne
 
@@ -136,21 +137,21 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         max_dist = 0.0
 
         for m in range(0, nt_bns):
-            ne_parent = ne_old[m]
+            ne_parent = int(ne_old[m])
             com = mesh_com(ne_parent, ld, datapoints)
-            ne_grnd_parent = elem_upstream[ne_parent][1]  # Assumes only one parent, true in diverging tree
-            np_start = elems[ne_parent][2]
-            np_prt_start = elems[ne_parent][1]
-            np_grnd_start = elems[ne_grnd_parent][1]
-            if elem_downstream[ne_grnd_parent][1] == ne_parent:
-                if elem_downstream[ne_grnd_parent][2] == 0:
-                    np4 = elems[elem_upstream[ne_grnd_parent][1]][1]
-                else:
-                    np4 = elems[elem_downstream[ne_grnd_parent][2]][2]
-            else:
-                np4 = elems[elem_downstream[ne_grnd_parent][1]][2]
+            ne_grnd_parent = int(elem_upstream[ne_parent][1])  # Assumes only one parent, true in diverging tree
+            np_start = int(elems[ne_parent][2])
+            #np_prt_start = int(elems[ne_parent][1])
+            #np_grnd_start = int(elems[ne_grnd_parent][1])
+            #if elem_downstream[ne_grnd_parent][1] == ne_parent:
+            #    if elem_downstream[ne_grnd_parent][2] == 0:
+            #        np4 = int(elems[elem_upstream[ne_grnd_parent][1]][1])
+            #    else:
+            #        np4 = int(elems[elem_downstream[ne_grnd_parent][2]][2])
+            #else:
+            #    np4 = int(elems[elem_downstream[ne_grnd_parent][1]][2])
 
-            length_parent = dist_two_vectors(node_loc[elems[ne_parent][1]][1:4], node_loc[elems[ne_parent][2]][1:4])
+            length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1])][1:4], node_loc[int(elems[ne_parent][2])][1:4])
 
 
             # Split the seed points by the plane defined by the parent branch and the com of the
@@ -177,7 +178,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     # insert checks that the branches are valid here
                     branch = True
                     if sorv is 'surface':
-                        node1=np.array([node_loc[elems[ne_parent][1]][1], node_loc[elems[ne_parent][1]][2], 0])
+                        node1=np.array([node_loc[int(elems[ne_parent][1])][1], node_loc[int(elems[ne_parent][1])][2], 0])
                         node2=np.array([start_node_loc[0], start_node_loc[1], 0])
                         node3=np.array([end_node_loc[0], end_node_loc[1], 0])
                         end_node=mesh_check_angle(angle_min,angle_max,node1,node2,node3,ne_parent,ne+1)
@@ -192,7 +193,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     elem_downstream[ne + 1][0] = 0
 
                     elem_downstream[ne_parent][0] = elem_downstream[ne_parent][0] + 1
-                    elem_downstream[ne_parent][elem_downstream[ne_parent][0]] = ne + 1
+                    elem_downstream[ne_parent][int(elem_downstream[ne_parent][0])] = ne + 1
 
                     node_loc[nnod + 1][0] = nnod + 1
                     node_loc[nnod + 1][1:4] = end_node_loc
@@ -222,7 +223,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                             ld[nd] = ne_parent #give back to parent
                         if ld[nd] == ne + 2:
                             ld[nd] = ne_parent
-                        dist = dist_two_vectors(datapoints[nd][:], node_loc[elems[ne_parent][2]][1:4])
+                        dist = dist_two_vectors(datapoints[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                         if dist < min_dist:
                             if ld[nd] == ne_parent:
                                 nd_min = nd
@@ -236,7 +237,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
         for n in range(0, n_elm):
             ne_old[n] = ne_temp[n]
-            nstem[ne_old[n]][1] = 0  # initialaw count of data points
+            nstem[int(ne_old[n])][1] = 0  # initialaw count of data points
 
         # reallocate datapoints
         ld = data_to_mesh(ld, datapoints, ne_old[0:n_elm], node_loc, elems)
@@ -418,7 +419,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
         num_nodes = NT_BNS
         NT_BNS = 0
         for m in range(1, num_nodes + 1):
-            ne0 = ne_old[m]
+            ne0 = int(ne_old[m])
             for n in range(0, int(elem_downstream[ne0][0])):
                 NT_BNS = NT_BNS + 1
                 ne_temp[NT_BNS] = elem_downstream[ne0][n + 1]
@@ -429,7 +430,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     ntemp_list[0] = ne_count
     num_in_list = 0
     for noelem in range(1, ne_count + 1):
-        ne = ntemp_list[noelem]
+        ne = int(ntemp_list[noelem])
         if elem_downstream[ne][0] == 0:
             num_in_list = num_in_list + 1
             parentlist[num_in_list - 1] = ne
@@ -444,10 +445,11 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
     # Assigns data(seed) points to the closest ending of branches in the current generation.
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
+            ne_min = 0
             min_dist = 1e10
             for noelem in range(0, len(parentlist)):
-                ne = parentlist[noelem]
-                np = elems[ne][2]
+                ne = int(parentlist[noelem])
+                np = int(elems[ne][2])
                 dist = dist_two_vectors(node_loc[np][1:4], datapoints[nd])
                 if dist < min_dist:
                     ne_min = ne
