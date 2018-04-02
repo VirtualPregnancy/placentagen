@@ -28,5 +28,37 @@ class Test_grow_trees(TestCase):
         seed_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
         data = [[-0.1, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.0, 0.3], [0.1, 0.1, 0.1], [-0.2, -0.2, -0.2]]
         chorion_geom = placentagen.grow_chorionic_surface(90 * np.pi / 180, 45 * np.pi / 180, 0.5, 0.1, 1,
-                                                 1, 1, 1, data, seed_geom, 'surface')
+                                                          1, 1, 1, data, seed_geom, 'surface')
         self.assertTrue(chorion_geom['nodes'][6][3], 0.48527182)
+
+
+class Test_refine_trees(TestCase):
+    def test_refine_node(self):
+        from_elem = 0
+        initial_geom = {}
+        initial_geom['nodes'] = [[0, 0.0, 0.0, 0.0], [1, 0.0, 0.0, 1.0]]
+        initial_geom['elems'] = [[0, 0, 1]]
+        initial_geom['elem_up'] = [[0, 0, 0]]
+        initial_geom['elem_down'] = [[0, 0, 0]]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        self.assertTrue(refined_geom['nodes'][1][3], 0.5)
+
+    def test_refine_cnct(self):
+        from_elem = 0
+        initial_geom = {}
+        initial_geom['nodes'] = [[0, 0.0, 0.0, 0.0], [1, 0.0, 0.0, 1.0]]
+        initial_geom['elems'] = [[0, 0, 1]]
+        initial_geom['elem_up'] = [[0, 0, 0]]
+        initial_geom['elem_down'] = [[0, 0, 0]]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        self.assertTrue(refined_geom['elem_up'][1][0], 1)
+
+    def test_refine_node_from(self):
+        from_elem = 1
+        initial_geom = {}
+        initial_geom['nodes'] = [[0, 0.0, 0.0, 0.0], [1, 0.0, 0.0, 1.0], [2, 1.0, 0.0, 1.0], [3, -1.0, 0.0, 1.0]]
+        initial_geom['elems'] = [[0, 0, 1], [1, 1, 2], [1, 1, 3]]
+        initial_geom['elem_up'] = [[0, 0, 0], [1, 0, 0], [1, 0, 0]]
+        initial_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        self.assertTrue(refined_geom['nodes'][2][1], 0.5)
