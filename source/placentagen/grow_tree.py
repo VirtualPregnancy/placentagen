@@ -276,8 +276,6 @@ def refine_1D(initial_geom, from_elem):
     elem_downstream = np.zeros((num_elems_new, 3), dtype=int)
     old_2_new = np.zeros((num_elems_old, 2), dtype=int)
 
-    print(num_elems_new)
-    print(num_nodes_new)
     for nnod in range(0, num_nodes_new):
         node_loc[nnod][0] = nnod  # will be a numeric list of nodes
 
@@ -295,26 +293,25 @@ def refine_1D(initial_geom, from_elem):
 
     new_elems = from_elem - 1
     nnod = from_elem
-    for ne in range(from_elem,num_elems_old):
-        #split element in two at half way point
+    for ne in range(from_elem, num_elems_old):
+        # split element in two at half way point
         old_2_new[ne][0] = new_elems + 1
         old_2_new[ne][1] = new_elems + 2
         in_node = elems[old_2_new[elem_upstream_old[ne][1]][1]][2]
-        in_point  = node_loc_old[elems_old[ne][1]][1:4]
+        in_point = node_loc_old[elems_old[ne][1]][1:4]
         out_point = node_loc_old[elems_old[ne][2]][1:4]
         mid_point = np.zeros(3)
-        for i in range(0,3):
-            mid_point[i]=(in_point[i] + out_point[i])/2.0
+        for i in range(0, 3):
+            mid_point[i] = (in_point[i] + out_point[i]) / 2.0
         # Create a new node at midpoint
         nnod = nnod + 1
-        node_loc[nnod][1:4]=mid_point
+        node_loc[nnod][1:4] = mid_point
         # Next node is outpoint
-        nnod1=nnod + 1
-        node_loc[nnod1][1:4]=out_point
-        #create first new element
+        nnod1 = nnod + 1
+        node_loc[nnod1][1:4] = out_point
+        # create first new element
         new_elems = new_elems + 1
-        print(new_elems)
-        elems[new_elems][0]= new_elems
+        elems[new_elems][0] = new_elems
         elems[new_elems][1] = in_node
         elems[new_elems][2] = nnod
 
@@ -325,13 +322,13 @@ def refine_1D(initial_geom, from_elem):
 
         nnod = nnod1
 
-    node_loc.resize(nnod+1, 4, refcheck=False)
-    elems.resize(new_elems+1,3,refcheck = False)
-    print(elems)
+    node_loc.resize(nnod + 1, 4, refcheck=False)
+    elems.resize(new_elems + 1, 3, refcheck=False)
 
+    elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
 
-
-    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
+            'elem_down': elem_connectivity['elem_down']}
 
 
 def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno):

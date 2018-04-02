@@ -35,20 +35,45 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     return on_ellipsoid
 
 
-def angle_two_vectors(vector1,vector2):
-    vector1_u=vector1 / np.linalg.norm(vector1)
-    vector2_u=vector2 / np.linalg.norm(vector2)
+def angle_two_vectors(vector1, vector2):
+    vector1_u = vector1 / np.linalg.norm(vector1)
+    vector2_u = vector2 / np.linalg.norm(vector2)
 
-    if(np.equal(vector1_u,vector2_u)).all():
+    if (np.equal(vector1_u, vector2_u)).all():
         print('true')
         angle = 0.0
     else:
-        dotprod = np.dot(vector1_u,vector2_u)
-        if np.isclose(1.0,dotprod):
+        dotprod = np.dot(vector1_u, vector2_u)
+        if np.isclose(1.0, dotprod):
             angle = 0
         else:
             angle = np.arccos(dotprod)
 
-
     return angle
 
+
+def element_connectivity_1D(node_loc, elems):
+    # Initialise connectivity arrays
+    num_elems = len(elems)
+    elem_upstream = np.zeros((num_elems, 3), dtype=int)
+    elem_downstream = np.zeros((num_elems, 3), dtype=int)
+    num_nodes = len(node_loc)
+    elems_at_node = np.zeros((num_nodes, 4), dtype=int)
+    # determine elements that are associated with each node
+    for ne in range(0, num_elems):
+        for nn in range(1, 3):
+            nnod = elems[ne][nn]
+            elems_at_node[nnod][0] = elems_at_node[nnod][0] + 1
+            elems_at_node[nnod][elems_at_node[nnod][0]] = ne
+    # assign connectivity
+    for ne in range(0, num_elems):
+        nnod2 = elems[ne][2]  # second node in elem
+        for noelem in range(1, elems_at_node[nnod2][0] + 1):
+            ne2 = elems_at_node[nnod2][noelem]
+            if ne2 != ne:
+                elem_upstream[ne2][0] = elem_upstream[ne2][0] + 1
+                elem_upstream[ne2][elem_upstream[ne2][0]] = ne
+                elem_downstream[ne][0] = elem_downstream[ne][0] + 1
+                elem_downstream[ne][elem_downstream[ne][0]] = ne2
+
+    return {'elem_up': elem_upstream, 'elem_down': elem_downstream}
