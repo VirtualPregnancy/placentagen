@@ -237,7 +237,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
         for n in range(0, n_elm):
             ne_old[n] = ne_temp[n]
-            nstem[ne_old[n]][1] = 0  # initialaw count of data points
+            nstem[int(ne_old[n])][1] = 0  # initialaw count of data points
 
         # reallocate datapoints
         ld = data_to_mesh(ld, datapoints, ne_old[0:n_elm], node_loc, elems)
