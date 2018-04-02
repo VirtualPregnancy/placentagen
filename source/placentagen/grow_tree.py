@@ -178,7 +178,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     # insert checks that the branches are valid here
                     branch = True
                     if sorv is 'surface':
-                        node1=np.array([node_loc[elems[ne_parent][1]][1], node_loc[elems[ne_parent][1]][2], 0])
+                        node1=np.array([node_loc[int(elems[ne_parent][1])][1], node_loc[int(elems[ne_parent][1])][2], 0])
                         node2=np.array([start_node_loc[0], start_node_loc[1], 0])
                         node3=np.array([end_node_loc[0], end_node_loc[1], 0])
                         end_node=mesh_check_angle(angle_min,angle_max,node1,node2,node3,ne_parent,ne+1)
