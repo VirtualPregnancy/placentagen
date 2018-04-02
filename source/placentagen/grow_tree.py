@@ -223,7 +223,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                             ld[nd] = ne_parent #give back to parent
                         if ld[nd] == ne + 2:
                             ld[nd] = ne_parent
-                        dist = dist_two_vectors(datapoints[nd][:], node_loc[elems[ne_parent][2]][1:4])
+                        dist = dist_two_vectors(datapoints[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                         if dist < min_dist:
                             if ld[nd] == ne_parent:
                                 nd_min = nd
