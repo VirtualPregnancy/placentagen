@@ -128,7 +128,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     ne_min = ne
 
     while n_elm != 0:
-    #for ok in range(0,2):
+        # for ok in range(0,2):
         ngen = ngen + 1  # increment generation from parent
         nt_bns = n_elm
         n_elm = 0
@@ -141,18 +141,18 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             com = mesh_com(ne_parent, ld, datapoints)
             ne_grnd_parent = int(elem_upstream[ne_parent][1])  # Assumes only one parent, true in diverging tree
             np_start = int(elems[ne_parent][2])
-            #np_prt_start = int(elems[ne_parent][1])
-            #np_grnd_start = int(elems[ne_grnd_parent][1])
-            #if elem_downstream[ne_grnd_parent][1] == ne_parent:
+            # np_prt_start = int(elems[ne_parent][1])
+            # np_grnd_start = int(elems[ne_grnd_parent][1])
+            # if elem_downstream[ne_grnd_parent][1] == ne_parent:
             #    if elem_downstream[ne_grnd_parent][2] == 0:
             #        np4 = int(elems[elem_upstream[ne_grnd_parent][1]][1])
             #    else:
             #        np4 = int(elems[elem_downstream[ne_grnd_parent][2]][2])
-            #else:
+            # else:
             #    np4 = int(elems[elem_downstream[ne_grnd_parent][1]][2])
 
-            length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1])][1:4], node_loc[int(elems[ne_parent][2])][1:4])
-
+            length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1])][1:4],
+                                             node_loc[int(elems[ne_parent][2])][1:4])
 
             # Split the seed points by the plane defined by the parent branch and the com of the
             # seedpoints attached to it
@@ -168,8 +168,9 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
                     start_node_loc = node_loc[np_start][1:4]
                     length_new = np.linalg.norm(fraction * (com - start_node_loc))
-                    if length_new <  min_length:
-                        end_node_loc = start_node_loc + min_length * (com - start_node_loc)/np.linalg.norm((com - start_node_loc))
+                    if length_new < min_length:
+                        end_node_loc = start_node_loc + min_length * (com - start_node_loc) / np.linalg.norm(
+                            (com - start_node_loc))
                     else:
                         end_node_loc = start_node_loc + fraction * (com - start_node_loc)
                     if sorv is 'surface':
@@ -178,12 +179,13 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     # insert checks that the branches are valid here
                     branch = True
                     if sorv is 'surface':
-                        node1=np.array([node_loc[int(elems[ne_parent][1])][1], node_loc[int(elems[ne_parent][1])][2], 0])
-                        node2=np.array([start_node_loc[0], start_node_loc[1], 0])
-                        node3=np.array([end_node_loc[0], end_node_loc[1], 0])
-                        end_node=mesh_check_angle(angle_min,angle_max,node1,node2,node3,ne_parent,ne+1)
+                        node1 = np.array(
+                            [node_loc[int(elems[ne_parent][1])][1], node_loc[int(elems[ne_parent][1])][2], 0])
+                        node2 = np.array([start_node_loc[0], start_node_loc[1], 0])
+                        node3 = np.array([end_node_loc[0], end_node_loc[1], 0])
+                        end_node = mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, ne + 1)
                         end_node_loc[0:2] = end_node[0:2]
-                        end_node_loc[2] = pg_utilities.z_from_xy(end_node[0],end_node[1],x_radius,y_radius,z_radius)
+                        end_node_loc[2] = pg_utilities.z_from_xy(end_node[0], end_node[1], x_radius, y_radius, z_radius)
                     # Create new elements and nodes
                     elems[ne + 1][0] = ne + 1
                     elems[ne + 1][1] = np_start
@@ -201,7 +203,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     nnod = nnod + 1
 
                     elem_order[ne][0] = elem_order[ne][0] + 1
-                    noelem_gen = noelem_gen + 1 #Only used for runtime output
+                    noelem_gen = noelem_gen + 1  # Only used for runtime output
 
                     nstem[ne][0] = nstem[ne_parent][0]
 
@@ -220,7 +222,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                 for nd in range(0, len(datapoints)):
                     if ld[nd] != 0:
                         if ld[nd] == ne + 1:
-                            ld[nd] = ne_parent #give back to parent
+                            ld[nd] = ne_parent  # give back to parent
                         if ld[nd] == ne + 2:
                             ld[nd] = ne_parent
                         dist = dist_two_vectors(datapoints[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
@@ -242,10 +244,9 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         # reallocate datapoints
         ld = data_to_mesh(ld, datapoints, ne_old[0:n_elm], node_loc, elems)
 
-
-        print('   ' +str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+        print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
               '   ' + str(numtb) + '   ' + str(ld_num) + '   ' + str(
-            numtb + ld_num + numtbsum))
+                    numtb + ld_num + numtbsum))
         numtbsum = numtbsum + numtb
 
     elems.resize(ne + 1, 3, refcheck=False)
@@ -255,58 +256,144 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
-def mesh_check_angle(angle_min,angle_max,node1,node2,node3,ne_parent,myno):
+
+def refine_1D(initial_geom, from_elem):
+    # Estimate new number of nodes and elements
+    num_elems_old = len(initial_geom['elems'])
+    num_nodes_old = len(initial_geom['nodes'])
+    num_elems_new = 2 * num_elems_old - from_elem + 1
+    num_nodes_new = num_nodes_old + num_elems_old - from_elem + 1
+
+    elems_old = initial_geom['elems']
+    node_loc_old = initial_geom['nodes']
+    elem_upstream_old = initial_geom['elem_up']
+    elem_downstream_old = initial_geom['elem_down']
+
+    # allocate temporary arrays
+    elems = np.zeros((num_elems_new, 3), dtype=int)
+    node_loc = np.zeros((num_nodes_new, 4))
+    elem_upstream = np.zeros((num_elems_new, 3), dtype=int)
+    elem_downstream = np.zeros((num_elems_new, 3), dtype=int)
+    old_2_new = np.zeros((num_elems_old, 2), dtype=int)
+
+    print(num_elems_new)
+    print(num_nodes_new)
+    for nnod in range(0, num_nodes_new):
+        node_loc[nnod][0] = nnod  # will be a numeric list of nodes
+
+    # copy non-split elements and nodes into the arrays
+    if from_elem != 0:  # nothing needs to be done if from elem is zero
+        node_loc[0][:] = initial_geom['nodes'][0][:]
+        elems[0:from_elem][:] = initial_geom['elems'][0:from_elem][:]
+        elem_upstream[0:from_elem][:] = initial_geom['elem_up'][0:from_elem][:]
+        elem_downstream[0:from_elem][:] = initial_geom['elem_down'][0:from_elem][:]
+        for ne in range(0, from_elem):
+            # grab second node from each non-split element
+            node_loc[elems_old[ne][2]][:] = node_loc_old[elems_old[ne][2]][:]
+            old_2_new[ne][0] = ne
+            old_2_new[ne][1] = ne
+
+    new_elems = from_elem - 1
+    nnod = from_elem
+    for ne in range(from_elem,num_elems_old):
+        #split element in two at half way point
+        old_2_new[ne][0] = new_elems + 1
+        old_2_new[ne][1] = new_elems + 2
+        in_node = elems[old_2_new[elem_upstream_old[ne][1]][1]][2]
+        in_point  = node_loc_old[elems_old[ne][1]][1:4]
+        out_point = node_loc_old[elems_old[ne][2]][1:4]
+        mid_point = np.zeros(3)
+        for i in range(0,3):
+            mid_point[i]=(in_point[i] + out_point[i])/2.0
+        # Create a new node at midpoint
+        nnod = nnod + 1
+        node_loc[nnod][1:4]=mid_point
+        # Next node is outpoint
+        nnod1=nnod + 1
+        node_loc[nnod1][1:4]=out_point
+        #create first new element
+        new_elems = new_elems + 1
+        print(new_elems)
+        elems[new_elems][0]= new_elems
+        elems[new_elems][1] = in_node
+        elems[new_elems][2] = nnod
+
+
+
+
+
+        new_elems = new_elems + 1
+        elems[new_elems][0] = new_elems
+        elems[new_elems][1] = nnod
+        elems[new_elems][2] = nnod1
+
+        nnod = nnod1
+
+    node_loc.resize(nnod+1, 4, refcheck=False)
+    elems.resize(new_elems+1,3,refcheck = False)
+    print(elems)
+
+
+
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+
+
+def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno):
     normal_to_plane = np.zeros(3)
     vector_cross_n = np.zeros(3)
-    vector1=(node2-node1)
-    vector1_u=vector1/np.linalg.norm(node2-node1)
-    vector2=(node3-node2)
-    vector2_u=vector2/np.linalg.norm(node3-node2)
+    vector1 = (node2 - node1)
+    vector1_u = vector1 / np.linalg.norm(node2 - node1)
+    vector2 = (node3 - node2)
+    vector2_u = vector2 / np.linalg.norm(node3 - node2)
 
-    if (np.equal(vector1_u,vector2_u)).all():
-        node3 [0] = node3[0]*.99
-        node3 [1] = node3[1]*1.01
-        vector2=node3-node2
+    if (np.equal(vector1_u, vector2_u)).all():
+        node3[0] = node3[0] * .99
+        node3[1] = node3[1] * 1.01
+        vector2 = node3 - node2
 
+    # want to rotate vector 2 wrt vector 1
+    angle = pg_utilities.angle_two_vectors(vector1, vector2)
 
-    #want to rotate vector 2 wrt vector 1
-    angle=pg_utilities.angle_two_vectors(vector1,vector2)
-
-
-    normal_to_plane [0] = (vector2[1]*vector1[2] - vector2[2]*vector1[1])
-    normal_to_plane [1] = (vector2[0]*vector1[2] - vector2[2]*vector1[0])
-    normal_to_plane [2] = (vector2[0]*vector1[1] - vector2[1]*vector1[0])
+    normal_to_plane[0] = (vector2[1] * vector1[2] - vector2[2] * vector1[1])
+    normal_to_plane[1] = (vector2[0] * vector1[2] - vector2[2] * vector1[0])
+    normal_to_plane[2] = (vector2[0] * vector1[1] - vector2[1] * vector1[0])
 
     normal_to_plane_u = normal_to_plane / np.linalg.norm(normal_to_plane)
 
-    vector_cross_n [0] = (vector1[1]*normal_to_plane[2] - vector1[2]*normal_to_plane[1])
-    vector_cross_n [1] = (vector1[0]*normal_to_plane[2] - vector1[2]*normal_to_plane[0])
-    vector_cross_n [2] = (vector1[0]*normal_to_plane[1] - vector1[1]*normal_to_plane[0])
+    vector_cross_n[0] = (vector1[1] * normal_to_plane[2] - vector1[2] * normal_to_plane[1])
+    vector_cross_n[1] = (vector1[0] * normal_to_plane[2] - vector1[2] * normal_to_plane[0])
+    vector_cross_n[2] = (vector1[0] * normal_to_plane[1] - vector1[1] * normal_to_plane[0])
 
-    dotprod=np.dot(vector2,vector_cross_n)
+    dotprod = np.dot(vector2, vector_cross_n)
 
     if dotprod < 0:
-        angle = -1* angle
+        angle = -1 * angle
 
     if abs(angle) < angle_min:
         # Need to adjust node3 to get a angle equal to  angle_min
-        angle0=abs(angle)
-        angle_rot=(angle0-angle_min) #amount of angle to add
+        angle0 = abs(angle)
+        angle_rot = (angle0 - angle_min)  # amount of angle to add
 
-        #need to rotate around axis normal to the plane that the original and the vector make
-        #unit vector normal to plane:
-        R=np.zeros((3,3))
-        R[0][0] = np.cos(angle_rot) + normal_to_plane_u[0]**2*(1-np.cos(angle_rot))
-        R[0][1] = normal_to_plane_u[0]*normal_to_plane_u[1]*(1-np.cos(angle_rot))-normal_to_plane_u[2]*np.sin(angle_rot)
-        R[0][2] = normal_to_plane_u[0]*normal_to_plane[2]*(1-np.cos(angle_rot))+normal_to_plane_u[1]*np.sin(angle_rot)
-        R[1][0] =normal_to_plane_u[0]*normal_to_plane_u[1]*(1-np.cos(angle_rot))+normal_to_plane_u[2]*np.sin(angle_rot)
-        R[1][1] = np.cos(angle_rot) + normal_to_plane_u[1]**2*(1-np.cos(angle_rot))
-        R[1][2] = normal_to_plane_u[1]*normal_to_plane_u[2]*(1-np.cos(angle_rot))-normal_to_plane_u[0]*np.sin(angle_rot)
-        R[2][0] = normal_to_plane_u[0]*normal_to_plane[2]*(1-np.cos(angle_rot))-normal_to_plane_u[1]*np.sin(angle_rot)
-        R[2][1] = normal_to_plane_u[1]*normal_to_plane_u[2]*(1-np.cos(angle_rot))+normal_to_plane_u[0]*np.sin(angle_rot)
-        R[2][2] = np.cos(angle_rot) + normal_to_plane_u[2]**2*(1-np.cos(angle_rot))
-        nu_vec=np.zeros(3)
-        nu_vec [0] = R[0][0]*vector2[0]+R[0][1]*vector2[1]+R[0][2]*vector2[2]
+        # need to rotate around axis normal to the plane that the original and the vector make
+        # unit vector normal to plane:
+        R = np.zeros((3, 3))
+        R[0][0] = np.cos(angle_rot) + normal_to_plane_u[0] ** 2 * (1 - np.cos(angle_rot))
+        R[0][1] = normal_to_plane_u[0] * normal_to_plane_u[1] * (1 - np.cos(angle_rot)) - normal_to_plane_u[2] * np.sin(
+            angle_rot)
+        R[0][2] = normal_to_plane_u[0] * normal_to_plane[2] * (1 - np.cos(angle_rot)) + normal_to_plane_u[1] * np.sin(
+            angle_rot)
+        R[1][0] = normal_to_plane_u[0] * normal_to_plane_u[1] * (1 - np.cos(angle_rot)) + normal_to_plane_u[2] * np.sin(
+            angle_rot)
+        R[1][1] = np.cos(angle_rot) + normal_to_plane_u[1] ** 2 * (1 - np.cos(angle_rot))
+        R[1][2] = normal_to_plane_u[1] * normal_to_plane_u[2] * (1 - np.cos(angle_rot)) - normal_to_plane_u[0] * np.sin(
+            angle_rot)
+        R[2][0] = normal_to_plane_u[0] * normal_to_plane[2] * (1 - np.cos(angle_rot)) - normal_to_plane_u[1] * np.sin(
+            angle_rot)
+        R[2][1] = normal_to_plane_u[1] * normal_to_plane_u[2] * (1 - np.cos(angle_rot)) + normal_to_plane_u[0] * np.sin(
+            angle_rot)
+        R[2][2] = np.cos(angle_rot) + normal_to_plane_u[2] ** 2 * (1 - np.cos(angle_rot))
+        nu_vec = np.zeros(3)
+        nu_vec[0] = R[0][0] * vector2[0] + R[0][1] * vector2[1] + R[0][2] * vector2[2]
         nu_vec[1] = R[1][0] * vector2[0] + R[1][1] * vector2[1] + R[1][2] * vector2[2]
         nu_vec[2] = R[2][0] * vector2[0] + R[2][1] * vector2[1] + R[2][2] * vector2[2]
 
@@ -314,32 +401,36 @@ def mesh_check_angle(angle_min,angle_max,node1,node2,node3,ne_parent,myno):
 
     elif abs(angle) > angle_max:
         # Need to adjust node3 to get a angle equal to  angle_max
-        angle0=abs(angle)
-        angle_rot=(angle0-angle_max) #amount of angle to add
+        angle0 = abs(angle)
+        angle_rot = (angle0 - angle_max)  # amount of angle to add
 
-        #need to rotate around axis normal to the plane that the original and the vector make
-        #unit vector normal to plane:
-        R=np.zeros((3,3))
-        R[0][0] = np.cos(angle_rot) + normal_to_plane_u[0]**2*(1-np.cos(angle_rot))
-        R[0][1] = normal_to_plane_u[0]*normal_to_plane_u[1]*(1-np.cos(angle_rot))-normal_to_plane_u[2]*np.sin(angle_rot)
-        R[0][2] = normal_to_plane_u[0]*normal_to_plane[2]*(1-np.cos(angle_rot))+normal_to_plane_u[1]*np.sin(angle_rot)
-        R[1][0] =normal_to_plane_u[0]*normal_to_plane_u[1]*(1-np.cos(angle_rot))+normal_to_plane_u[2]*np.sin(angle_rot)
-        R[1][1] = np.cos(angle_rot) + normal_to_plane_u[1]**2*(1-np.cos(angle_rot))
-        R[1][2] = normal_to_plane_u[1]*normal_to_plane_u[2]*(1-np.cos(angle_rot))-normal_to_plane_u[0]*np.sin(angle_rot)
-        R[2][0] = normal_to_plane_u[0]*normal_to_plane[2]*(1-np.cos(angle_rot))-normal_to_plane_u[1]*np.sin(angle_rot)
-        R[2][1] = normal_to_plane_u[1]*normal_to_plane_u[2]*(1-np.cos(angle_rot))+normal_to_plane_u[0]*np.sin(angle_rot)
-        R[2][2] = np.cos(angle_rot) + normal_to_plane_u[2]**2*(1-np.cos(angle_rot))
+        # need to rotate around axis normal to the plane that the original and the vector make
+        # unit vector normal to plane:
+        R = np.zeros((3, 3))
+        R[0][0] = np.cos(angle_rot) + normal_to_plane_u[0] ** 2 * (1 - np.cos(angle_rot))
+        R[0][1] = normal_to_plane_u[0] * normal_to_plane_u[1] * (1 - np.cos(angle_rot)) - normal_to_plane_u[2] * np.sin(
+            angle_rot)
+        R[0][2] = normal_to_plane_u[0] * normal_to_plane[2] * (1 - np.cos(angle_rot)) + normal_to_plane_u[1] * np.sin(
+            angle_rot)
+        R[1][0] = normal_to_plane_u[0] * normal_to_plane_u[1] * (1 - np.cos(angle_rot)) + normal_to_plane_u[2] * np.sin(
+            angle_rot)
+        R[1][1] = np.cos(angle_rot) + normal_to_plane_u[1] ** 2 * (1 - np.cos(angle_rot))
+        R[1][2] = normal_to_plane_u[1] * normal_to_plane_u[2] * (1 - np.cos(angle_rot)) - normal_to_plane_u[0] * np.sin(
+            angle_rot)
+        R[2][0] = normal_to_plane_u[0] * normal_to_plane[2] * (1 - np.cos(angle_rot)) - normal_to_plane_u[1] * np.sin(
+            angle_rot)
+        R[2][1] = normal_to_plane_u[1] * normal_to_plane_u[2] * (1 - np.cos(angle_rot)) + normal_to_plane_u[0] * np.sin(
+            angle_rot)
+        R[2][2] = np.cos(angle_rot) + normal_to_plane_u[2] ** 2 * (1 - np.cos(angle_rot))
 
-        nu_vec=np.zeros(3)
-        nu_vec [0] = R[0][0]*vector2[0]+R[0][1]*vector2[1]+R[0][2]*vector2[2]
+        nu_vec = np.zeros(3)
+        nu_vec[0] = R[0][0] * vector2[0] + R[0][1] * vector2[1] + R[0][2] * vector2[2]
         nu_vec[1] = R[1][0] * vector2[0] + R[1][1] * vector2[1] + R[1][2] * vector2[2]
         nu_vec[2] = R[2][0] * vector2[0] + R[2][1] * vector2[1] + R[2][2] * vector2[2]
 
         node3 = node2 + nu_vec
 
     return node3
-
-
 
 
 def data_splitby_xy(ld, datapoints, x0, x1, ne_parent, ne_current, point_limit):
