@@ -141,15 +141,15 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             com = mesh_com(ne_parent, ld, datapoints)
             ne_grnd_parent = int(elem_upstream[ne_parent][1])  # Assumes only one parent, true in diverging tree
             np_start = int(elems[ne_parent][2])
-            np_prt_start = int(elems[ne_parent][1])
-            np_grnd_start = int(elems[ne_grnd_parent][1])
-            if elem_downstream[ne_grnd_parent][1] == ne_parent:
-                if elem_downstream[ne_grnd_parent][2] == 0:
-                    np4 = int(elems[elem_upstream[ne_grnd_parent][1]][1])
-                else:
-                    np4 = int(elems[elem_downstream[ne_grnd_parent][2]][2])
-            else:
-                np4 = int(elems[elem_downstream[ne_grnd_parent][1]][2])
+            #np_prt_start = int(elems[ne_parent][1])
+            #np_grnd_start = int(elems[ne_grnd_parent][1])
+            #if elem_downstream[ne_grnd_parent][1] == ne_parent:
+            #    if elem_downstream[ne_grnd_parent][2] == 0:
+            #        np4 = int(elems[elem_upstream[ne_grnd_parent][1]][1])
+            #    else:
+            #        np4 = int(elems[elem_downstream[ne_grnd_parent][2]][2])
+            #else:
+            #    np4 = int(elems[elem_downstream[ne_grnd_parent][1]][2])
 
             length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1])][1:4], node_loc[int(elems[ne_parent][2])][1:4])
 
