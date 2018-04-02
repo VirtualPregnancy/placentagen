@@ -151,7 +151,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             else:
                 np4 = int(elems[elem_downstream[ne_grnd_parent][1]][2])
 
-            length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1]])[1:4], node_loc[int(elems[ne_parent][2])][1:4])
+            length_parent = dist_two_vectors(node_loc[int(elems[ne_parent][1])][1:4], node_loc[int(elems[ne_parent][2])][1:4])
 
 
             # Split the seed points by the plane defined by the parent branch and the com of the
