@@ -193,7 +193,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     elem_downstream[ne + 1][0] = 0
 
                     elem_downstream[ne_parent][0] = elem_downstream[ne_parent][0] + 1
-                    elem_downstream[ne_parent][elem_downstream[ne_parent][0]] = ne + 1
+                    elem_downstream[ne_parent][int(elem_downstream[ne_parent][0])] = ne + 1
 
                     node_loc[nnod + 1][0] = nnod + 1
                     node_loc[nnod + 1][1:4] = end_node_loc
