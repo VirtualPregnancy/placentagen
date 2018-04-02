@@ -449,7 +449,7 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
             min_dist = 1e10
             for noelem in range(0, len(parentlist)):
                 ne = parentlist[noelem]
-                np = elems[ne][2]
+                np = int(elems[ne][2])
                 dist = dist_two_vectors(node_loc[np][1:4], datapoints[nd])
                 if dist < min_dist:
                     ne_min = ne
