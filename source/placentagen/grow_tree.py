@@ -318,10 +318,6 @@ def refine_1D(initial_geom, from_elem):
         elems[new_elems][1] = in_node
         elems[new_elems][2] = nnod
 
-
-
-
-
         new_elems = new_elems + 1
         elems[new_elems][0] = new_elems
         elems[new_elems][1] = nnod
