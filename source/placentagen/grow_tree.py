@@ -54,8 +54,8 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         else:
             ne0 = elem_upstream[ne][1]
             elem_order[ne][0] = elem_order[ne0][0] + 1
-        node_in = elems[ne][1]
-        node_out = elems[ne][2]
+        node_in = int(elems[ne][1])
+        node_out = int(elems[ne][2])
         elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
     # initialise ne_old (list of old terminals) to list of terminals in current geometry
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])
