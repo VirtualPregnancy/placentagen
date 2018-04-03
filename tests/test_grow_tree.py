@@ -10,20 +10,20 @@ class Test_create_trees(TestCase):
         thickness = (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0
         data_input = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
         datapoints = placentagen.umbilical_seed_geometry(1.0, thickness, 1.0, 0.0, 0.0, 0.1, 20.0, data_input)
-        self.assertTrue(datapoints['umb_nodes'][5][3], 0.61833222)
+        self.assertTrue(datapoints['nodes'][5][3], 0.61833222)
 
     def test_umilical_node(self):
         thickness = (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0
         data_input = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
         datapoints = placentagen.umbilical_seed_geometry(1.0, thickness, 1.0, 0.0, 0.0, 0.1, 20.0, data_input)
-        self.assertTrue(datapoints['umb_elems'][2][2], 4)
+        self.assertTrue(datapoints['elems'][2][2], 4)
 
 
 class Test_grow_trees(TestCase):
     def test_grow_node(self):
         seed_geom = {}
-        seed_geom['umb_nodes'] = [[0, 0, 1, 0], [1, 0, .1, 0], [2, -0.1, 0.1, 0], [3, 0.1, 0.1, 0]]
-        seed_geom['umb_elems'] = [[0, 0, 1], [1, 1, 2], [2, 1, 3]]
+        seed_geom['nodes'] = [[0, 0, 1, 0], [1, 0, .1, 0], [2, -0.1, 0.1, 0], [3, 0.1, 0.1, 0]]
+        seed_geom['elems'] = [[0, 0, 1], [1, 1, 2], [2, 1, 3]]
         seed_geom['elem_up'] = [[0, 0, 0], [1, 0, 0], [1, 0, 0]]
         seed_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
         data = [[-0.1, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.0, 0.3], [0.1, 0.1, 0.1], [-0.2, -0.2, -0.2]]

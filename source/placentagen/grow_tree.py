@@ -19,17 +19,17 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
-    num_elems_old = len(initial_geom["umb_elems"])
-    num_nodes_old = len(initial_geom["umb_nodes"])
+    num_elems_old = len(initial_geom["elems"])
+    num_nodes_old = len(initial_geom["nodes"])
     num_elems_new = num_elems_old + total_estimated
     num_nodes_new = num_nodes_old + total_estimated
     # Pre-allocation of data arrays
     elem_directions = np.zeros((num_elems_new, 3))
     elem_order = np.zeros((num_elems_new, 3))
     node_loc = np.zeros((num_nodes_new, 4))
-    node_loc[0:num_nodes_old][:] = initial_geom["umb_nodes"]
+    node_loc[0:num_nodes_old][:] = initial_geom["nodes"]
     elems = np.zeros((num_elems_new, 3))
-    elems[0:num_elems_old][:] = initial_geom["umb_elems"]
+    elems[0:num_elems_old][:] = initial_geom["elems"]
     elem_upstream = np.zeros((num_elems_new, 3))
     elem_upstream[0:num_elems_old][:] = initial_geom['elem_up']
     elem_downstream = np.zeros((num_elems_new, 3))
@@ -731,7 +731,7 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elem_upstream[8][1] = 4
     elem_downstream[8][0] = 0
 
-    return {'umb_nodes': node_loc, 'umb_elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 
 def mesh_com(ld_val, ld, datapoints):
