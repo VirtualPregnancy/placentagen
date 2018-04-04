@@ -37,7 +37,7 @@ class Test_term_br_location(TestCase):
         nodedata=placentagen.import_exnode_tree(TESTDATA_FILENAME)
         term_br=placentagen.terminal_branch(eldata['el_array'])
         pos_node= placentagen.pos_axis(nodedata['node_array'],2.5,5,3.54)
-        term_block=placentagen.terminal_block(term_br['terminal_el'],nel_x,nel_y,nel_z,eldata['el_array'],pos_node['new_node_array'],x_min,y_min,z_min,x_width,y_width,z_width)
+        term_block=placentagen.terminal_block(term_br['terminal_el'],2,5,4,eldata['el_array'],pos_node['new_node_array'],0,0,0,2.5,2,2)
         self.assertTrue(np.isclose(term_block['total_term_block'], 2))
         
 
