@@ -102,10 +102,10 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
 
     return chorion_data
 
-def gen_rectangular_mesh(x_min,x_max,y_min,y_max,z_min,z_max,nel_x,nel_y,nel_z,x_width,y_width,z_width):
-    x = np.linspace(x_min,x_max, x_max/x_width+1)#linspace for x axis
-    y = np.linspace(y_min, y_max, y_max/y_width+1)#linspace for y axis
-    z = np.linspace(z_min, z_max, z_max/z_width+1)#linspace for z axis
+def gen_rectangular_mesh(x_min,x_max,y_min,y_max,z_min,z_max,nel_x,nel_y,nel_z,x_width,y_width,z_width,Xlen,Ylen,Zlen):
+    x = np.linspace(x_min,x_max, Xlen/x_width+1)#linspace for x axis
+    y = np.linspace(y_min, y_max, Ylen/y_width+1)#linspace for y axis
+    z = np.linspace(z_min, z_max, Zlen/z_width+1)#linspace for z axis
     nodes = np.vstack(np.meshgrid(y,z,x)).reshape(3,-1)#generate nodes for rectangular mesh
 
     y=np.array(nodes[0,:])#y coordinates of each node

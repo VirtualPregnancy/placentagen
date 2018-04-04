@@ -21,14 +21,14 @@ class Test_generate_data(TestCase):
 class Test_gen_rectangular_mesh(TestCase):
         
     def test_meshgrid_el(self):
-        mesh_el  = placentagen.gen_rectangular_mesh(0,5,0,10,0,8,2,5,4,2.5,2,2)
-        self.assertTrue(np.isclose(len(mesh_el['nodeOfelement']), 40))
-        self.assertTrue(np.isclose(mesh_el['total_mesh_el'],40))
+        mesh_el  = placentagen.gen_rectangular_mesh(-2.5,2.5,-5,5,-3.54,3.54,2,5,3,2.5,2,2.36,5,10,7.08)
+        self.assertTrue(np.isclose(len(mesh_el['nodeOfelement']), 30))
+        self.assertTrue(np.isclose(mesh_el['total_mesh_el'],30))
         
     def test_meshgrid_node(self):
-        mesh_el  = placentagen.gen_rectangular_mesh(0,5,0,10,0,8,2,5,4,2.5,2,2)
-        self.assertTrue(np.isclose(len(mesh_el['z_coor']),90))
-        self.assertTrue(np.isclose(mesh_el['total_mesh_node'],90))
+        mesh_el  = placentagen.gen_rectangular_mesh(-2.5,2.5,-5,5,-3.54,3.54,2,5,3,2.5,2,2.36,5,10,7.08)
+        self.assertTrue(np.isclose(len(mesh_el['z_coor']),72))
+        self.assertTrue(np.isclose(mesh_el['total_mesh_node'],72))
 
 if __name__ == '__main__':
    unittest.main()
