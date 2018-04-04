@@ -49,6 +49,6 @@ def terminal_block(Terminal_El_num,nel_x,nel_y,nel_z,Br_El,node,x_min,y_min,z_mi
        T_e = ((num_z-1)*nel_x*nel_y + (num_y-1)*nel_x + num_x)-1#the number of mesh grid element where that end node of term_br lie
        term_block[T_e,0] = 1;# if 1, that mesh grid cube contains terminal branch
  
-    return {'term_block':term_block, 'total_term_block': np.sum(term_block)}
+    return {'term_block':term_block, 'total_term_block': int(np.sum(term_block))}
 
 
