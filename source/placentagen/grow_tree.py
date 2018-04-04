@@ -19,100 +19,100 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
+    #Define the total number of nodes and elements prior to growing, plus the new number expected
     num_elems_old = len(initial_geom["elems"])
     num_nodes_old = len(initial_geom["nodes"])
     num_elems_new = num_elems_old + total_estimated
     num_nodes_new = num_nodes_old + total_estimated
     # Pre-allocation of data arrays
-    elem_directions = np.zeros((num_elems_new, 3))
-    elem_order = np.zeros((num_elems_new, 3))
+    #elem_directions = np.zeros((num_elems_new, 3))
+    #elem_order = np.zeros((num_elems_new, 3))
     node_loc = np.zeros((num_nodes_new, 4))
     node_loc[0:num_nodes_old][:] = initial_geom["nodes"]
-    elems = np.zeros((num_elems_new, 3))
+    elems = np.zeros((num_elems_new, 3), dtype = int)
     elems[0:num_elems_old][:] = initial_geom["elems"]
-    elem_upstream = np.zeros((num_elems_new, 3))
+    elem_upstream = np.zeros((num_elems_new, 3),dtype = int)
     elem_upstream[0:num_elems_old][:] = initial_geom['elem_up']
-    elem_downstream = np.zeros((num_elems_new, 3))
+    elem_downstream = np.zeros((num_elems_new, 3), dtype = int)
     elem_downstream[0:num_elems_old][:] = initial_geom['elem_down']
 
     # local arrays
-    nstem = np.zeros((num_elems_new, 2))
-    ne_temp = np.zeros(num_elems_new)
-    ne_old = np.zeros(1000)
-    ld = np.zeros(len(datapoints))
-    ld_np = np.zeros(len(datapoints))
-    ldtmp1 = np.zeros(len(datapoints))
+    nstem = np.zeros((num_elems_new, 2), dtype=int)
+    local_parent_temp = np.zeros(num_elems_new)
+    local_parent = np.zeros(num_elems_new)
+    map_seed_to_elem = np.zeros(len(datapoints), dtype=int)
+    ld_np = np.zeros(len(datapoints), dtype=int)
+    ldtmp1 = np.zeros(len(datapoints), dtype=int)
 
     numtbsum = 0
 
     # Calculate the generations for the initial branches
     # Calculate the direction of the initial branches
 
-    for ne in range(0, num_elems_old):
-        if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
-            elem_order[ne][0] = 1
-        else:
-            ne0 = int(elem_upstream[ne][1])
-            elem_order[ne][0] = elem_order[ne0][0] + 1
-        node_in = int(elems[ne][1])
-        node_out = int(elems[ne][2])
-        elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
-    # initialise ne_old (list of old terminals) to list of terminals in current geometry
+   #for ne in range(0, num_elems_old):
+        #if elem_upstream[ne][0] == 0.0:  # This is the stem (inlet) vessel
+            #elem_order[ne][0] = 1
+        #else:
+            #ne0 = int(elem_upstream[ne][1])
+            #elem_order[ne][0] = elem_order[ne0][0] + 1
+        #node_in = int(elems[ne][1])
+        #node_out = int(elems[ne][2])
+        #elem_directions[ne][:] = calc_branch_direction(node_loc[node_out][1:4] - node_loc[node_in][1:4])
+    # initialise local_parent (list of old terminals) to list of terminals in current geometry
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])
-    ne_old[0:len(parentlist)] = parentlist
-    nt_bns = len(ne_old)  # Curerent number of terminals
+    local_parent[0:len(parentlist)] = parentlist
+    nt_bns = len(parentlist)  # Curerent number of terminals
     n_elm = nt_bns
     for n in range(0, len(parentlist)):
-        nstem[n][0] = ne_old[n]
+        nstem[n][0] = local_parent[n]
 
     # Initialise LD array to map each seed point to a parent branch.
     # For a single parent, all seed points will initially be mapped to
     # it; for multiple parents data_to_mesh is called to calculate
     # the closest parent end-point to each seed point.
-    ld = ld + ne_old[0]
-    ld_np = ld
-    ld = data_to_mesh(ld, datapoints, ne_old, node_loc, elems)
-
+    map_seed_to_elem = map_seed_to_elem + local_parent[0]
+    ld_np = map_seed_to_elem
+    map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
     # Assign temporary arrays
     for nd in range(0, len(datapoints)):
-        if ld[nd] != 0:
-            ne_min = int(ld[nd])
+        if map_seed_to_elem[nd] != 0:
+            ne_min = int(map_seed_to_elem[nd])
             nstem[ne_min][1] = nstem[ne_min][1] + 1
-            ldtmp1[nd] = ld[nd]
+            ldtmp1[nd] = map_seed_to_elem[nd]
 
     # Dealing with cases when there are no datapoints assigned with an element
     nt_bns = 0
     for n in range(0, len(parentlist)):
         if nstem[int(parentlist[n])][1] != 0:
-            ne_old[nt_bns] = parentlist[n]
+            local_parent[nt_bns] = parentlist[n]
             nt_bns = nt_bns + 1
     n_elm = nt_bns
     n_elm_temp = n_elm
-
     # remove terminal elements with only one data point associated and corresponding data pomt
     # from the group
     for n in range(0, n_elm):
-        ne_min = int(ne_old[n])
+        ne_min = int(local_parent[n])
         if nstem[ne_min][1] < 2:
             for nd in range(0, len(datapoints)):
-                ldtmp1[nd] = ld[nd]
-                ld[nd] = 0
-                ne_old[n] = 0
-                n_elm_temp = n_elm_temp - 1
+                if (map_seed_to_elem[nd] == ne_min):
+                    ldtmp1[nd] = map_seed_to_elem[nd]
+                    map_seed_to_elem[nd] = 0
+                    local_parent[n] = 0
+                    n_elm_temp = n_elm_temp - 1
     numtb = 0
     for n in range(0, n_elm):
-        if ne_old[n] == 0:
+        if local_parent[n] == 0:
             i = 0
-            while (n + i < n_elm) and (ne_old[n + i] == 0):
+            while (n + i < n_elm) and (local_parent[n + i] == 0):
                 i = i + 1
             for m in range(n, n_elm - 1):
-                ne_old[m] = ne_old[m + i]
+                local_parent[m] = local_parent[m + i]
             numtb = numtb + 1
     n_elm = n_elm_temp
 
     ld_num = 0
     for nd in range(0, len(datapoints)):
-        if ld[nd] > 0:
+        if map_seed_to_elem[nd] > 0:
             ld_num = ld_num + 1
     # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
 
@@ -135,13 +135,12 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         numzero = 0
         noelem_gen = 0
         max_dist = 0.0
-
         for m in range(0, nt_bns):
-            ne_parent = int(ne_old[m])
-            com = mesh_com(ne_parent, ld, datapoints)
+            ne_parent = int(local_parent[m])
+            com = mesh_com(ne_parent, map_seed_to_elem, datapoints)
             ne_grnd_parent = int(elem_upstream[ne_parent][1])  # Assumes only one parent, true in diverging tree
             np_start = int(elems[ne_parent][2])
-            # np_prt_start = int(elems[ne_parent][1])
+            np_prt_start = int(elems[ne_parent][1])
             # np_grnd_start = int(elems[ne_grnd_parent][1])
             # if elem_downstream[ne_grnd_parent][1] == ne_parent:
             #    if elem_downstream[ne_grnd_parent][2] == 0:
@@ -157,14 +156,14 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             # Split the seed points by the plane defined by the parent branch and the com of the
             # seedpoints attached to it
             if sorv is 'surface':
-                split_data = data_splitby_xy(ld, datapoints, com, node_loc[np_start][1:3], ne_parent, ne, point_limit)
+                split_data = data_splitby_xy(map_seed_to_elem, datapoints, com, node_loc[np_start][1:3], ne_parent, ne, point_limit)
             else:
-                # data_splitby_plane
-                print('hello')
+                split_data = data_splitby_plane(map_seed_to_elem, datapoints, com, node_loc[np_prt_start][1:4],
+                                                node_loc[np_start][1:4], ne_parent, ne, point_limit)
             # Check that you are going to grow two branches
             if split_data['ss'][0] and split_data['ss'][1]:
                 for n in range(0, 2):
-                    com = mesh_com(ne + 1, ld, datapoints)
+                    com = mesh_com(ne + 1, map_seed_to_elem, datapoints)
 
                     start_node_loc = node_loc[np_start][1:4]
                     length_new = np.linalg.norm(fraction * (com - start_node_loc))
@@ -202,13 +201,13 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     ne = ne + 1
                     nnod = nnod + 1
 
-                    elem_order[ne][0] = elem_order[ne][0] + 1
+                    #elem_order[ne][0] = elem_order[ne][0] + 1
                     noelem_gen = noelem_gen + 1  # Only used for runtime output
 
                     nstem[ne][0] = nstem[ne_parent][0]
 
                     if branch and split_data['ss'][n]:
-                        ne_temp[n_elm] = ne
+                        local_parent_temp[n_elm] = ne
                         n_elm = n_elm + 1
                     else:
                         numtb = numtb + 1
@@ -220,29 +219,29 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                 numtb = numtb + 1
                 min_dist = 1.0e10
                 for nd in range(0, len(datapoints)):
-                    if ld[nd] != 0:
-                        if ld[nd] == ne + 1:
-                            ld[nd] = ne_parent  # give back to parent
-                        if ld[nd] == ne + 2:
-                            ld[nd] = ne_parent
+                    if map_seed_to_elem[nd] != 0:
+                        if map_seed_to_elem[nd] == ne + 1:
+                            map_seed_to_elem[nd] = ne_parent  # give back to parent
+                        if map_seed_to_elem[nd] == ne + 2:
+                            map_seed_to_elem[nd] = ne_parent
                         dist = dist_two_vectors(datapoints[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                         if dist < min_dist:
-                            if ld[nd] == ne_parent:
+                            if map_seed_to_elem[nd] == ne_parent:
                                 nd_min = nd
                                 min_dist = dist
                 ldtmp1[nd_min] = ne_parent
-                ld[nd_min] = 0
+                map_seed_to_elem[nd_min] = 0
                 ld_num = ld_num - 1
 
         # .......Copy the temporary list of branches to NE_OLD. These become the
         # .......parent elements for the next branching
 
         for n in range(0, n_elm):
-            ne_old[n] = ne_temp[n]
-            nstem[int(ne_old[n])][1] = 0  # initialaw count of data points
+            local_parent[n] = local_parent_temp[n]
+            nstem[int(local_parent[n])][1] = 0  # initialaw count of data points
 
         # reallocate datapoints
-        ld = data_to_mesh(ld, datapoints, ne_old[0:n_elm], node_loc, elems)
+        map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, local_parent[0:n_elm], node_loc, elems)
 
         print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
               '   ' + str(numtb) + '   ' + str(ld_num) + '   ' + str(
@@ -330,7 +329,8 @@ def refine_1D(initial_geom, from_elem):
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
             'elem_down': elem_connectivity['elem_down']}
 
-def add_stem_villi(initial_geom, from_elem,sv_length):
+
+def add_stem_villi(initial_geom, from_elem, sv_length):
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -340,12 +340,12 @@ def add_stem_villi(initial_geom, from_elem,sv_length):
     elem_upstream_old = initial_geom['elem_up']
     elem_downstream_old = initial_geom['elem_down']
 
-    #calculate number pf new elements to add
+    # calculate number pf new elements to add
     num_2_add = 0
     for ne in range(from_elem, num_elems_old):
         if elem_downstream_old[ne][0] == 1:
             num_2_add = num_2_add + 1
-    #Allocate arrays
+    # Allocate arrays
     num_elems_new = num_elems_old + num_2_add
     num_nodes_new = num_nodes_old + num_2_add
     elems = np.zeros((num_elems_new, 3), dtype=int)
@@ -354,13 +354,13 @@ def add_stem_villi(initial_geom, from_elem,sv_length):
     node_loc[0:num_nodes_old][:] = initial_geom['nodes']
     elems[0:num_elems_old][:] = initial_geom['elems']
 
-    #Create new elements
+    # Create new elements
     nnod = num_nodes_old - 1
     ne0 = num_elems_old - 1
-    for ne in range(from_elem,num_elems_old):
+    for ne in range(from_elem, num_elems_old):
         if elem_downstream_old[ne][0] == 1:
-            nnod = nnod+1
-            ne0 = ne0+1
+            nnod = nnod + 1
+            ne0 = ne0 + 1
             node_loc[nnod][0] = nnod
             elems[ne0][0] = ne0
             elems[ne0][1] = elems[ne][2]
@@ -368,7 +368,6 @@ def add_stem_villi(initial_geom, from_elem,sv_length):
 
             node_loc[nnod][1:3] = node_loc[elems[ne][2]][1:3]
             node_loc[nnod][3] = node_loc[elems[ne][2]][3] - sv_length
-
 
     elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
 
@@ -517,6 +516,62 @@ def data_splitby_xy(ld, datapoints, x0, x1, ne_parent, ne_current, point_limit):
     return {'nde_change1': nde_change1, 'nde_change2': nde_change2, 'ss': ss}
 
 
+def data_splitby_plane(ld, datapoints, x0, x1, x2, ne_parent, ne_current, point_limit):
+    # Decides which side of a plane a random point is on.
+
+    # x0 is location of com
+    # x1 is start node of parent
+    # x2 is end node of parent
+
+    npoints = 0
+    dat1 = 0
+    dat2 = 0
+    ss = [True, True]
+    # nd1_1st = 0
+    # nd2_1st = 0
+    nde_change1 = 0
+    nde_change2 = 0
+
+    colinear = pg_utilities.check_colinear(x0, x1, x2)
+    if colinear:
+        print('WARNING: Colinear is true')
+    plane = pg_utilities.plane_from_3_pts(x0, x1, x2, False)
+    for nd in range(0, len(datapoints)):
+        nsp = ld[nd]
+        if nsp == ne_parent:  # data point belongs to this element
+            npoints = npoints + 1
+            checkvalue = 0.0
+            for i in range(0, 3):
+                checkvalue = checkvalue + plane[i] * datapoints[nd][i]
+            checkvalue = -1.0*checkvalue - plane[3]
+            print(checkvalue,ne_parent)
+    #        checkvalue = (x1[0] - x0[0]) * (datapoints[nd][1] - x0[1]) - (datapoints[nd][0] - x0[0]) * (x1[1] - x0[1])
+            if checkvalue >= 0:
+                if dat1 == 0:
+                    nd1_1st = nd
+                dat1 = dat1 + 1
+                ld[nd] = ne_current + 1
+                nde_change1 = ne_current + 1
+            else:
+                if dat2 == 0:
+                    nd2_1st = nd
+                dat2 = dat2 + 1
+                ld[nd] = ne_current + 2
+                nde_change2 = ne_current + 2
+    if npoints < point_limit:
+        ss[0] = False
+        ss[1] = False
+    else:
+        ss[0] = True
+        ss[1] = True
+        if dat1 < point_limit:
+            ss[0] = False
+        if dat2 < point_limit:
+            ss[0] = False
+
+    return {'nde_change1': nde_change1, 'nde_change2': nde_change2, 'ss': ss}
+
+
 def calc_branch_direction(vector):
     length = 0.0
     for i in range(0, len(vector)):
@@ -535,10 +590,10 @@ def dist_two_vectors(vector1, vector2):
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
-    parentlist = np.zeros(10)
-    ne_old = np.zeros(10)
-    ntemp_list = np.zeros(10)
-    ne_temp = np.zeros(10)
+    parentlist = np.zeros(1000)
+    ne_old = np.zeros(1000)
+    ntemp_list = np.zeros(1000)
+    ne_temp = np.zeros(1000)
 
     NT_BNS = 1
     ne_old[0] = ne_parent
@@ -564,7 +619,9 @@ def group_elem_parent_term(ne_parent, elem_downstream):
             num_in_list = num_in_list + 1
             parentlist[num_in_list - 1] = ne
     parentlist.resize(num_in_list)
-
+    ne_old.resize(num_in_list)
+    ntemp_list.resize(num_in_list)
+    ne_temp.resize(num_in_list)
     print('Grouped by parent,' + str(ne_parent) + ' No in parent list,' + str(num_in_list))
 
     return parentlist
