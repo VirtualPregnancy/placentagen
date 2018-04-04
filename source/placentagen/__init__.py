@@ -8,3 +8,5 @@ from .grow_tree import grow_chorionic_surface
 from .grow_tree import group_elem_parent_term
 from .grow_tree import umbilical_seed_geometry
 from .analyse_tree import terminal_branch
+from .analyse_tree import pos_axis
+from .analyse_tree import terminal_block
