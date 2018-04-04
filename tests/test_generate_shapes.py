@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import numpy as np
-
+import unittest
 import placentagen
 
 
@@ -18,4 +18,17 @@ class Test_generate_data(TestCase):
         array_test = np.isclose(datapoints[1][:], [0.57526684, -0.14461422, 0.18163017])
         self.assertTrue(array_test.all)
 
+class Test_gen_rectangular_mesh(TestCase):
+        
+    def test_meshgrid_el(self):
+        mesh_el  = placentagen.gen_rectangular_mesh(0,5,0,10,0,8,2,5,4,2.5,2,2)
+        self.assertTrue(np.isclose(len(mesh_el['nodeOfelement']), 40))
+        self.assertTrue(np.isclose(mesh_el['total_mesh_el'],40))
+        
+    def test_meshgrid_node(self):
+        mesh_el  = placentagen.gen_rectangular_mesh(0,5,0,10,0,8,2,5,4,2.5,2,2)
+        self.assertTrue(np.isclose(len(mesh_el['z_coor']),90))
+        self.assertTrue(np.isclose(mesh_el['total_mesh_node'],90))
 
+if __name__ == '__main__':
+   unittest.main()
