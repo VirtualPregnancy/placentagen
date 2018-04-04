@@ -15,14 +15,7 @@ def terminal_branch(Br_El):#Br_El is el_array output from import_exeelem_tree su
     Terminal_El_num=np.array(np.where(T_Br[:,0]==1))#looking for the element number which are terminal branch 
     
     return {'terminal_el': Terminal_El_num, 'total_terminal_el': len(Terminal_El_num[0])}
-def pos_axis(NODE,x_rad,y_rad,z_rad):#NODE is the output array from nodedata['node_array'], x_rad,y_rad,z_rad are radius of ellipsoid#this function is to shift the whole tree into positive axis as the meshgrid in positive axis works easier and faster
-    
-    for i in range (0,len(NODE)):
-      
-         NODE[i][1] = NODE[i][1]+x_rad#to shift the x axis into positve axis
-         NODE[i][2] = NODE[i][2]+y_rad#to shift the y axis into positive axis
-         NODE[i][3] = NODE[i][3]+z_rad#to shift the z axis into positive axis
-    return{'new_node_array':NODE}
+
 
 def terminal_block(Terminal_El_num,nel_x,nel_y,nel_z,Br_El,node,x_min,y_min,z_min,x_width,y_width,z_width):
     term_block = np.zeros((nel_x*nel_y*nel_z,1))#this stores the 1 and 0 value. If it is 1, that meshgrid element contain terminal branch of tree
