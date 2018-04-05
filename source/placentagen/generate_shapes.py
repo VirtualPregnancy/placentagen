@@ -126,9 +126,8 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     y_width = y_spacing * (nnod_y - 1)
     nnod_z = int(np.ceil(z_radius * 2.0 / z_spacing)) + 1
     z_width = z_spacing * (nnod_z - 1)
-    print(nnod_y,y_width)
 
-    # # Calculate an appropriate
+    # Create linspaces for x y and z coordinates
     x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
     y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
     z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis

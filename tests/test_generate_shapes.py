@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 import numpy as np
+
 import placentagen
 
 
@@ -17,17 +18,25 @@ class Test_generate_data(TestCase):
         array_test = np.isclose(datapoints[1][:], [0.57526684, -0.14461422, 0.18163017])
         self.assertTrue(array_test.all)
 
+
 class Test_gen_rectangular_mesh(TestCase):
-        
-    def test_meshgrid_el(self):
-        mesh_el  = placentagen.gen_rectangular_mesh(-2.5,2.5,-5,5,-3.54,3.54,2,5,3,2.5,2,2.36,5,10,7.08)
-        self.assertTrue(np.isclose(len(mesh_el['nodeOfelement']), 30))
-        self.assertTrue(np.isclose(mesh_el['total_mesh_el'],30))
-        
-    def test_meshgrid_node(self):
-        mesh_el  = placentagen.gen_rectangular_mesh(-2.5,2.5,-5,5,-3.54,3.54,2,5,3,2.5,2,2.36,5,10,7.08)
-        self.assertTrue(np.isclose(len(mesh_el['z_coor']),72))
-        self.assertTrue(np.isclose(mesh_el['total_mesh_node'],72))
+
+    def test_rect_el_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_elems'] == 4)
+
+    def test_rect_el_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['elems'][0][5] == 9)
+
+    def test_rect_node_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_nodes'] == 18)
+
+    def test_rect_node_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(np.isclose(mesh_el['nodes'][14][1],0.5))
+
 
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()
