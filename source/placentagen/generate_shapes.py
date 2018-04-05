@@ -117,7 +117,7 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
-
+    print(x_radius,y_radius,z_radius)
     # z height of ellipsoid is 2* zradius
     # We want number of nodes to cover height and have prescribed spaing
     nnod_x = int(np.ceil(x_radius * 2.0 / x_spacing)) + 1
