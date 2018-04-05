@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import os
-import numpy as np
 
 
 def export_ex_coords(data, groupname, filename, type):
@@ -15,7 +13,7 @@ def export_ex_coords(data, groupname, filename, type):
     data_num = len(data)
     filename = filename + '.' + type
     f = open(filename, 'w')
-    f.write(" Group name: %s\n" %groupname)
+    f.write(" Group name: %s\n" % groupname)
     f.write(" #Fields=1\n")
     f.write(" 1) coordinates, coordinate, rectangular cartesian, #Components=3\n")
     f.write(" x.  Value index=1, #Derivatives=0\n")
@@ -24,7 +22,7 @@ def export_ex_coords(data, groupname, filename, type):
 
     for x in range(0, data_num):
         if data_length is 4:
-            f.write("Node:  "        "%s\n" % int(data[x][0]+1))
+            f.write("Node:  "        "%s\n" % int(data[x][0] + 1))
             f.write("          %s\n" % data[x][1])
             f.write("          %s\n" % data[x][2])
             f.write("          %s\n" % data[x][3])
@@ -35,7 +33,8 @@ def export_ex_coords(data, groupname, filename, type):
             f.write("          %s\n" % data[x][2])
     f.close()
 
-def export_exelem_1d(data,groupname,filename):
+
+def export_exelem_1d(data, groupname, filename):
     # Exports element locations to exelem format
     # data = array of data
     # groupname = what you want your data to be called in cmgui
@@ -43,7 +42,7 @@ def export_exelem_1d(data,groupname,filename):
     data_num = len(data)
     filename = filename + '.exelem'
     f = open(filename, 'w')
-    f.write(" Group name: %s\n" %groupname)
+    f.write(" Group name: %s\n" % groupname)
     f.write(" Shape.  Dimension=1\n")
     f.write(" #Scale factor sets= 1\n")
     f.write("   l.Lagrange, #Scale factors= 2\n")
@@ -75,11 +74,116 @@ def export_exelem_1d(data,groupname,filename):
     f.write("       Value indices:     1\n")
     f.write("       Scale factor indices:   2\n")
     for x in range(0, data_num):
-        f.write(" Element:            %s 0 0\n" % int(data[x][0]+1))
+        f.write(" Element:            %s 0 0\n" % int(data[x][0] + 1))
         f.write("   Nodes:")
-        f.write("                %s            %s\n" % (int(data[x][1]+1), int(data[x][2]+1)))
+        f.write("                %s            %s\n" % (int(data[x][1] + 1), int(data[x][2] + 1)))
         f.write("   Scale factors:\n")
         f.write("       0.1000000000000000E+01   0.1000000000000000E+01\n")
+    f.close()
+
+
+def export_exelem_3d_linear(data, groupname, filename):
+    # Exports element locations to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(data)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape. Dimension=3 line*line*line\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           8\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) coordinates, coordinate, rectangular cartesian, #Components=3\n")
+    f.write("   x.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("   y.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("   z.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    for x in range(0, data_num):
+        f.write(" Element:            %s 0 0\n" % int(data[x][0] + 1))
+        f.write("   Nodes:")
+        f.write(
+            "                %s            %s            %s            %s            %s            %s            %s            %s\n" % (
+                int(data[x][1] + 1), int(data[x][2] + 1), int(data[x][3] + 1), int(data[x][4] + 1), int(data[x][5] + 1),
+                int(data[x][6] + 1), int(data[x][7] + 1), int(data[x][8] + 1)))
+        #f.write("   Scale factors:\n")
+        #f.write(
+        #    "       0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01   0.1000000000000000E+01\n")
     f.close()
 
 
