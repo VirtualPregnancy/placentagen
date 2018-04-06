@@ -53,7 +53,6 @@ def terminals_in_sampling_grid(rectangular_mesh,terminal_list,node_loc):
                     if coord_terminal[2] >= min_coords[2] and coord_terminal[2] < max_coords[2]:
                         in_element[2] = True
             if(np.all(in_element)):
-                print('Whoo hoo I am in this element')
                 terminals_in_grid[ne] = terminals_in_grid[ne]+1
 
     return terminals_in_grid
