@@ -12,26 +12,35 @@ class Test_Terminal_Br(TestCase):
         
     def test_terminal_br(self):
         eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
-        term_br  = placentagen.terminal_branch(eldata['el_array'])
-        self.assertTrue(np.isclose(term_br['terminal_el'][0,1], 2))
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br  = placentagen.calc_terminal_branch(noddata['nodes'],eldata['elems'])
+        print(term_br['terminal_elems'])
+        self.assertTrue(term_br['terminal_elems'][0] == 1)
         
     def test_terminal_br_total(self):
         eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
-        term_br_total  = placentagen.terminal_branch(eldata['el_array'])
-        self.assertTrue(np.isclose(term_br_total['total_terminal_el'], 2))
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br  = placentagen.calc_terminal_branch(noddata['nodes'],eldata['elems'])
+        self.assertTrue(term_br['total_terminals'] == 2)
 
 
 
         
-class Test_term_br_location(TestCase):
+class test_term_br_location(TestCase):
         
     def test_term_br_loc(self):
         
         eldata=placentagen.import_exelem_tree(TESTDATA_FILENAME1)
         nodedata=placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        term_br=placentagen.terminal_branch(eldata['el_array'])
-        term_block=placentagen.terminal_block(term_br['terminal_el'],2,5,3,eldata['el_array'],nodedata['node_array'],-2.5,-5,-3.54,2.5,2,2.36)
-        self.assertTrue(np.isclose(term_block['total_term_block'], 2))
+        term_br  = placentagen.calc_terminal_branch(nodedata['nodes'],eldata['elems'])
+        volume = 1  # mm^3
+        thickness = 1  # mm
+        ellipticity = 1.00  # no units
+        spacing = 1.0  # mm
+        rectangular_mesh = placentagen.gen_rectangular_mesh(volume, thickness, ellipticity, spacing, spacing, spacing)
+        terminals_in_grid = placentagen.terminals_in_sampling_grid(rectangular_mesh, term_br, nodedata['nodes'])
+        test_array=terminals_in_grid == [[0, 1, 0, 1]]
+        self.assertTrue(test_array.all)
         
 
 if __name__ == '__main__':

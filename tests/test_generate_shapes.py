@@ -19,3 +19,24 @@ class Test_generate_data(TestCase):
         self.assertTrue(array_test.all)
 
 
+class Test_gen_rectangular_mesh(TestCase):
+
+    def test_rect_el_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_elems'] == 4)
+
+    def test_rect_el_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['elems'][0][5] == 9)
+
+    def test_rect_node_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_nodes'] == 18)
+
+    def test_rect_node_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(np.isclose(mesh_el['nodes'][14][2],0.5))
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,48 +1,60 @@
 #!/usr/bin/env python
 import numpy as np
+from . import pg_utilities
 
-def terminal_branch(Br_El):#Br_El is el_array output from import_exeelem_tree subroutine
+def calc_terminal_branch(node_loc,elems):
+    #This function generates a list of terminal nodes associated with a branching geometry
+    #inputs are node locations and elements
+    num_elems = len(elems)
+    num_nodes = len(node_loc)
+    elem_cnct = pg_utilities.element_connectivity_1D(node_loc, elems)
 
-    T_Br=np.ones((len(Br_El),1))#if it is 1, it is terminal br, if it is zero it is not, initialise all branches as terminal
+    terminal_branches = np.zeros(num_elems, dtype = int)
+    terminal_nodes = np.zeros(num_nodes, dtype = int)
 
-    for i in range(0, len(Br_El)):
-        for j in range(0,len(Br_El)):     
-        
-            if Br_El[j][1] == Br_El[i][2]:# if the first node of any elment is equal to 2nd node another element, 
-               T_Br[i] = 0 #the element is not terminal (zero means 'not terminal')
-             
-       
-    Terminal_El_num=np.array(np.where(T_Br[:,0]==1))#looking for the element number which are terminal branch 
-    
-    return {'terminal_el': Terminal_El_num, 'total_terminal_el': len(Terminal_El_num[0])}
+    num_term = 0
+    for ne in range(0,num_elems):
+        if elem_cnct['elem_down'][ne][0] == 0: #no downstream element
+            terminal_branches[num_term] = ne
+            terminal_nodes[num_term] = elems[ne][2] #node that leaves the terminal element
+            num_term = num_term + 1
+
+    terminal_branches = np.resize(terminal_branches,num_term)
+    terminal_nodes = np.resize(terminal_nodes,num_term)
+
+    print('Total number of terminals assessed, num_terminals =  ' + str(num_term))
+
+    return {'terminal_elems': terminal_branches, 'terminal_nodes': terminal_nodes, 'total_terminals': num_term}
 
 
-def terminal_block(Terminal_El_num,nel_x,nel_y,nel_z,Br_El,node,x_min,y_min,z_min,x_width,y_width,z_width):
-    term_block = np.zeros((nel_x*nel_y*nel_z,1))#this stores the 1 and 0 value. If it is 1, that meshgrid element contain terminal branch of tree
-    for j in range(0,len(Terminal_El_num[0])):
+def terminals_in_sampling_grid(rectangular_mesh,terminal_list,node_loc):
+    #This function counts the number of terminals in a sampling grid element
+    #inputs are:
+    #Rectangular mesh - the sampling grid
+    #terminal_list - a list of terminals
+    #node_loc - location of nodes
+    num_sample_elems = rectangular_mesh['total_elems']
+    num_terminals = terminal_list['total_terminals']
+    terminals_in_grid = np.zeros(num_sample_elems,dtype = int)
 
-       N=Br_El[Terminal_El_num[0][j]]# element connectivity of each terminal branch
-  
-       Endpoints=node[int(N[2])-1] # coordinates of 2nd node in element connectivity
-  
-       #searching where that node is located in the mesh grid cube element
-       num_x = np.floor((Endpoints[1]-x_min)/x_width)+1;
-       num_y = np.floor((Endpoints[2]-y_min)/y_width)+1;
-       num_z = np.floor((Endpoints[3]-z_min)/z_width)+1;
-   
-       if num_x > nel_x:
-          num_x = nel_x
+    for ne in range(0,num_sample_elems):
+        #First node has min x,y,z and last node has max x,y,z
+        first_node = rectangular_mesh['elems'][ne][1]
+        last_node = rectangular_mesh['elems'][ne][8]
+        min_coords = rectangular_mesh['nodes'][first_node][0:3]
+        max_coords = rectangular_mesh['nodes'][last_node][0:3]
+        for nt in range(0,num_terminals):
+            in_element = [False, False, False]
+            coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
+            if coord_terminal[0] >= min_coords[0] and coord_terminal[0] < max_coords[0]:
+                in_element[0] = True
+                if coord_terminal[1] >= min_coords[1] and coord_terminal[1] < max_coords[1]:
+                    in_element[1] = True
+                    if coord_terminal[2] >= min_coords[2] and coord_terminal[2] < max_coords[2]:
+                        in_element[2] = True
+            if(np.all(in_element)):
+                print('Whoo hoo I am in this element')
+                terminals_in_grid[ne] = terminals_in_grid[ne]+1
 
-       if num_y >= nel_y:
-          num_y = nel_y
-   
-       if num_z >= nel_z:
-          num_z = nel_z
-
-       T_e = ((num_z-1)*nel_x*nel_y + (num_y-1)*nel_x + num_x)-1#the number of mesh grid element where that end node of term_br lie
-       T_e =int(T_e)
-       term_block[T_e,0] = 1;# if 1, that mesh grid cube contains terminal branch
- 
-    return {'term_block':term_block, 'total_term_block': int(np.sum(term_block))}
-
+    return terminals_in_grid
 

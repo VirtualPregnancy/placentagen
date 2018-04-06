@@ -17,20 +17,20 @@ class Test_import_exnode_exelem(TestCase):
 
     def test_node_array_setup(self):
         nodedata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        node_array = nodedata['node_array']
-        self.assertTrue(np.isclose(node_array[2][2], -0.5000000000000000E+01))
+        node_array = nodedata['nodes']
+        self.assertTrue(np.isclose(node_array[2][2], -0.5000000000000000E+00))
 
 
 
     def test_el_num(self):
        el_num= placentagen.import_exelem_tree(TESTDATA_FILENAME1)
-       self.assertTrue(el_num['total_el'] is 3)
+       self.assertTrue(el_num['total_elems'] is 3)
 
 
     def test_el_array_setup(self):
         eldata = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
-        el_array = eldata['el_array']
-        self.assertTrue(np.isclose(el_array[0][2], 2))
+        el_array = eldata['elems']
+        self.assertTrue(el_array[0][2] == 1)
 
 
 

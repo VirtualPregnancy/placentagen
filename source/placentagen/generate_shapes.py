@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+
 from . import pg_utilities
 
 
@@ -102,4 +103,62 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
 
     return chorion_data
 
-#to add terminal_branch code
+
+def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z_spacing):
+    # Generates equally spaced data nodes and elements and constructs a rectangular 'mesh' that covers the space that is
+    # made up of an ellipsoidal placenta
+    # volume=volume of ellipsoid
+    # thickness = placental thickness (z-dimension)
+    # ellipticity = ratio of y to x axis dimensions
+    # X,Y,Z spacing is the number of elements required in each of the x, y z directions
+
+    # Calculate the dimensions of the ellipsoid
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+    # z height of ellipsoid is 2* zradius
+    # We want number of nodes to cover height and have prescribed spaing
+    nnod_x = int(np.ceil(x_radius * 2.0 / x_spacing)) + 1
+    x_width = x_spacing * (nnod_x - 1)
+    nnod_y = int(np.ceil(y_radius * 2.0 / y_spacing)) + 1
+    y_width = y_spacing * (nnod_y - 1)
+    nnod_z = int(np.ceil(z_radius * 2.0 / z_spacing)) + 1
+    z_width = z_spacing * (nnod_z - 1)
+
+    # Create linspaces for x y and z coordinates
+    x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
+    y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
+    z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis
+    node_loc_temp = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
+
+    node_loc = np.zeros((nnod_x*nnod_y*nnod_z,3))
+    for i in range(0,len(node_loc)):
+        node_loc[i][0] = node_loc_temp[i][2]
+        node_loc[i][1] = node_loc_temp[i][0]
+        node_loc[i][2] = node_loc_temp[i][1]
+
+    # Generating the element connectivity of each cube element, 8 nodes for each 3D cube element
+    num_elems = (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)
+    elems = np.zeros((num_elems, 9),
+                     dtype=int)  # this stores first element number and then the nodes of each mesh element
+    element_number = 0
+
+    ne = 0
+    # loop through elements
+    for k in range(1, nnod_z):
+        for j in range(1, nnod_y):
+            for i in range(1, nnod_x):
+                elems[ne][0] = ne  # store element number
+                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) #lowest coordinates
+                elems[ne][2] = elems[ne][1] + 1 #add one in x
+                elems[ne][3] = elems[ne][1] + nnod_x #go through x and find first in y
+                elems[ne][4] = elems[ne][3] + 1 #add one in y
+                elems[ne][5] = elems[ne][1] + nnod_x * nnod_y #same as 1 -4 but at higher z -coord
+                elems[ne][6] = elems[ne][2] + nnod_x * nnod_y
+                elems[ne][7] = elems[ne][3] + nnod_x * nnod_y
+                elems[ne][8] = elems[ne][4] + nnod_x * nnod_y
+                ne = ne + 1
+
+    return {'nodes': node_loc, 'elems': elems, 'total_nodes': nnod_x * nnod_y * nnod_z,
+            'total_elems': (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)}
