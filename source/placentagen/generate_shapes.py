@@ -117,7 +117,6 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
-    print(x_radius,y_radius,z_radius)
     # z height of ellipsoid is 2* zradius
     # We want number of nodes to cover height and have prescribed spaing
     nnod_x = int(np.ceil(x_radius * 2.0 / x_spacing)) + 1
@@ -131,7 +130,13 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
     y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
     z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis
-    node_loc = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
+    node_loc_temp = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
+
+    node_loc = np.zeros((nnod_x*nnod_y*nnod_z,3))
+    for i in range(0,len(node_loc)):
+        node_loc[i][0] = node_loc_temp[i][2]
+        node_loc[i][1] = node_loc_temp[i][0]
+        node_loc[i][2] = node_loc_temp[i][1]
 
     # Generating the element connectivity of each cube element, 8 nodes for each 3D cube element
     num_elems = (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)
@@ -145,11 +150,11 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
         for j in range(1, nnod_y):
             for i in range(1, nnod_x):
                 elems[ne][0] = ne  # store element number
-                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1)
-                elems[ne][2] = elems[ne][1] + 1
-                elems[ne][3] = elems[ne][1] + nnod_x
-                elems[ne][4] = elems[ne][3] + 1
-                elems[ne][5] = elems[ne][1] + nnod_x * nnod_y
+                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) #lowest coordinates
+                elems[ne][2] = elems[ne][1] + 1 #add one in x
+                elems[ne][3] = elems[ne][1] + nnod_x #go through x and find first in y
+                elems[ne][4] = elems[ne][3] + 1 #add one in y
+                elems[ne][5] = elems[ne][1] + nnod_x * nnod_y #same as 1 -4 but at higher z -coord
                 elems[ne][6] = elems[ne][2] + nnod_x * nnod_y
                 elems[ne][7] = elems[ne][3] + nnod_x * nnod_y
                 elems[ne][8] = elems[ne][4] + nnod_x * nnod_y

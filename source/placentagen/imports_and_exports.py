@@ -234,7 +234,6 @@ def import_exelem_tree(filename):
                 count_atribute = 0  # intitalise attributes of the el (1st el, 2nd el)
                 #el_array.append([0, 0, 0])  # initialise a list of attributes for each el
                 el_array = np.append(el_array, np.zeros((1, 3),dtype = int), axis=0)
-                print(int(str.split(line)[1]))
                 el_array[count_el - 1][count_atribute] = int(str.split(line)[1])-1
             else:
                 line_num = is_float(line_type)  # checking if the line is a number
