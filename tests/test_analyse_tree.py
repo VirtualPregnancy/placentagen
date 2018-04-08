@@ -48,8 +48,8 @@ class Test_placental_vol(TestCase):
     def test_pl_vol(self):
         placenta_vol=1
         thickness = (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0
-        rectangular_mesh=pg.gen_rectangular_mesh(placenta_vol,thickness, 1,1,1,1)
-        p_vol=pg.placental_vol(rectangular_mesh, placenta_vol, thickness, 1,1,1,1)
+        rectangular_mesh=placentagen.gen_rectangular_mesh(placenta_vol,thickness, 1,1,1,1)
+        p_vol=placentagen.placental_vol(rectangular_mesh, placenta_vol, thickness, 1,1,1,1)
                
         self.assertTrue(placenta_vol-0.02<= p_vol['total_pl_vol'] <= placenta_vol+0.02)
        
