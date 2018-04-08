@@ -13,3 +13,4 @@ from .grow_tree import refine_1D
 from .grow_tree import add_stem_villi
 from .analyse_tree import calc_terminal_branch
 from .analyse_tree import terminals_in_sampling_grid
+from .analyse_tree import placental_vol

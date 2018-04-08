@@ -57,3 +57,67 @@ def terminals_in_sampling_grid(rectangular_mesh,terminal_list,node_loc):
 
     return terminals_in_grid
 
+
+def placental_vol(rectangular_mesh, volume, thickness, ellipticity,x_spacing,y_spacing,z_spacing):
+    elems=rectangular_mesh['elems']
+    nodes=rectangular_mesh['nodes']
+    x=nodes[:,0]
+    y=nodes[:,1]
+    z=nodes[:,2]
+    total_elems=rectangular_mesh['total_elems']
+
+    
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_rad = radii['z_radius']
+    x_rad = radii['x_radius']
+    y_rad= radii['y_radius']
+
+    pl_vol_in_grid=np.zeros((total_elems,3),dtype=object)#1st col stores the number of samp_grid_el, 2nd col stores 0/1/2 (depend on type of samp_grid_el), 3rd col stores the pl_vol in that sam_grid_el
+    pl_vol_in_grid[:,0:1]=int(0)
+    pl_vol_in_grid[:,2]=float(0)
+    
+    for ii in range(0,len(elems)):
+    
+       if ((x[elems[ii,1]])**2/x_rad**2+(y[elems[ii,1]])**2/y_rad**2+(z[elems[ii,1]])**2/z_rad**2)<=1 and ((x[elems[ii,2]])**2/x_rad**2+(y[elems[ii,2]])**2/y_rad**2+(z[elems[ii,2]])**2/z_rad**2)<=1 and ((x[elems[ii,3]])**2/x_rad**2+(y[elems[ii,3]])**2/y_rad**2+(z[elems[ii,3]])**2/z_rad**2)<=1 and ((x[elems[ii,4]])**2/x_rad**2+(y[elems[ii,4]])**2/y_rad**2+(z[elems[ii,4]])**2/z_rad**2)<=1 and ((x[elems[ii,5]])**2/x_rad**2+(y[elems[ii,5]])**2/y_rad**2+(z[elems[ii,5]])**2/z_rad**2)<=1 and ((x[elems[ii,6]])**2/x_rad**2+(y[elems[ii,6]])**2/y_rad**2+(z[elems[ii,6]])**2/z_rad**2)<=1 and ((x[elems[ii,7]])**2/x_rad**2+(y[elems[ii,7]])**2/y_rad**2+(z[elems[ii,7]])**2/z_rad**2)<=1 and ((x[elems[ii,8]])**2/x_rad**2+(y[elems[ii,8]])**2/y_rad**2+(z[elems[ii,8]])**2/z_rad**2)<=1 :#if all 8 nodes are inside the ellipsoid
+         pl_vol_in_grid[ii,0]=ii
+         pl_vol_in_grid[ii,1]=2 #if the sam_grid_element is completely inside the placental ellipsoid, it is defined as 2
+         pl_vol_in_grid[ii,2]=x_spacing*y_spacing*z_spacing#the placental vol in that samp_grid_el is same as vol of samp_grid_el
+         
+
+       elif ((x[elems[ii,1]])**2/x_rad**2+(y[elems[ii,1]])**2/y_rad**2+(z[elems[ii,1]])**2/z_rad**2)>1 and ((x[elems[ii,2]])**2/x_rad**2+(y[elems[ii,2]])**2/y_rad**2+(z[elems[ii,2]])**2/z_rad**2)>1 and ((x[elems[ii,3]])**2/x_rad**2+(y[elems[ii,3]])**2/y_rad**2+(z[elems[ii,3]])**2/z_rad**2)>1 and ((x[elems[ii,4]])**2/x_rad**2+(y[elems[ii,4]])**2/y_rad**2+(z[elems[ii,4]])**2/z_rad**2)>1 and ((x[elems[ii,5]])**2/x_rad**2+(y[elems[ii,5]])**2/y_rad**2+(z[elems[ii,5]])**2/z_rad**2)>1 and ((x[elems[ii,6]])**2/x_rad**2+(y[elems[ii,6]])**2/y_rad**2+(z[elems[ii,6]])**2/z_rad**2)>1 and ((x[elems[ii,7]])**2/x_rad**2+(y[elems[ii,7]])**2/y_rad**2+(z[elems[ii,7]])**2/z_rad**2)>1 and ((x[elems[ii,8]])**2/x_rad**2+(y[elems[ii,8]])**2/y_rad**2+(z[elems[ii,8]])**2/z_rad**2)>1 :#if all 8 nodes are outside the ellpsiod
+
+         pl_vol_in_grid[ii,0]=ii  
+         pl_vol_in_grid[ii,1]=0#this type of samp_grid_el is defined as 0
+         pl_vol_in_grid[ii,2]=0 #since this samp_grid_el is completely outside, the placental vol is zero (there will be no tree here and no need to worried about the vol)
+         
+       else: #if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
+
+                       
+         pl_vol_in_grid[ii,1]=1 #this type of samp_grid_el is defined as 1. The placental vol cannot be fully cube, so has to calculate proportion of pl_vol
+         #Filling the equally spaced datapoints in this samp_grid_el and looking for how many datapoints falls in the ellipsoid and can calculate volume 
+         startx=x[elems[ii,1]]
+         endx=x[elems[ii,2]]
+
+         starty=y[elems[ii,1]]
+         endy=y[elems[ii,3]]
+
+         startz=z[elems[ii,1]]
+         endz=z[elems[ii,5]]
+
+         xVector = np.linspace(startx, endx, 30)
+         yVector = np.linspace(starty, endy, 30)
+         zVector = np.linspace(startz, endz, 30)
+         
+         nodes = np.vstack(np.meshgrid(xVector,yVector,zVector)).reshape(3,-1).T
+         
+         pointcount=0
+         for jj in range (0, len(nodes)):
+             if (nodes[jj,0])**2/x_rad**2+(nodes[jj,1])**2/y_rad**2+(nodes[jj,2])**2/z_rad**2<=1:#if the point fall inside the ellipsoid
+                pointcount=pointcount+1
+                                        
+ 
+         pl_vol_in_grid[ii,2]=float(pointcount)/float(len(nodes))*(x_spacing*y_spacing*z_spacing)#calculate the proportion of placental vol in that samp_gr_el
+         pl_vol_in_grid[ii,0]=ii
+        
+
+    return{'pl_vol_in_grid':pl_vol_in_grid,'total_pl_vol':np.sum(pl_vol_in_grid[:,2])}    
