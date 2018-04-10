@@ -52,6 +52,27 @@ class Test_placental_vol(TestCase):
         p_vol=placentagen.placental_vol(rectangular_mesh, placenta_vol, thickness, 1,1,1,1)
                
         self.assertTrue(placenta_vol-0.02<= p_vol['total_pl_vol'] <= placenta_vol+0.02)
+
+
+
+class Test_cal_vol_voxel(TestCase):
+        
+    def test_vol_br_in_voxel(self):
+        placenta_vol=5
+        thickness = 2
+        rectangular_mesh=placentagen.gen_rectangular_mesh(placenta_vol,thickness, 1,1,1,1)
+        eldata=placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        nodedata=placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        vol_voxel=placentagen.cal_vol_voxel(rectangular_mesh,eldata,nodedata,placenta_vol,thickness,1)
+
+        self.assertTrue(vol_voxel['br_counting'][1,0] , 1)
+        self.assertTrue(np.isclose(vol_voxel['total_vol_check']-vol_voxel['total_br_vol'],0))
+        self.assertTrue(np.isclose(vol_voxel['total_br_vol'],0.0150341981624))
+        self.assertTrue(np.isclose(vol_voxel['vol_each_br'][2,0],0.0055536036727))
+        self.assertTrue(np.isclose(vol_voxel['master_vol_voxel'][1,0],2.13600141e-04))
+        self.assertTrue(np.isclose(vol_voxel['master_vol_voxel'][1,1],2.13600141e-05))
+
+
        
 
 if __name__ == '__main__':
