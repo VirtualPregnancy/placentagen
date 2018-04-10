@@ -35,7 +35,7 @@ class Test_gen_rectangular_mesh(TestCase):
 
     def test_rect_node_val(self):
         mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
-        self.assertTrue(np.isclose(mesh_el['nodes'][14][1],0.5))
+        self.assertTrue(np.isclose(mesh_el['nodes'][14][2],0.5))
 
 
 if __name__ == '__main__':

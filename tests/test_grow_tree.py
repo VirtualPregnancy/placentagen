@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 import numpy as np
-
+import unittest
 import placentagen
-
+import os
 
 class Test_create_trees(TestCase):
     def test_umilical_node(self):
@@ -30,7 +30,6 @@ class Test_grow_trees(TestCase):
         chorion_geom = placentagen.grow_chorionic_surface(90 * np.pi / 180, 45 * np.pi / 180, 0.5, 0.1, 1,
                                                           1, 1, 1, data, seed_geom, 'surface')
         self.assertTrue(chorion_geom['nodes'][6][3], 0.48527182)
-
 
 class Test_refine_trees(TestCase):
     def test_refine_node(self):
