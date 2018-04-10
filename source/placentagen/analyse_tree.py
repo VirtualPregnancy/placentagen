@@ -124,7 +124,7 @@ def placental_vol(rectangular_mesh, volume, thickness, ellipticity,x_spacing,y_s
 
 
 
- def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity):
+def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity):
     '''
     This subroutine is to:
     1. calculate total volume of branches in each samp_grid_el (this is to calculate vol_fraction)
