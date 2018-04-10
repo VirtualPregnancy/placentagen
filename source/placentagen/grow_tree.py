@@ -74,8 +74,6 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             num_parents = num_parents + 1
     num_next_parents = num_parents
     n_elm_temp = num_next_parents
-    print(parentlist)
-    print(local_parent[0:num_next_parents])
     # remove terminal elements with only one data point associated and corresponding data pomt
     # from the group
     numtb = 0
@@ -89,7 +87,6 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     n_elm_temp = n_elm_temp - 1 #
                     tb_list[numtb] = ne_min
                     numtb = numtb + 1
-    print(local_parent[0:num_next_parents])
     #Pulls out just the non-zero elements in this parent list
     for n in range(0, num_next_parents):
         if local_parent[n] == 0:
@@ -99,8 +96,6 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             for m in range(n, num_next_parents - 1):
                 local_parent[m] = local_parent[m + i]
     num_next_parents = n_elm_temp
-
-    print(local_parent[0:num_next_parents])
 
     remaining_data = 0
     for nd in range(0, len(datapoints)):
@@ -195,7 +190,8 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                         local_parent_temp[num_next_parents] = ne
                         num_next_parents = num_next_parents + 1
                     else:
-                        print('not going to branch next time')
+                        #Note that this needs to be updated so that the branch and its datapoints get deleted from the list and dont grow nest time
+                        #but for python speed reasons we should leave here for now
                         local_parent_temp[num_next_parents] = ne
                         num_next_parents = num_next_parents + 1
                         #numtb = numtb + 1
@@ -237,7 +233,6 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
               '   ' + str(numtb) + '   ' + str(remaining_data))
 
-    print(tb_list)
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
     elem_downstream.resize(ne + 1, 3, refcheck=False)
