@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import numpy as np
 from . import pg_utilities
-
+import sys
+import math
+import numpy.matlib 
 def calc_terminal_branch(node_loc,elems):
     #This function generates a list of terminal nodes associated with a branching geometry
     #inputs are node locations and elements
