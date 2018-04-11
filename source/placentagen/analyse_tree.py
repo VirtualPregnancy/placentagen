@@ -130,7 +130,7 @@ def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity)
     '''
     This subroutine is to:
     1. calculate total volume of branches in each samp_grid_el (this is to calculate vol_fraction)
-    2. calculate total weighted_daimeter of branches in each samp_grid_el
+    2. calculate variables that will use to calculate weighted_daimeter of branches in each samp_grid_el in next subroutine
     3. count the number of branches in each samp_grid_el (to see the distribution)
     4. calculate the volume of individual branch in the whole tree
     5. calculate total volume of all branches in the whole tree (summation of 4 should be equal to 5)
@@ -149,7 +149,7 @@ def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity)
     pi=math.pi
     br_counting=np.zeros((total_elems,1),dtype=int)# this array stores the number of branch in each meshgrid element (to see distribution)
     vol_each_br=np.zeros((len(branch_el),1))# this array stores the vol of individual branch
-    master_vol_voxel=np.zeros((total_elems, 2))#1st col of stores total vol of braches in each samp_grid el, 2nd col stores total weighted_diameter of branches in each samp_grid el
+    master_vol_voxel=np.zeros((total_elems, 2))#1st col of stores total vol of braches in each samp_grid el, 2nd col stores variable that will be used to calculate weighted_diameter later
 
     
     for ne in range (0,len(branch_el)):#looping for all branchs in tree
@@ -290,7 +290,7 @@ def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity)
        br_counting[:,0]=br_counting[:,0] + temp_br_counting[:,0]#adding up the number of branches in each loop
        
        master_vol_voxel[:,0] = master_vol_voxel[:,0] + vol_voxel# adding up volume  as one samp_grid_el may have more than one branch element
-       master_vol_voxel[:,1] = master_vol_voxel[:,1] + vol_voxel*r*2;#adding up weighted diameter 
+       master_vol_voxel[:,1] = master_vol_voxel[:,1] + vol_voxel*r*2;#adding up variables
        
     if np.sum(master_vol_voxel[:,0])-np.sum(vol_each_br)>10**-6:#countercheck
        sys.exit("Error: total vol not equal")
