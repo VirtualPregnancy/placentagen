@@ -11,5 +11,6 @@ from .grow_tree import group_elem_parent_term
 from .grow_tree import umbilical_seed_geometry
 from .grow_tree import refine_1D
 from .grow_tree import add_stem_villi
+from .grow_tree import grow_large_tree
 from .analyse_tree import calc_terminal_branch
 from .analyse_tree import terminals_in_sampling_grid

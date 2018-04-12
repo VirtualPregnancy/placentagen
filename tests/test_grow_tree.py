@@ -31,6 +31,17 @@ class Test_grow_trees(TestCase):
                                                           1, 1, 1, data, seed_geom, 'surface')
         self.assertTrue(chorion_geom['nodes'][6][3], 0.48527182)
 
+    def test_grow_node_alt(self):
+        seed_geom = {}
+        seed_geom['nodes'] = [[0, 0, 1, 0], [1, 0, .1, 0], [2, -0.1, 0.1, 0], [3, 0.1, 0.1, 0]]
+        seed_geom['elems'] = [[0, 0, 1], [1, 1, 2], [2, 1, 3]]
+        seed_geom['elem_up'] = [[0, 0, 0], [1, 0, 0], [1, 0, 0]]
+        seed_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
+        data = placentagen.uniform_data_on_ellipsoid(5,1,1,1,0)
+        geom = placentagen.grow_large_tree(90 * np.pi / 180, 45 * np.pi / 180, 0.5, 0.1, 1,
+                                                              1, 1, 1, data, seed_geom)
+        self.assertTrue(geom['nodes'][6][3], 0.22301891)
+
 class Test_refine_trees(TestCase):
     def test_refine_node(self):
         from_elem = 0
