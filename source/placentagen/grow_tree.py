@@ -5,7 +5,7 @@ from . import pg_utilities
 
 
 def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
-                    volume, thickness, ellipticity, datapoints, initial_geom, sorv):
+                    volume, thickness, ellipticity, datapoints, initial_geom):
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -57,7 +57,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
 
     for npar in range(0, len(parentlist)):
-        print('Generating children for parent ' + str(npar) + ' of a total of ' + str(len(parentlist)))
+        print('Generating children for parent ' + str(npar) + '(elem #' + str(parentlist[npar]) + ') of a total of ' + str(len(parentlist)))
         current_parent = parentlist[npar]
         num_next_parents = 1
         data_current_parent = np.zeros((len(datapoints), 3))
@@ -68,8 +68,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                 map_seed_to_elem[nd] = 0
                 datapoints[nd][:] = 0
                 nd_for_parent = nd_for_parent + 1
-        datapoints = datapoints[np.nonzero(map_seed_to_elem)]
-        map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)]
+
+        datapoints = datapoints[np.nonzero(map_seed_to_elem)] #remove the datapoints you are currently analysing from master list
+        map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)] #remove parent you are currently analysing from master list
         data_current_parent.resize(nd_for_parent, 3)
         local_parent_temp = np.zeros(num_elems_new, dtype=int)  # rezero local parent arrays
         local_parent = np.zeros(num_elems_new, dtype=int)
