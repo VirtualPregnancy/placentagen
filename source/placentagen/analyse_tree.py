@@ -157,7 +157,7 @@ def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity)
        N2=branch_node[branch_el[ne][2]][1:4]#coor of end node of a branch element
        
        r=0.05#######artifical value at the moment, radius of individual branch
-       interval=0.01
+       interval=0.05
        points=5
        unit_Vx=[1, 0, 0]# Defining Unit vector along the X-direction
        angle_X1X2 = np.arccos(np.dot(unit_Vx,np.subtract(N2,N1))/(np.linalg.norm(unit_Vx)*np.linalg.norm(np.subtract(N2,N1))) )*180/pi#branching angle from unit vector
@@ -165,7 +165,7 @@ def cal_vol_voxel(rectangular_mesh,eldata,nodedata,volume,thickness,ellipticity)
        length_br=np.linalg.norm(np.subtract(N2,N1))#length of individual branch 
        branch_vol = pi*r**2*length_br#volume of individual branch 
        vol_each_br[ne,0]=branch_vol
-       dp_along_length=np.linspace(interval,np.subtract(length_br,interval),10)#points along the length of branch
+       dp_along_length=np.linspace(interval,length_br,10)#points along the length of branch
 
           
        #generate evenly spaced points in the y and z cross section of branch
