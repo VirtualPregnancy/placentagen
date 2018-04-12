@@ -39,13 +39,15 @@ def angle_two_vectors(vector1, vector2):
     vector1_u = vector1 / np.linalg.norm(vector1)
     vector2_u = vector2 / np.linalg.norm(vector2)
 
-    if (np.equal(vector1_u, vector2_u)).all():
-        print('true')
+    if (np.equal(vector1_u, vector2_u)).all(): #vectors are parallel
         angle = 0.0
+    elif(np.equal(vector1_u, -1.0*vector2_u)).all(): #vectors are anti-parrallel.
+        angle = np.pi
     else:
         dotprod = np.dot(vector1_u, vector2_u)
         if np.isclose(1.0, dotprod):
-            angle = 0
+            #can't do arccos of 1
+            angle = np.sqrt(2*np.abs(1-dotprod)) #small angle approximation to cos near theta =1
         else:
             angle = np.arccos(dotprod)
 

@@ -45,8 +45,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     # Set initial values for local and global nodes and elements
     ne = num_elems_old - 1  # current maximum element number
     nnod = num_nodes_old - 1  # current maximum node number
-    numtb = 0 #count of terminals
-
+    numtb = 0  # count of terminals
 
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
 
@@ -57,7 +56,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     map_seed_to_elem = map_seed_to_elem + parentlist[0]
     map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
 
-    for npar in range(0,len(parentlist)):
+    for npar in range(0, len(parentlist)):
+        print('Generating children for parent ' + str(npar) + ' of a total of ' + str(len(parentlist)))
         current_parent = parentlist[npar]
         num_next_parents = 1
         data_current_parent = np.zeros((len(datapoints), 3))
@@ -68,25 +68,20 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                 map_seed_to_elem[nd] = 0
                 datapoints[nd][:] = 0
                 nd_for_parent = nd_for_parent + 1
-        print('ms2', len(map_seed_to_elem))
         datapoints = datapoints[np.nonzero(map_seed_to_elem)]
         map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)]
-        print(len(datapoints), len(map_seed_to_elem))
         data_current_parent.resize(nd_for_parent, 3)
-        print('curr',current_parent)
         local_parent_temp = np.zeros(num_elems_new, dtype=int)  # rezero local parent arrays
         local_parent = np.zeros(num_elems_new, dtype=int)
         local_parent[0] = current_parent
-        map_seed_to_elem_new = np.zeros(len(data_current_parent),dtype = int)
+        map_seed_to_elem_new = np.zeros(len(data_current_parent), dtype=int)
         map_seed_to_elem_new = map_seed_to_elem_new + current_parent
         remaining_data = len(data_current_parent)
         original_data = len(data_current_parent)
 
-        print('remaining',remaining_data)
-
         # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
-
-        print('         newgens       #brn       total#       #term      #data')
+        # could make this an optional output at a later date
+        # print('         newgens       #brn       total#       #term      #data')
 
         ngen = 0  # for output, look to have each generation of elements recordded
 
@@ -103,7 +98,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                 np_prt_start = int(elems[ne_parent][1])
                 # Split the seed points by the plane defined by the parent branch and the com of the
                 # seedpoints attached to it
-                split_data = data_splitby_plane(map_seed_to_elem_new, data_current_parent, com, node_loc[np_prt_start][1:4],
+                split_data = data_splitby_plane(map_seed_to_elem_new, data_current_parent, com,
+                                                node_loc[np_prt_start][1:4],
                                                 node_loc[np_start][1:4], ne_parent, ne, point_limit)
                 # Check that there ar enough seedpoints in both groups to proceed
                 # Note long term one could allow one group to continue and the other not to
@@ -136,7 +132,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                         elem_downstream[ne + 1][0] = 0  # the new element currently has no children
 
                         elem_downstream[ne_parent][0] = elem_downstream[ne_parent][
-                                                        0] + 1  # the parent element gets this as a child
+                                                            0] + 1  # the parent element gets this as a child
                         elem_downstream[ne_parent][elem_downstream[ne_parent][0]] = ne + 1
 
                         node_loc[nnod + 1][0] = nnod + 1
@@ -153,7 +149,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                         else:
-                            print('not going to branch next time')
+                            # Need to modify down the line not to branch in the next generation
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                             # numtb = numtb + 1
@@ -180,8 +176,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
 
-        # .......Copy the temporary list of branches to NE_OLD. These become the
-        # .......parent elements for the next branching
+            # .......Copy the temporary list of branches to NE_OLD. These become the
+            # .......parent elements for the next branching
 
             for n in range(0, num_next_parents):
                 local_parent[n] = local_parent_temp[n]
@@ -190,13 +186,13 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
             if remaining_data < original_data:  # only need to reallocate data if we have lost some data points
                 original_data = remaining_data
                 # reallocate datapoints
-                map_seed_to_elem_new = data_to_mesh(map_seed_to_elem_new, data_current_parent, local_parent[0:num_next_parents], node_loc,
-                                            elems)
+                map_seed_to_elem_new = data_to_mesh(map_seed_to_elem_new, data_current_parent,
+                                                    local_parent[0:num_next_parents], node_loc,
+                                                    elems)
+            # Could make this an optional output at a later date
+            # print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+            #      '   ' + str(numtb) + '   ' + str(remaining_data))
 
-            print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-                  '   ' + str(numtb) + '   ' + str(remaining_data))
-
-    print(numtb, ne)
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
     elem_downstream.resize(ne + 1, 3, refcheck=False)
@@ -205,30 +201,18 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 
-
-
-
-
 def data_with_parent(current_parent, map_seed_to_elem, datapoints):
-    new_datapoints = np.zeros((len(datapoints),3))
+    new_datapoints = np.zeros((len(datapoints), 3))
     nd_for_parent = 0
-    for nd in range(0,len(datapoints)):
+    for nd in range(0, len(datapoints)):
         if map_seed_to_elem[nd] == current_parent:
             new_datapoints[nd_for_parent] = datapoints[nd][:]
             map_seed_to_elem[nd] = 0
             datapoints[nd][:] = 0
             nd_for_parent = nd_for_parent + 1
-    print('ms2',len(map_seed_to_elem))
     datapoints = datapoints[np.nonzero(map_seed_to_elem)]
     map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)]
-    print(len(datapoints),len(map_seed_to_elem))
-    new_datapoints.resize(nd_for_parent,3)
-
-
-    print(nd_for_parent)
-
-
-
+    new_datapoints.resize(nd_for_parent, 3)
 
     return new_datapoints
 
@@ -330,8 +314,8 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
         if map_seed_to_elem[nd] > 0:
             remaining_data = remaining_data + 1
     # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
-
-    print('         newgens       #brn       total#       #term      #data')
+    # Could potentially make this an optional output at a later date
+    # print('         newgens       #brn       total#       #term      #data')
 
     # Set initial values for local and global nodes and elements
     ne = num_elems_old - 1  # current maximum element number
@@ -418,8 +402,8 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                         local_parent_temp[num_next_parents] = ne
                         num_next_parents = num_next_parents + 1
                     else:
-                        #Note that this needs to be updated so that the branch and its datapoints get deleted from the list and dont grow nest time
-                        #but for python speed reasons we should leave here for now
+                        # Note that this needs to be updated so that the branch and its datapoints get deleted from the list and dont grow nest time
+                        # but for python speed reasons we should leave here for now
                         local_parent_temp[num_next_parents] = ne
                         num_next_parents = num_next_parents + 1
                         # numtb = numtb + 1
@@ -458,9 +442,9 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             # reallocate datapoints
             map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, local_parent[0:num_next_parents], node_loc,
                                             elems)
-
-        print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-              '   ' + str(numtb) + '   ' + str(remaining_data))
+        # Could potentially make this an optional output at a later date
+        # print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+        #      '   ' + str(numtb) + '   ' + str(remaining_data))
 
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
@@ -593,17 +577,25 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
     normal_to_plane = np.zeros(3)
     vector_cross_n = np.zeros(3)
     vector1 = (node2 - node1)
-    vector1_u = vector1 / np.linalg.norm(node2 - node1)
+    vector1_u = vector1 / np.linalg.norm(vector1)
     vector2 = (node3 - node2)
-    vector2_u = vector2 / np.linalg.norm(node3 - node2)
+    vector2_u = vector2 / np.linalg.norm(vector2)
+    # angle = pg_utilities.angle_two_vectors(vector1, vector2)
+    # if angle == 0:
+    #    print('in',vector1 / np.linalg.norm(vector1),vector2 / np.linalg.norm(vector2))
 
-    if (np.equal(vector1_u, vector2_u)).all():
-        node3[0] = node3[0] * .99
-        node3[1] = node3[1] * 1.01
+    if (np.isclose(vector1_u, vector2_u)).all() or (np.isclose(vector1_u, -1.0 * vector2_u)).all():
+        #   perturb new node slightly to 'misalign vectors and allow for normal to plane to be calculated
+        length = np.linalg.norm(vector2)
+        node3[0] = node3[0] + np.random.uniform(-0.01 * length, 0.01 * length)
+        node3[1] = node3[1] + np.random.uniform(-0.01 * length, 0.01 * length)
+        node3[2] = node3[2] + np.random.uniform(-0.01 * length, 0.01 * length)
         vector2 = node3 - node2
 
     # want to rotate vector 2 wrt vector 1
     angle = pg_utilities.angle_two_vectors(vector1, vector2)
+    if angle == 0:
+        print('out', vector1 / np.linalg.norm(vector1), vector2 / np.linalg.norm(vector2))
 
     normal_to_plane[0] = (vector2[1] * vector1[2] - vector2[2] * vector1[1])
     normal_to_plane[1] = (vector2[0] * vector1[2] - vector2[2] * vector1[0])
@@ -997,7 +989,3 @@ def mesh_com(ld_val, ld, datapoints):
         com = com / dat
 
     return com
-
-
-
-
