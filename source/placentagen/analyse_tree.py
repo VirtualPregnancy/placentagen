@@ -57,3 +57,66 @@ def terminals_in_sampling_grid(rectangular_mesh,terminal_list,node_loc):
 
     return terminals_in_grid
 
+def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_test_points):
+    # This subroutine calculates the placental volume associated with each element in a samplling grid
+    # inputs are:
+    # rectangular_mesh = the sampling grid nodes and elements
+    # volume = placental volume
+    # thickness = placental thickness
+    # ellipiticity = placental ellipticity
+    # x_spacing,y_spacing,z_spaing (dont think these are needed)
+    total_elems = rectangular_mesh['total_elems']
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    x = nodes[:, 0]
+    y = nodes[:, 1]
+    z = nodes[:, 2]
+
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
+    pl_vol_in_grid = np.zeros(
+        total_elems)  # 1st col stores the number of samp_grid_el, 2nd col stores 0/1/2 (depend on type of samp_grid_el), 3rd col stores the pl_vol in that sam_grid_el
+
+
+    xVector = np.linspace(0.0, 1.0, num_test_points)
+    yVector = np.linspace(0.0, 1.0, num_test_points)
+    zVector = np.linspace(0.0, 1.0, num_test_points)
+
+    calculating_nodes = np.vstack(np.meshgrid(xVector, yVector, zVector)).reshape(3, -1).T
+
+    print(calculating_nodes)
+
+    for ne in range(0, len(elems)):  # looping through elements
+        count_in_range = 0
+        nod_in_range = np.zeros(8, dtype=int)
+        for nod in range(1, 9):
+            check_in_range = pg_utilities.check_in_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
+                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
+            check_on_range = pg_utilities.check_on_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
+                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
+            if check_in_range or check_on_range:
+                count_in_range = count_in_range + 1
+                nod_in_range[nod - 1] = 1
+        if count_in_range == 8:  # if all 8 nodes are inside the ellipsoid
+            pl_vol_in_grid[ne] = 1.0  # the placental vol in that samp_grid_el is same as vol of samp_grid_el
+        if count_in_range == 0:  # if all 8 nodes are outside the ellpsiod
+            pl_vol_in_grid[ne] = 0  # since this samp_grid_el is completely outside, the placental vol is zero (there will be no tree here and no need to worried about the vol)
+        else:  # if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
+            startx = nodes[elems[ne][1]][0]
+            endx = nodes[elems[ne][8]][0]
+            starty = nodes[elems[ne][1]][1]
+            endy = nodes[elems[ne][8]][1]
+            startz = nodes[elems[ne][1]][2]
+            endz = nodes[elems[ne][8]][2]
+
+
+
+
+    print(np.sum(pl_vol_in_grid))
+    print(pl_vol_in_grid)
+
+    return pl_vol_in_grid
+
