@@ -68,10 +68,6 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_
     total_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
-    x = nodes[:, 0]
-    y = nodes[:, 1]
-    z = nodes[:, 2]
-
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
@@ -87,7 +83,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_
 
     calculating_nodes = np.vstack(np.meshgrid(xVector, yVector, zVector)).reshape(3, -1).T
 
-    print(calculating_nodes)
+    print(calculating_nodes[0][2])
 
     for ne in range(0, len(elems)):  # looping through elements
         count_in_range = 0
@@ -102,7 +98,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_
                 nod_in_range[nod - 1] = 1
         if count_in_range == 8:  # if all 8 nodes are inside the ellipsoid
             pl_vol_in_grid[ne] = 1.0  # the placental vol in that samp_grid_el is same as vol of samp_grid_el
-        if count_in_range == 0:  # if all 8 nodes are outside the ellpsiod
+        elif count_in_range == 0:  # if all 8 nodes are outside the ellpsiod
             pl_vol_in_grid[ne] = 0  # since this samp_grid_el is completely outside, the placental vol is zero (there will be no tree here and no need to worried about the vol)
         else:  # if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
             startx = nodes[elems[ne][1]][0]
@@ -112,10 +108,18 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_
             startz = nodes[elems[ne][1]][2]
             endz = nodes[elems[ne][8]][2]
 
+            pointcount = 0
 
+            for nnod in range(0, len(calculating_nodes)):
 
+                x = calculating_nodes[nnod][0]*(endx-startx)+startx
+                y = calculating_nodes[nnod][1]*(endy-starty)+starty
+                z = calculating_nodes[nnod][2]*(endz-startz)+startz
+                point_check = pg_utilities.check_in_ellipsoid(x,y,z, x_radius, y_radius, z_radius)
+                if point_check:  # if the point fall inside the ellipsoid
+            pl_vol_in_grid[ne] = float(pointcount)/float(num_test_points*num_test_points*num_test_points)
 
-    print(np.sum(pl_vol_in_grid))
+    print('true',np.sum(pl_vol_in_grid)*volume)
     print(pl_vol_in_grid)
 
     return pl_vol_in_grid
