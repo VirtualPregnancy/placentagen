@@ -57,7 +57,7 @@ def terminals_in_sampling_grid(rectangular_mesh,terminal_list,node_loc):
 
     return terminals_in_grid
 
-def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_test_points):
+def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_test_points,method):
     # This subroutine calculates the placental volume associated with each element in a samplling grid
     # inputs are:
     # rectangular_mesh = the sampling grid nodes and elements
@@ -107,19 +107,48 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity,num_
             endy = nodes[elems[ne][8]][1]
             startz = nodes[elems[ne][1]][2]
             endz = nodes[elems[ne][8]][2]
+            if(method == 'summing'):
+                pointcount = 0
+                for nnod in range(0, len(calculating_nodes)):
+                    x = calculating_nodes[nnod][0]*(endx-startx)+startx
+                    y = calculating_nodes[nnod][1]*(endy-starty)+starty
+                    z = calculating_nodes[nnod][2]*(endz-startz)+startz
+                    point_check = pg_utilities.check_in_ellipsoid(x,y,z, x_radius, y_radius, z_radius)
+                    if point_check:  # if the point fall inside the ellipsoid
+                        pointcount = pointcount+1
+                    pl_vol_in_grid[ne] = float(pointcount)/float(num_test_points*num_test_points*num_test_points)
+            else: #Use quadrature
+                #need to map to positive quadrant
+                if (startx >=0 and starty >=0 and startz >=0):
+                    xVector = np.linspace(startx, endx, num_test_points)
+                    yVector = np.linspace(starty, endy, num_test_points)
+                    xv,yv = np.meshgrid(xVector,yVector,indexing='ij')
+                    zv = z_radius**2 * (1-(xv/x_radius)**2 -(yv/y_radius)**2)
+                    zv=zv[zv > startz**2]
+                    zv = np.sqrt(zv)
+                    z1 = zv > endz
+                    z2 = zv < endz
+                    z3 = zv < startz
+                    zv = z1*endz + z2*zv + z3*startz
 
-            pointcount = 0
+                    ## do a 1-D integral over every row
+                    ## -----------------------------------
+                    #I = np.zeros(Ny)
+                    #for i in range(Ny):
+                    #    I[i] = np.trapz(y[i, :], xlin)
 
-            for nnod in range(0, len(calculating_nodes)):
+                    #Value1 = np.trapz(xv,x=zv,axis = 2)
+                    #for i in range(num_test_points):
+                    #    for j in range(num_test_points):
+                    #        if zv[i][j] < startz:
+                    #            zv[i][j] = 0
+                    #        else:
+                    #            zv[i][j] = np.sqrt(zv[i,j])
+                    print(zv),Value1
 
-                x = calculating_nodes[nnod][0]*(endx-startx)+startx
-                y = calculating_nodes[nnod][1]*(endy-starty)+starty
-                z = calculating_nodes[nnod][2]*(endz-startz)+startz
-                point_check = pg_utilities.check_in_ellipsoid(x,y,z, x_radius, y_radius, z_radius)
-                if point_check:  # if the point fall inside the ellipsoid
-            pl_vol_in_grid[ne] = float(pointcount)/float(num_test_points*num_test_points*num_test_points)
 
-    print('true',np.sum(pl_vol_in_grid)*volume)
+
+
     print(pl_vol_in_grid)
 
     return pl_vol_in_grid
