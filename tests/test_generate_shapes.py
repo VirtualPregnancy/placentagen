@@ -19,6 +19,7 @@ class Test_generate_data(TestCase):
         self.assertTrue(array_test.all)
 
 
+<<<<<<< HEAD
         
     def test_meshgrid_el(self):
         mesh_el  = placentagen.generate_rectangular_mesh(x_min,x_max,y_min,y_max,z_min,z_max,nel_x,nel_y,nel_z,x_width,y_width,z_width)
@@ -32,3 +33,26 @@ class Test_generate_data(TestCase):
 
 if __name__ == '__main__':
    unittest.main()
+=======
+class Test_gen_rectangular_mesh(TestCase):
+
+    def test_rect_el_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_elems'] == 4)
+
+    def test_rect_el_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['elems'][0][5] == 9)
+
+    def test_rect_node_num(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(mesh_el['total_nodes'] == 18)
+
+    def test_rect_node_val(self):
+        mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+        self.assertTrue(np.isclose(mesh_el['nodes'][14][2],0.5))
+
+
+if __name__ == '__main__':
+    unittest.main()
+>>>>>>> 14529405e3721ac79557d1296f9e3f12439f5eca
