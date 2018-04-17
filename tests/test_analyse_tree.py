@@ -42,6 +42,40 @@ class test_term_br_location(TestCase):
         test_array=terminals_in_grid == [[0, 1, 0, 1]]
         self.assertTrue(test_array.all)
         
+class test_pl_vol_in_grid(TestCase):
+        
+    def test_pl_vol_margin(self):
+        
+        volume = 1  # mm^3
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        ellipticity = 1.00  # no units
+        spacing = 1.0  # mm
+        rectangular_mesh = placentagen.gen_rectangular_mesh(volume, thickness, ellipticity, spacing, spacing, spacing)
+        pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 25)
+        
+        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], 0.124841925586))
+
+
+    def test_pl_vol_complete_outside(self):
+        
+        volume = 5  # mm^3
+        thickness =  2 # mm
+        ellipticity = 1.6  # no units
+        spacing = 0.5  # mm
+        rectangular_mesh = placentagen.gen_rectangular_mesh(volume, thickness, ellipticity, spacing, spacing, spacing)
+        pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 25)
+        
+        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], 0.0))
+
+    def test_pl_vol_complete_inside(self):
+        
+        volume = 5  # mm^3
+        thickness =  2 # mm
+        ellipticity = 1.6  # no units
+        spacing = 0.5  # mm
+        rectangular_mesh = placentagen.gen_rectangular_mesh(volume, thickness, ellipticity, spacing, spacing, spacing)
+        pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 25)
+        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][33], 0.125))
 
 if __name__ == '__main__':
    unittest.main()
