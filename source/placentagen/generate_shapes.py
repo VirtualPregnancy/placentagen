@@ -103,6 +103,37 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
 
     return chorion_data
 
+def generate_rectangular_mesh(x_min,x_max,y_min,y_max,z_min,z_max,nel_x,nel_y,nel_z,x_width,y_width,z_width):
+    x = np.linspace(x_min,x_max, x_max/x_width+1)#linspace for x axis
+    y = np.linspace(y_min, y_max, y_max/y_width+1)#linspace for y axis
+    z = np.linspace(z_min, z_max, z_max/z_width+1)#linspace for z axis
+    nodes = np.vstack(np.meshgrid(y,z,x)).reshape(3,-1)#generate rectangular mesh
+
+    y=np.array(nodes[0,:])#y coordinates of nodes in rectangular mesh
+    z=np.array(nodes[1,:])#z coordinates of nodes in rectangular mesh
+    x=np.array(nodes[2,:])#x coordinates of nodes in rectangular mesh
+
+    #Generating the element connectivity of each cube element, 8 nodes for each 3D cube element
+    nodeOfelement=np.zeros((8,nel_x*nel_y*nel_z))#this stores element array of each mesh grid element
+    E1=0
+
+    for K1 in range (1,nel_z+1):
+       for J1 in range (1,nel_y+1):
+          for I1 in range(1,nel_x+1):
+           
+            nodeOfelement[0,E1] = I1+(nel_x+1)*(J1-1)+(nel_x+1)*(nel_y+1)*(K1-1)#node 1 of 3D cube
+            nodeOfelement[1,E1] = nodeOfelement[0,E1]+1#node 2 of 3D cube
+            nodeOfelement[2,E1] = nodeOfelement[0,E1]+nel_x+1#node 3 of 3D cube
+            nodeOfelement[3,E1] = nodeOfelement[2,E1]+1#node 4 of 3D cube
+            nodeOfelement[4,E1] = nodeOfelement[0,E1]+(nel_x+1)*(nel_y+1)#node 5 of 3D cube
+            nodeOfelement[5,E1] = nodeOfelement[1,E1]+(nel_x+1)*(nel_y+1)#node 6 of 3D cube
+            nodeOfelement[6,E1] = nodeOfelement[2,E1]+(nel_x+1)*(nel_y+1)#node 7 of 3D cube
+            nodeOfelement[7,E1] = nodeOfelement[3,E1]+(nel_x+1)*(nel_y+1)#node 8 of 3D cube
+            
+            E1 = E1+1
+
+    nodeOfelement=nodeOfelement.T
+    return {'nodeOfelement': nodeOfelement, 'x_coor': x,'y_coor':y,'z_coor':z,'total_mesh_el':nel_x*nel_y*nel_z,'total_mesh_node':(nel_x+1)*(nel_y+1)*(nel_z+1)}
 
 def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z_spacing):
     # Generates equally spaced data nodes and elements and constructs a rectangular 'mesh' that covers the space that is
