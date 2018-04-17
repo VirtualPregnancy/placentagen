@@ -59,14 +59,14 @@ def terminals_in_sampling_grid(rectangular_mesh, terminal_list, node_loc):
     return terminals_in_grid
 
 
-def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points, method):
+def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
     # This subroutine calculates the placental volume associated with each element in a samplling grid
     # inputs are:
     # rectangular_mesh = the sampling grid nodes and elements
     # volume = placental volume
     # thickness = placental thickness
     # ellipiticity = placental ellipticity
-    # x_spacing,y_spacing,z_spaing (dont think these are needed)
+    # num_test_points = resolution of integration quadrature
     total_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
@@ -75,26 +75,19 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
 
-    pl_vol_in_grid = np.zeros(
-        total_elems)  # 1st col stores the number of samp_grid_el, 2nd col stores 0/1/2 (depend on type of samp_grid_el), 3rd col stores the pl_vol in that sam_grid_el
-
-    xVector = np.linspace(0.0, 1.0, num_test_points)
-    yVector = np.linspace(0.0, 1.0, num_test_points)
-    zVector = np.linspace(0.0, 1.0, num_test_points)
-
-    calculating_nodes = np.vstack(np.meshgrid(xVector, yVector, zVector)).reshape(3, -1).T
-
-    print(calculating_nodes[0][2])
+    #Initialise the array that defines the volume of placenta in each grid element
+    pl_vol_in_grid = np.zeros(total_elems)
 
     for ne in range(0, len(elems)):  # looping through elements
+        count_in_range = 0
+        nod_in_range = np.zeros(8, dtype=int)
+        #define range of x, y , and z in the element
         startx = nodes[elems[ne][1]][0]
         endx = nodes[elems[ne][8]][0]
         starty = nodes[elems[ne][1]][1]
         endy = nodes[elems[ne][8]][1]
         startz = nodes[elems[ne][1]][2]
         endz = nodes[elems[ne][8]][2]
-        count_in_range = 0
-        nod_in_range = np.zeros(8, dtype=int)
         for nod in range(1, 9):
             check_in_range = pg_utilities.check_in_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
                                                              nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
@@ -109,71 +102,57 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
             pl_vol_in_grid[
                 ne] = 0  # since this samp_grid_el is completely outside, the placental vol is zero (there will be no tree here and no need to worried about the vol)
         else:  # if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
-            if (method == 'summing'):
-                pointcount = 0
-                for nnod in range(0, len(calculating_nodes)):
-                    x = calculating_nodes[nnod][0] * (endx - startx) + startx
-                    y = calculating_nodes[nnod][1] * (endy - starty) + starty
-                    z = calculating_nodes[nnod][2] * (endz - startz) + startz
-                    point_check = pg_utilities.check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius)
-                    if point_check:  # if the point fall inside the ellipsoid
-                        pointcount = pointcount + 1
-                    pl_vol_in_grid[ne] = float(pointcount) / float(num_test_points * num_test_points * num_test_points)
-            else:  # Use quadrature
-                # need to map to positive quadrant
-                repeat = False
-                if (startz < 0 and endz <=0):
-                    #need to project to positive z axis
-                    startz = abs(nodes[elems[ne][8]][2])
-                    endz = abs(nodes[elems[ne][1]][2])
-                elif(startz < 0 and endz > 0):
-                    #Need to split into components above and below the axis and sum the two
-                    startz = 0
-                    endz = abs(nodes[elems[ne][1]][2])
-                    startz_2=0
-                    endz_2 =nodes[elems[ne][8]][2]
-                    repeat = True
+        #Use trapezoidal quadrature to caculate the volume under the surface of the ellipsoid in each element
+            # need to map to positive quadrant
+            repeat = False
+            if (startz < 0 and endz <=0):
+                #need to project to positive z axis
+                startz = abs(nodes[elems[ne][8]][2])
+                endz = abs(nodes[elems[ne][1]][2])
+            elif(startz < 0 and endz > 0):
+                #Need to split into components above and below the axis and sum the two
+                startz = 0
+                endz = abs(nodes[elems[ne][1]][2])
+                startz_2=0
+                endz_2 =nodes[elems[ne][8]][2]
+                repeat = True
+            xVector = np.linspace(startx, endx, num_test_points)
+            yVector = np.linspace(starty, endy, num_test_points)
+            xv, yv = np.meshgrid(xVector, yVector)
+            zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
+            for i in range(num_test_points):
+                for j in range(num_test_points):
+                    if zv[i, j] <= startz ** 2:
+                        zv[i, j] = startz ** 2
+                    zv[i, j] = np.sqrt(zv[i, j])
+                    if zv[i, j] > endz:
+                        zv[i, j] = endz
+                    elif zv[i, j] < startz:
+                        zv[i, j] = startz
+            intermediate = np.zeros(num_test_points)
+            for i in range(0, num_test_points):
+                intermediate[i] = np.trapz(zv[:, i], xVector)
+            Value1 = np.trapz(intermediate, yVector)
+            pl_vol_in_grid[ne] = (Value1 - startz * (endx - startx) * (endy - starty))
+            if repeat:
                 xVector = np.linspace(startx, endx, num_test_points)
                 yVector = np.linspace(starty, endy, num_test_points)
                 xv, yv = np.meshgrid(xVector, yVector)
                 zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
                 for i in range(num_test_points):
                     for j in range(num_test_points):
-                        if zv[i, j] <= startz ** 2:
-                            zv[i, j] = startz ** 2
+                        if zv[i, j] <= startz_2 ** 2:
+                            zv[i, j] = startz_2 ** 2
                         zv[i, j] = np.sqrt(zv[i, j])
-                        if zv[i, j] > endz:
-                            zv[i, j] = endz
-                        elif zv[i, j] < startz:
-                            zv[i, j] = startz
+                        if zv[i, j] > endz_2:
+                            zv[i, j] = endz_2
+                        elif zv[i, j] < startz_2:
+                            zv[i, j] = startz_2
                 intermediate = np.zeros(num_test_points)
                 for i in range(0, num_test_points):
                     intermediate[i] = np.trapz(zv[:, i], xVector)
                 Value1 = np.trapz(intermediate, yVector)
-                pl_vol_in_grid[ne] = (Value1 - startz * (endx - startx) * (endy - starty))# / ((endx - startx) * (endy - starty) * (endz - startz))
-                if repeat:
-                    xVector = np.linspace(startx, endx, num_test_points)
-                    yVector = np.linspace(starty, endy, num_test_points)
-                    xv, yv = np.meshgrid(xVector, yVector)
-                    zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
-                    for i in range(num_test_points):
-                        for j in range(num_test_points):
-                            if zv[i, j] <= startz_2 ** 2:
-                                zv[i, j] = startz_2 ** 2
-                            zv[i, j] = np.sqrt(zv[i, j])
-                            if zv[i, j] > endz_2:
-                                zv[i, j] = endz_2
-                            elif zv[i, j] < startz_2:
-                                zv[i, j] = startz_2
-                    intermediate = np.zeros(num_test_points)
-                    for i in range(0, num_test_points):
-                        intermediate[i] = np.trapz(zv[:, i], xVector)
-                    Value1 = np.trapz(intermediate, yVector)
-                    pl_vol_in_grid[ne] =pl_vol_in_grid[ne] + (Value1 - startz_2 * (endx - startx) * (
-                                endy - starty))  # / ((endx - startx) * (endy - starty) * (endz - startz))
-
-
-    print(pl_vol_in_grid)
-    print(np.sum(pl_vol_in_grid))
+                pl_vol_in_grid[ne] =pl_vol_in_grid[ne] + (Value1 - startz_2 * (endx - startx) * (
+                                endy - starty))
 
     return pl_vol_in_grid
