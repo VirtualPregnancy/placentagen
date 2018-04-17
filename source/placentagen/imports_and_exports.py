@@ -75,7 +75,7 @@ def export_exelem_1d(data, groupname, filename):
     f.write("       Scale factor indices:   2\n")
     for x in range(0, data_num):
         f.write(" Element:            %s 0 0\n" % int(data[x][0] + 1))
-        f.write("   Nodes:")
+        f.write("   Nodes:\n")
         f.write("                %s            %s\n" % (int(data[x][1] + 1), int(data[x][2] + 1)))
         f.write("   Scale factors:\n")
         f.write("       0.1000000000000000E+01   0.1000000000000000E+01\n")
@@ -184,6 +184,33 @@ def export_exelem_3d_linear(data, groupname, filename):
 
     f.close()
 
+def export_exfield_3d_linear(data, groupname, fieldname, filename):
+    # Exports element locations to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(data)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape. Dimension=3 line*line*line\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           0\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, field, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write("   %s.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, grid based.\n" % fieldname)
+    f.write("   #xi1=1 \n")
+    f.write("   #xi2=1 \n")
+    f.write("   #xi3=1 \n")
+    for x in range(0, data_num):
+        f.write(" Element:            %s 0 0\n" % int(x + 1))
+        f.write("   Values:")
+        f.write(
+            "           %s       %s       %s       %s       %s       %s       %s       %s\n" % (
+                data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
+
+    f.close()
+
 
 def import_exnode_tree(filename):
     # count nodes for check of correct number for the user, plus use in future arrays
@@ -199,7 +226,7 @@ def import_exnode_tree(filename):
                 break  # exit if done with all lines
             # identifying whether there is a node defined here
             line_type = str.split(line)[0]
-            if (line_type == 'Node:'):  # line dedfines new node
+            if (line_type == 'Node:'):  # line defines new node
                 count_node = count_node + 1  # count the node
                 count_atribute = 0  # intitalise attributes of the node (coordinates, radius)
                 node_array=np.append(node_array,np.zeros((1,7)),axis = 0)  # initialise a list of attributes for each node
@@ -232,7 +259,6 @@ def import_exelem_tree(filename):
             if (line_type == 'Element:'):  # line dedfines new el
                 count_el = count_el + 1  # count the el
                 count_atribute = 0  # intitalise attributes of the el (1st el, 2nd el)
-                #el_array.append([0, 0, 0])  # initialise a list of attributes for each el
                 el_array = np.append(el_array, np.zeros((1, 3),dtype = int), axis=0)
                 el_array[count_el - 1][count_atribute] = int(str.split(line)[1])-1
             else:
