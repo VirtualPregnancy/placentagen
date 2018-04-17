@@ -155,4 +155,4 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
                 pl_vol_in_grid[ne] =pl_vol_in_grid[ne] + (Value1 - startz_2 * (endx - startx) * (
                                 endy - starty))
 
-    return pl_vol_in_grid
+    return {'pl_vol_in_grid':pl_vol_in_grid}
