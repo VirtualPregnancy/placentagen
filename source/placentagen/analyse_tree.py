@@ -28,6 +28,41 @@ def calc_terminal_branch(node_loc, elems):
 
     return {'terminal_elems': terminal_branches, 'terminal_nodes': terminal_nodes, 'total_terminals': num_term}
 
+def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
+    # This function counts the number of terminals in a sampling grid element, will only work with
+    # rectangular mesh created as in generate_shapes.gen_rectangular_mesh
+    # inputs are:
+    # Rectangular mesh - the sampling grid
+    # terminal_list - a list of terminal,
+    # node_loc - location of nodes
+    num_terminals = terminal_list['total_terminals']
+    terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
+    terminal_elems = np.zeros(num_terminals, dtype=int)
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    startx = np.min(nodes[:,0])
+    xside = nodes[elems[0][8]][0]-nodes[elems[0][1]][0]
+    endx=np.max(nodes[:,0])
+    nelem_x=(endx-startx)/xside
+    starty = np.min(nodes[:,1])
+    yside = nodes[elems[0][8]][1]-nodes[elems[0][1]][1]
+    endy=np.max(nodes[:,1])
+    nelem_y = (endy - starty) / yside
+    startz = np.min(nodes[:,2])
+    zside = nodes[elems[0][8]][2]-nodes[elems[0][1]][2]
+    endz=np.max(nodes[:,2])
+    nelem_z = (endz - startz) / zside
+
+    for nt in range(0, num_terminals):
+        coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
+        xelem_num = np.floor((coord_terminal[0] - startx) / xside)
+        yelem_num = np.floor((coord_terminal[1] - starty) / yside)
+        zelem_num = np.floor((coord_terminal[2] - startz) / zside)
+        nelem = int(xelem_num + (yelem_num)*nelem_x + (zelem_num)*(nelem_x*nelem_y))
+        terminals_in_grid[nelem]=terminals_in_grid[nelem]+1
+        terminal_elems[nt] = nelem #record what element the terminal is in
+    return{'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
+
 
 def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc):
     # This function counts the number of terminals in a sampling grid element
@@ -39,14 +74,11 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
     num_terminals = terminal_list['total_terminals']
     terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
     terminal_mapped = np.zeros(num_terminals, dtype=int)
-
-
-    print('length of data', len(placenta_list))
+    terminal_elems = np.zeros(num_terminals, dtype=int)
 
     for ne_i in range(0, num_sample_elems):
         # First node has min x,y,z and last node has max x,y,z
         ne = placenta_list[ne_i]
-        start = time.time()
         if placenta_list[ne_i] > 0: #There is some placenta in this element (assuming none in el 0)
             first_node = rectangular_mesh['elems'][ne][1]
             last_node = rectangular_mesh['elems'][ne][8]
@@ -64,13 +96,10 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
                                         if coord_terminal[2] < max_coords[2]:
                                             in_element = True
                     if in_element:
-                        print(nt, in_element)
                         terminals_in_grid[ne] = terminals_in_grid[ne] + 1
                         terminal_mapped[nt] = 1
-        end = time.time()
-        print('Time taken for this element: ' + str(ne))
-        print(end-start, np.sum(terminal_mapped))
-    return terminals_in_grid
+                        terminal_elems[nt] = ne
+    return{'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
 
 
 def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
