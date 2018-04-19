@@ -102,3 +102,7 @@ ENV/
 
 #pycharm stuff
 .idea
+
+# Backup files
+*~
+
