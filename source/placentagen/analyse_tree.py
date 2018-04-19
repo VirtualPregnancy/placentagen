@@ -114,7 +114,6 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
 
     for ne in range(0,num_elems):
         radius[ne]= 10.**(np.log10(radius_ratio)*(elem_order[ne]-n_max_ord)+np.log10(inlet_radius))
-        print(elem_order[ne],radius[ne])
 
     return radius
 
