@@ -103,13 +103,20 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
     # inlet_elem: element number that you want to define as having inlet_radius
     # inlet_radius: the radius of your inlet vessel
     # radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
-    radius = np.zeros(len(elems))  # initialise radius array
+    num_elems = len(elems)
+    radius = np.zeros(num_elems)  # initialise radius array
     # Evaluate orders in the system
     orders = evaluate_orders(node_loc, elems)
     elem_order = orders[system]
     ne = inlet_elem
     n_max_ord = elem_order[ne]
     radius[ne] = inlet_radius
+
+    for ne in range(0,num_elems):
+        radius[ne]= 10.**(np.log10(radius_ratio)*(elem_order[ne]-n_max_ord)+np.log10(inlet_radius))
+        print(elem_order[ne],radius[ne])
+
+    return radius
 
 
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):

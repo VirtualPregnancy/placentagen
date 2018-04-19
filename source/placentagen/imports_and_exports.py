@@ -211,6 +211,30 @@ def export_exfield_3d_linear(data, groupname, fieldname, filename):
 
     f.close()
 
+def export_exfield_1d_linear(data, groupname, fieldname, filename):
+    # Exports element locations to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(data)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape.  Dimension=1\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           0\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, field, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write("   %s.  l.Lagrange, no modify, grid based.\n" % fieldname)
+    f.write("   #xi1=1 \n")
+    for x in range(0, data_num):
+        f.write(" Element:            %s 0 0\n" % int(x + 1))
+        f.write("   Values:")
+        f.write(
+            "           %s       %s\n" % (
+                data[x], data[x]))
+    f.close()
+
 
 def import_exnode_tree(filename):
     # count nodes for check of correct number for the user, plus use in future arrays
