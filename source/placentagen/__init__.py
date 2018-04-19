@@ -15,6 +15,7 @@ from .grow_tree import add_stem_villi
 from .grow_tree import grow_large_tree
 from .analyse_tree import calc_terminal_branch
 from .analyse_tree import evaluate_orders
+from .analyse_tree import define_radius_by_order
 from .analyse_tree import terminals_in_sampling_grid
 from .analyse_tree import terminals_in_sampling_grid_fast
 from .analyse_tree import ellipse_volume_to_grid

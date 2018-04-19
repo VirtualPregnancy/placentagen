@@ -94,6 +94,24 @@ def evaluate_orders(node_loc, elems):
     return {'strahler': strahler, 'horsfield': horsfield, 'generation': generation}
 
 
+def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, radius_ratio):
+    # This function defines radii in a branching tree by 'order' of the vessel
+    # Inputs are:
+    # node_loc: The nodes in the branching tree
+    # elems: The elements in the branching tree
+    # system: 'strahler','horsfield' or 'generation' to define vessel order
+    # inlet_elem: element number that you want to define as having inlet_radius
+    # inlet_radius: the radius of your inlet vessel
+    # radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
+    radius = np.zeros(len(elems))  # initialise radius array
+    # Evaluate orders in the system
+    orders = evaluate_orders(node_loc, elems)
+    elem_order = orders[system]
+    ne = inlet_elem
+    n_max_ord = elem_order[ne]
+    radius[ne] = inlet_radius
+
+
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
     # This function counts the number of terminals in a sampling grid element, will only work with
     # rectangular mesh created as in generate_shapes.gen_rectangular_mesh
