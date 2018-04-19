@@ -204,7 +204,7 @@ def export_exfield_3d_linear(data, groupname, fieldname, filename):
     f.write("   #xi3=1 \n")
     for x in range(0, data_num):
         f.write(" Element:            %s 0 0\n" % int(x + 1))
-        f.write("   Values:")
+        f.write("   Values:\n")
         f.write(
             "           %s       %s       %s       %s       %s       %s       %s       %s\n" % (
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
@@ -229,7 +229,7 @@ def export_exfield_1d_linear(data, groupname, fieldname, filename):
     f.write("   #xi1=1 \n")
     for x in range(0, data_num):
         f.write(" Element:            %s 0 0\n" % int(x + 1))
-        f.write("   Values:")
+        f.write("   Values:\n")
         f.write(
             "           %s       %s\n" % (
                 data[x], data[x]))
