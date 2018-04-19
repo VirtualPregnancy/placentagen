@@ -23,9 +23,6 @@ class Test_Terminal_Br(TestCase):
         term_br  = placentagen.calc_terminal_branch(noddata['nodes'],eldata['elems'])
         self.assertTrue(term_br['total_terminals'] == 2)
 
-
-
-        
       
 class test_pl_vol_in_grid(TestCase):
         
