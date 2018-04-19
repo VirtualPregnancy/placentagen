@@ -65,9 +65,8 @@ class test_pl_vol_in_grid(TestCase):
         rectangular_mesh['total_nodes'] =8
         rectangular_mesh['total_elems'] = 1
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 0.125)
-        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], 0.125))
-        self.assertTrue(abs(pl_vol['pl_vol_in_grid'][0]- (spacing*spacing*spacing))<1e-2)#not sure this one is need as it is supposed to be exactly the same
-
+        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], spacing*spacing*spacing))
+       
     
 if __name__ == '__main__':
    unittest.main()
