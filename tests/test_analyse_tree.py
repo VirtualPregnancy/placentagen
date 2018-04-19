@@ -50,10 +50,14 @@ class test_pl_vol_in_grid(TestCase):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
         ellipticity = 1.00  # no units
         spacing = 1.0  # mm
-        rectangular_mesh = placentagen.gen_rectangular_mesh(volume, thickness, ellipticity, spacing, spacing, spacing)
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
+        rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+        rectangular_mesh['total_nodes'] =8
+        rectangular_mesh['total_elems'] = 1
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 25)
         
-        self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], 0.124841925586))
+        self.assertTrue(abs(pl_vol['pl_vol_in_grid']-1./8.)/(1./8)<1e-2)#looking for less than 1% error in expected volume of 1/8
 
 
     def test_pl_vol_complete_outside(self):
