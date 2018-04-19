@@ -43,8 +43,6 @@ class test_pl_vol_in_grid(TestCase):
         self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], 0.12485807941))
         self.assertTrue(abs(pl_vol['pl_vol_in_grid']-1./8.)/(1./8)<1e-2)#looking for less than 1% error in expected volume of 1/8
 
-
-
     def test_pl_vol_complete_inside(self):
         thickness =  2  # mm
         ellipticity = 1.6  # no units
