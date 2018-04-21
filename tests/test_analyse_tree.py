@@ -67,6 +67,31 @@ class test_pl_vol_in_grid(TestCase):
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 0.125)
         self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], spacing*spacing*spacing))
        
+
+class Test_terminals_in_sampling_grid_slow(TestCase):
+        
+    def test_terminals_in_grid_slow(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
+        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
+        placenta_list=[0,1,2,3,4,5,6,7]
+        term_grid=placentagen.terminals_in_sampling_grid(rect_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminals_in_grid'][0] == 0)
+        self.assertTrue(term_grid['terminals_in_grid'][7] == 1)
+   
+    def test_terminals_elems_slow(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
+        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
+        placenta_list=[0,1,2,3,4,5,6,7]
+        term_grid=placentagen.terminals_in_sampling_grid(rect_mesh, placenta_list,term_br,noddata['nodes'])
+        self.assertTrue(term_grid['terminal_elems'][0] == 5)
+     
+
     
 if __name__ == '__main__':
    unittest.main()
