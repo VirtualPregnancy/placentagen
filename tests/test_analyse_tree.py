@@ -70,24 +70,32 @@ class test_pl_vol_in_grid(TestCase):
 
 class Test_terminals_in_sampling_grid_fast(TestCase):
         
-    def test_terminals_in_grid(self):
+    def test_terminals_in_grid_present(self):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
-        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
         noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
-        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
-        term_grid =placentagen.terminals_in_sampling_grid_fast(rect_mesh, term_br, noddata['nodes'])
-        self.assertTrue(term_grid['terminals_in_grid'][0] == 0)
-        self.assertTrue(term_grid['terminals_in_grid'][7] == 1)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+        rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+        term_grid =placentagen.terminals_in_sampling_grid_fast(rectangular_mesh, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminals_in_grid'][0] == 1)
+        
      
-    def test_terminal_elems(self):
+    def test_terminal_elems_present(self):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
-        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
         noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
-        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
-        term_grid =placentagen.terminals_in_sampling_grid_fast(rect_mesh, term_br, noddata['nodes'])
-        self.assertTrue(term_grid['terminal_elems'][0] == 5)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+        rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+        term_grid =placentagen.terminals_in_sampling_grid_fast(rectangular_mesh, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminal_elems'][0] == 0)#this zero does not mean branch are not located. it means samp_grid el 0 
+
+
         
       
      
