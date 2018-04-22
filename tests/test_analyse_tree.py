@@ -67,6 +67,69 @@ class test_pl_vol_in_grid(TestCase):
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 0.125)
         self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], spacing*spacing*spacing))
        
+
+class Test_terminals_in_sampling_grid_slow(TestCase):
+        
+    def test_terminals_in_grid_slow_present(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        placenta_list=[7]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]]
+        rectangular_mesh['elems'][7]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminals_in_grid'][7] == 1)
+    
+
+
+    def test_terminals_elem_slow_present(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        placenta_list=[7]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]]
+        rectangular_mesh['elems'][7]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminal_elems'][0] == 7)
+
+
+    def test_terminals_in_grid_slow_absent(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        term_br=placentagen.calc_terminal_branch(noddata['nodes'],eldata['elems'])
+        placenta_list=[1]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0., -1., -1.],[ 1., -1., -1.],[ 0.,  0., -1.],[ 1. , 0., -1.],[ 0. ,-1. , 0.],[ 1., -1.,  0.],[ 0. , 0. , 0.],[ 1. , 0. , 0.]]
+        rectangular_mesh['elems'][1]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(np.sum(term_grid['terminals_in_grid']) == 0)#all must be zero as could not locate any terminal br
+
+
+
+    def test_terminals_elem_slow_absent(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        term_br=placentagen.calc_terminal_branch(noddata['nodes'],eldata['elems'])
+        placenta_list=[1]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0., -1., -1.],[ 1., -1., -1.],[ 0.,  0., -1.],[ 1. , 0., -1.],[ 0. ,-1. , 0.],[ 1., -1.,  0.],[ 0. , 0. , 0.],[ 1. , 0. , 0.]]
+        rectangular_mesh['elems'][1]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(np.sum(term_grid['terminal_elems']) == 0)#all must be zero as could not locate any terminal br
+
+
     
 if __name__ == '__main__':
    unittest.main()
