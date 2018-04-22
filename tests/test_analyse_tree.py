@@ -72,26 +72,31 @@ class Test_terminals_in_sampling_grid_slow(TestCase):
         
     def test_terminals_in_grid_slow(self):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
-        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
         noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
-        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
-        placenta_list=[0,1,2,3,4,5,6,7]
-        term_grid=placentagen.terminals_in_sampling_grid(rect_mesh, placenta_list, term_br, noddata['nodes'])
-        self.assertTrue(term_grid['terminals_in_grid'][0] == 0)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        placenta_list=[7]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]]
+        rectangular_mesh['elems'][7]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
         self.assertTrue(term_grid['terminals_in_grid'][7] == 1)
-   
-    def test_terminals_elems_slow(self):
+    
+    def test_terminals_elem_slow(self):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
-        eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
         noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
-        rect_mesh=placentagen.gen_rectangular_mesh(1, thickness, 1, 1, 1, 1)
-        term_br=placentagen.calc_terminal_branch(noddata['nodes'], eldata['elems'])
-        placenta_list=[0,1,2,3,4,5,6,7]
-        term_grid=placentagen.terminals_in_sampling_grid(rect_mesh, placenta_list,term_br,noddata['nodes'])
-        self.assertTrue(term_grid['terminal_elems'][0] == 5)
-     
-
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        placenta_list=[7]
+        rectangular_mesh = {}
+        rectangular_mesh['elems']=np.zeros((8,9),dtype=int)
+        rectangular_mesh['nodes'] = [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]]
+        rectangular_mesh['elems'][7]=[0, 0, 1, 2, 3, 4, 5, 6, 7]
+        term_grid=placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminal_elems'][0] == 7)
     
 if __name__ == '__main__':
    unittest.main()
