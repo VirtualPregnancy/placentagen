@@ -17,3 +17,4 @@ from .analyse_tree import calc_terminal_branch
 from .analyse_tree import terminals_in_sampling_grid
 from .analyse_tree import terminals_in_sampling_grid_fast
 from .analyse_tree import ellipse_volume_to_grid
+from .analyse_tree import cal_br_vol_samp_grid
