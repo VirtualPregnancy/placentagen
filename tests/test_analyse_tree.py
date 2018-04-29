@@ -66,7 +66,38 @@ class test_pl_vol_in_grid(TestCase):
         rectangular_mesh['total_elems'] = 1
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 0.125)
         self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], spacing*spacing*spacing))
-       
-    
+ 
+
+class Test_terminals_in_sampling_grid_fast(TestCase):
+        
+    def test_terminals_in_grid_present(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+        rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+        term_grid =placentagen.terminals_in_sampling_grid_fast(rectangular_mesh, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminals_in_grid'][0] == 1)
+        
+     
+    def test_terminal_elems_present(self):
+        thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        term_br={}
+        term_br['terminal_nodes']=[3]
+        term_br['total_terminals']=1
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+        rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+        term_grid =placentagen.terminals_in_sampling_grid_fast(rectangular_mesh, term_br, noddata['nodes'])
+        self.assertTrue(term_grid['terminal_elems'][0] == 0)#this zero does not mean branch are not located. it means samp_grid el 0 
+
+
+        
+      
+     
 if __name__ == '__main__':
    unittest.main()
