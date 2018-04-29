@@ -117,6 +117,82 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
 
     return radius
 
+def tree_statistics(node_loc, elems, radius, orders):
+    #Caclulates tree statistics for a given tree and prints to terminal
+    #Inputs are:
+    # node_loc: The nodes in the branching tree
+    # elems: The elements in the branching tree
+    # radius: per element radius
+    # orders: per element order
+
+    num_elems = len(elems)
+    diameters = 2.0*radius
+    connectivity=pg_utilities.element_connectivity_1D(node_loc, elems)
+    elem_upstream = connectivity['elem_up']
+    elem_downstream = connectivity['elem_down']
+    num_schemes = 3
+    generation = orders['generation']
+    horsfield = orders['horsfield']
+    strahler = orders['strahler']
+
+    index = np.zeros(3, dtype=int)
+
+    #local arrays
+    #length array
+    lengths = np.zeros(num_elems)
+    #ratios: index i is order, index j is ratios of branching (j=1), length (j=2), and diameter (j=3)
+
+    nbranches = np.zeros((num_schemes+1,num_elems))
+
+    # j = 0 length, j = 1 diameter, j = 4 L/D
+    branches = np.zeros((5,num_elems))
+
+    for ne in range(0,num_elems):
+        np1 = elems[ne][1]
+        np2 = elems[ne][2]
+        point1 = node_loc[np1][1:4]
+        point2 = node_loc[np2][1:4]
+        lengths[ne] = np.linalg.norm(point1-point2)
+
+    ntotal = 0
+    num_dpp = 0
+    num_llp = 0
+    N = 1
+    for ne in range(0, num_elems):
+        num_upstream = elem_upstream[ne][0]
+        ne0 = elem_upstream[ne][1]
+        index[0] = generation[ne]
+        index[1] = horsfield[ne]
+        index[2] = strahler[ne]
+        add = False
+        if(num_upstream == 0): #nothing upstream
+            add = True
+        elif generation[ne0] != index[0]: #something upstream and not the
+            add  = True
+        if add:
+            N = N+1
+            for i in range(0,num_schemes):
+                nbranches[i][N-1] = index[i]
+            if num_upstream !=0:
+                nbranches[num_schemes][N-1] = strahler[ne0] #strahler order of parent
+            else:
+                nbranches[num_schemes][N - 1] = 0
+
+        #Add length of all segments along branch, and calculate mean diameter
+        n_segments = 1
+
+        mean_diameter = diameter[ne]
+        branches[0][N-1] = lengths[ne]
+        ne_next = ne
+        while elem_downstream[ne_next][0] == 1:
+            ne_next = elem_downstream[ne_next][1]
+            branches[0][N - 1] = branches[0][N - 1] + lengths[ne_next]
+            mean_diameter = mean_diameter + diameters[ne_next]
+            n_segments = n_segments + 1
+            print n_segments
+
+
+
 
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
     # This function counts the number of terminals in a sampling grid element, will only work with
