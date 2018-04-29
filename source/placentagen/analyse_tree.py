@@ -189,7 +189,7 @@ def tree_statistics(node_loc, elems, radius, orders):
             branches[0][N - 1] = branches[0][N - 1] + lengths[ne_next]
             mean_diameter = mean_diameter + diameters[ne_next]
             n_segments = n_segments + 1
-            print n_segments
+            print(n_segments)
 
 
 
