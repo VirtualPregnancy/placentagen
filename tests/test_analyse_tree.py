@@ -66,6 +66,66 @@ class test_pl_vol_in_grid(TestCase):
         rectangular_mesh['total_elems'] = 1
         pl_vol=placentagen.ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, 0.125)
         self.assertTrue(np.isclose(pl_vol['pl_vol_in_grid'][0], spacing*spacing*spacing))
+   
+class test_br_vol_in_grid(TestCase):
+        
+    def test_br_vol_sampling_grid(self):
+        thickness =  2  # mm
+        ellipticity = 1.00  # no units
+        volume=5
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = np.array([[-0.5,-0.5, -1. ],[ 0.5 ,-0.5 ,-1. ],[-0.5 , 0.5 ,-1. ],[ 0.5  ,0.5, -1. ],[-0.5, -0.5 , 0. ],[ 0.5 ,-0.5 , 0. ],[-0.5  ,0.5  ,0. ],[ 0.5,  0.5 , 0. ]])
+        rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+        rectangular_mesh['total_elems'] = 1
+        p_vol={}
+        p_vol['pl_vol_in_grid']=[ 0.926015574057]
+        eldata={}
+        eldata['elems']=[[0 ,0, 1]]
+        nodedata={}
+        nodedata['nodes']=[[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]]
+        br_vol_in_grid=placentagen.cal_br_vol_samp_grid(rectangular_mesh,eldata,nodedata,5,2,1,p_vol)
+        self.assertTrue(np.isclose(br_vol_in_grid['total_vol_samp_gr'][0,0],  0.01570796))
+        self.assertTrue(np.isclose(br_vol_in_grid['total_vol_samp_gr'][0,1],  0.00314159))
+
+
+           
+    def test_each_and_total_br_vol(self):
+        thickness =  2  # mm
+        ellipticity = 1.00  # no units
+        volume=5
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = np.array([[-0.5,-0.5, -1. ],[ 0.5 ,-0.5 ,-1. ],[-0.5 , 0.5 ,-1. ],[ 0.5  ,0.5, -1. ],[-0.5, -0.5 , 0. ],[ 0.5 ,-0.5 , 0. ],[-0.5  ,0.5  ,0. ],[ 0.5,  0.5 , 0. ]])
+        rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+        rectangular_mesh['total_elems'] = 1
+        p_vol={}
+        p_vol['pl_vol_in_grid']=[ 0.926015574057]
+        eldata={}
+        eldata['elems']=[[0 ,0, 1]]
+        nodedata={}
+        nodedata['nodes']=[[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]]
+        br_vol_in_grid=placentagen.cal_br_vol_samp_grid(rectangular_mesh,eldata,nodedata,5,2,1,p_vol)
+        self.assertTrue(np.isclose(br_vol_in_grid['total_br_vol'],  0.01570796))
+        self.assertTrue(abs(br_vol_in_grid['total_br_vol']-0.0157)<1e-2)#error tolerance for the value when calculate manually using pi is 3.14
+        self.assertTrue(np.isclose(br_vol_in_grid['vol_each_br'][0],  0.01570796))
+        self.assertTrue(abs(br_vol_in_grid['vol_each_br'][0]-0.0157)<1e-2)#error tolerance for the value when calculate manually using pi is 3.14
+
+    def test_br_num_samp_gr(self):
+        thickness =  2  # mm
+        ellipticity = 1.00  # no units
+        volume=5
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = np.array([[-0.5,-0.5, -1. ],[ 0.5 ,-0.5 ,-1. ],[-0.5 , 0.5 ,-1. ],[ 0.5  ,0.5, -1. ],[-0.5, -0.5 , 0. ],[ 0.5 ,-0.5 , 0. ],[-0.5  ,0.5  ,0. ],[ 0.5,  0.5 , 0. ]])
+        rectangular_mesh['elems'] = [[ 0, 0, 1, 2, 3, 4,5 ,6,7]]
+        rectangular_mesh['total_elems'] = 1
+        p_vol={}
+        p_vol['pl_vol_in_grid']=[0.926015574057]
+        eldata={}
+        eldata['elems']=[[0 ,0, 1]]
+        nodedata={}
+        nodedata['nodes']=[[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]]
+        br_vol_in_grid=placentagen.cal_br_vol_samp_grid(rectangular_mesh,eldata,nodedata,5,2,1,p_vol)
+        self.assertTrue(np.isclose(br_vol_in_grid['br_num_in_samp_gr'][0],1))
+        
  
 
 class Test_terminals_in_sampling_grid_fast(TestCase):
@@ -152,6 +212,14 @@ class Test_terminals_in_sampling_grid_general(TestCase):
         self.assertTrue(
             np.sum(term_grid['terminal_elems']) == 0)  # all must be zero as could not locate any terminal br
       
-     
+
 if __name__ == '__main__':
    unittest.main()
+
+
+
+
+
+    
+    
+
