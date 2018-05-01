@@ -4,10 +4,37 @@ import numpy as np
 from . import pg_utilities
 
 
-# Contains code to generate placental shapes for generic placental models (i.e. from literature measures without
-# specific data from an individual
+"""
+.. module:: generate_shapes
+  :synopsis: Contains code to generate placental shapes for generic placental models.
+
+:synopsis:Contains code to generate placental shapes for generic placental models \n
+ (i.e. from literature measures without specific data from an individual
+"""
 
 def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
+    """ Generates equally spaced data points in an ellipsoid.
+
+    Inputs:
+       n: number of data points which we aim to generate
+       volume: volume of ellipsoid
+       thickness: placental thickness (z-dimension)
+       ellipticity: ratio of y to x axis dimensions
+
+    Returns:
+       A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
+
+    A way you might want to use me is:
+
+    >>> n = 100
+    >>> volume = 10
+    >>> thickness = 3
+    >>> ellipticity = 1.1
+    >>> equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity)
+
+   This will return 100 data points in an ellipse with z-axis thickness 3, volume 10, and with the y-axis dimension 1.1 times the x-axis dimension.
+
+    """
     # Generates equally spaced data points in an ellipsoid with the following inputs
     # n=number of data points which we aim to generate
     # volume=volume of ellipsoid
