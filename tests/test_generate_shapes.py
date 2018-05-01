@@ -1,8 +1,8 @@
 from unittest import TestCase
 
-import numpy as np
-
 import placentagen
+
+import numpy as np
 
 
 class Test_generate_data(TestCase):
