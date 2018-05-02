@@ -16,6 +16,7 @@ Contents:
    :maxdepth: 2
 
    building
+   developing
    testing
    modules
    pythonstyle

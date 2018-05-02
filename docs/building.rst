@@ -8,7 +8,6 @@ Pre-requisites
 To use these libraries you need:
 
 - A python interpreter
-- numpy (`pip install numpy`)
 
 
 Install and run
