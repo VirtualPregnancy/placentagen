@@ -7,7 +7,7 @@ Running tests-  :ref:`Running tests`
 Creating tests-  :ref:`Creating tests`
 
 Running tests
-=============
+-------------
 
 The codebase on the repository is tested using travis continuous integration for python 2.7 and 3.0
 
@@ -59,7 +59,7 @@ If you don't want to use nosetests, an alternative is (from the root directory o
 
 
 Creating tests
-==============
+--------------
 
 We aim to have this code 100% covered by unit tests, and if you are developing we expect pull requests to include unit
 tests, commented code, and documentation for new code. We try to practise what we preach, but we're almost exclusively
