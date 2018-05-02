@@ -10,19 +10,20 @@ from . import pg_utilities
 
 :synopsis:Contains code to generate placental shapes for generic placental models \n
  (i.e. from literature measures without specific data from an individual
+ 
 """
 
 def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     """ Generates equally spaced data points in an ellipsoid.
 
     Inputs:
-       n: number of data points which we aim to generate
-       volume: volume of ellipsoid
-       thickness: placental thickness (z-dimension)
-       ellipticity: ratio of y to x axis dimensions
+       - n: number of data points which we aim to generate
+       - volume: volume of ellipsoid
+       - thickness: placental thickness (z-dimension)
+       - ellipticity: ratio of y to x axis dimensions
 
     Returns:
-       A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
+       - Edata: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
 
     A way you might want to use me is:
 
@@ -83,11 +84,28 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
 
 
 def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
-    # Generates equally spaced data points on the surface of an ellipsoid with the following inputs
-    # n=number of data points which we aim to generate
-    # volume=volume of ellipsoid
-    # thickness = placental thickness (z-dimension)
-    # ellipticity = ratio of y to x axis dimensions
+    """ Generates equally spaced data points on the positive z-surface of an ellipsoid
+
+    Inputs:
+       - n: number of data points which we aim to generate
+       - volume: volume of ellipsoid
+       - thickness: placental thickness (z-dimension)
+       - ellipticity: ratio of y to x axis dimensions
+
+    Returns:
+       - chorion_data: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
+
+    A way you might want to use me is:
+
+    >>> n = 100
+    >>> volume = 10
+    >>> thickness = 3
+    >>> ellipticity = 1.1
+    >>> equispaced_data_on_ellipsoid(n, volume, thickness, ellipticity)
+
+   This will return 100 data points on the positive z-surface ellipse with z-axis thickness 3, volume 10, and with the y-axis dimension 1.1 times the x-axis dimension.
+
+    """
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']

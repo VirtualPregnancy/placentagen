@@ -6,7 +6,32 @@ import sys
 import math
 import numpy.matlib
 
+
+"""
+.. module:: analyse_tree
+  :synopsis: One sentence synopis (brief) could appear in module index.
+
+:synopsis:A longer synopsis that could appear on the home page for that module in documentation.
+
+"""
+
 def calc_terminal_branch(node_loc, elems):
+    """ What this function does
+
+    Inputs:
+       - input name: A description of the input
+
+    Returns:
+       - output name: a description of the output
+            - can do sub points if there are complicated arrays
+
+
+    A way you might want to use me is:
+
+    >>> include a simple example of how to call the function
+
+    Tell us what the function will do
+    """
     # This function generates a list of terminal nodes associated with a branching geometry
     # inputs are node locations and elements
     num_elems = len(elems)
