@@ -2,6 +2,21 @@
 import numpy as np
 
 
+def rotation_matrix_3d(axis,angle_rot):
+    axis=axis/np.linalg.norm(axis) #normalise just in case
+    R = np.zeros((3, 3))
+    R[0][0] = np.cos(angle_rot) + axis[0] ** 2 * (1 - np.cos(angle_rot))
+    R[0][1] = axis[0] * axis[1] * (1 - np.cos(angle_rot)) - axis[2] * np.sin(angle_rot)
+    R[0][2] = axis[0] * axis[2] * (1 - np.cos(angle_rot)) + axis[1] * np.sin(angle_rot)
+    R[1][0] = axis[0] * axis[1] * (1 - np.cos(angle_rot)) + axis[2] * np.sin(angle_rot)
+    R[1][1] = np.cos(angle_rot) + axis[1] ** 2 * (1 - np.cos(angle_rot))
+    R[1][2] = axis[1] * axis[2] * (1 - np.cos(angle_rot)) - axis[0] * np.sin(angle_rot)
+    R[2][0] = axis[0] * axis[2] * (1 - np.cos(angle_rot)) - axis[1] * np.sin(angle_rot)
+    R[2][1] = axis[1] * axis[2] * (1 - np.cos(angle_rot)) + axis[0] * np.sin(angle_rot)
+    R[2][2] = np.cos(angle_rot) + axis[2] ** 2 * (1 - np.cos(angle_rot))
+
+    return R
+
 def calculate_ellipse_radii(volume, thickness, ellipticity):
     pi = np.pi
     z_radius = thickness / 2.0
@@ -26,13 +41,26 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
-    zero_tol = 1e-14
+    zero_tol = 1e-10
     on_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
     if abs(coord_check - 1.0) < zero_tol:
         on_ellipsoid = True
 
     return on_ellipsoid
+
+def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    zero_tol = 1e-10
+    in_ellipsoid = False  # default to false
+    coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
+    if coord_check < 1.0:
+        in_ellipsoid = True
+    elif abs(coord_check - 1.0) < zero_tol:
+        in_ellipsoid = True
+
+    return in_ellipsoid
+
+
 
 
 def angle_two_vectors(vector1, vector2):

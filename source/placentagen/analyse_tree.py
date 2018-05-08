@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
 from . import pg_utilities
-import time
 import sys
-import math
-import numpy.matlib
+from numpy import matlib
 
 """
 .. module:: analyse_tree
@@ -305,6 +303,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
     total_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
+    
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
@@ -404,7 +403,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
     return {'pl_vol_in_grid': pl_vol_in_grid, 'non_empty_rects': non_empty_loc}
 
 
-def cal_br_vol_samp_grid(rectangular_mesh, eldata, nodedata, volume, thickness, ellipticity, p_vol):
+def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_radius, volume, thickness, ellipticity, start_elem):
     '''
     This subroutine is to:
     1. calculate total volume of branches in each samp_grid_el (to use when calculate vol_frac/porosity)
@@ -413,158 +412,155 @@ def cal_br_vol_samp_grid(rectangular_mesh, eldata, nodedata, volume, thickness, 
     4. calculate the volume of individual branch and total vol of all branches in the whole tree
          
     '''
-    total_elems = rectangular_mesh['total_elems']  # total number of samp_gr_element
-    branch_node = nodedata['nodes']  # node coordinate of branches whole tree
-    branch_el = eldata['elems']  # element connectivity of branches whole tree
-
+    # Define information about sampling grid required to place data points in correct locations
+    total_sample_elems = rectangular_mesh['total_elems']
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    startx = np.min(nodes[:, 0])
+    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
+    endx = np.max(nodes[:, 0])
+    nelem_x = (endx - startx) / xside
+    starty = np.min(nodes[:, 1])
+    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
+    endy = np.max(nodes[:, 1])
+    nelem_y = (endy - starty) / yside
+    startz = np.min(nodes[:, 2])
+    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
+    endz = np.max(nodes[:, 2])
+    #Define the placental ellipsoid
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
-    z_rad = radii['z_radius']
-    x_rad = radii['x_radius']
-    y_rad = radii['y_radius']
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
 
-    pi = math.pi
-    br_num_in_samp_gr = np.zeros((total_elems, 1),
-                                 dtype=int)  # number of branch in each samp_grid element (useful to see distribution)
-    vol_each_br = np.zeros((len(branch_el), 1))  # the vol of each whole branch
-    total_vol_samp_gr = np.zeros((total_elems,
-                                  2))  # 1st col of stores total vol of braches in each samp_grid el, 2nd col stores diameter variable of branches in each samp_grid el
-    b_count = 0
+    #Define the resolution of cylinder for analysis
+    num_points_xy = 8
+    num_points_z = 8
+    unit_cyl_points = np.zeros((num_points_xy*num_points_xy*num_points_z,3))
+    #Define a cylinder of points of radius 1 and length 1
+    x = np.linspace(-1,1,num_points_xy)
+    y = np.linspace(-1,1,num_points_xy)
+    num_accepted = 0
+    for k in range(0,num_points_z+1):
+        for i in range(0,num_points_xy):
+            for j in range(0,num_points_xy):
+                if(x[i]**2 + y[j]**2)<=1:
+                    new_z = 1 / np.double(num_points_z) * k
+                    unit_cyl_points[num_accepted][0] = x[i]
+                    unit_cyl_points[num_accepted][1] = y[j]
+                    unit_cyl_points[num_accepted][2] = new_z
+                    num_accepted = num_accepted+1
+    unit_cyl_points.resize(num_accepted, 3, refcheck=False)
+    cyl_points = unit_cyl_points
+    cylindervector = np.array([0.0,0.0,1.0])
 
-    for ne in range(0, len(branch_el)):  # looping for all branchs in tree
-        N1 = branch_node[branch_el[ne][1]][1:4]  # coor of start node of a branch element
-        N2 = branch_node[branch_el[ne][2]][1:4]  # coor of end node of a branch element
+    ###Define and initialise arrays to be populated
+    # number of branch in each samp_grid element (useful to see distribution)
+    br_num_in_samp_gr = np.zeros(total_sample_elems, dtype=int)
+    #The volume of each branch
+    vol_each_br = np.zeros(len(branch_elems))
+    # Array for total volume of sampling grid in each element
+    total_vol_samp_gr = np.zeros(total_sample_elems)
 
-        # check the branch is located inside the ellipsoid
-        check_in_range_N1 = pg_utilities.check_in_ellipsoid(N1[0], N1[1], N1[2], x_rad, y_rad, z_rad)
-        check_on_range_N1 = pg_utilities.check_on_ellipsoid(N1[0], N1[1], N1[2], x_rad, y_rad, z_rad)
-        check_in_range_N2 = pg_utilities.check_in_ellipsoid(N2[0], N2[1], N2[2], x_rad, y_rad, z_rad)
-        check_on_range_N2 = pg_utilities.check_on_ellipsoid(N2[0], N2[1], N2[2], x_rad, y_rad, z_rad)
+    #initialise counters
+    branch_count = 0
+    volume_outside_ellipsoid = 0.0
+    volume_inside_ellipsoid = 0.0
 
-        if (check_in_range_N1 == False and check_on_range_N1 == False) or (
-                check_in_range_N2 == False and check_in_range_N2 == False):
-            sys.exit('branch number: ' + str(
-                ne) + ' is located outside the ellispoid (whole or partial). Check ellipsoid vol/coordinates of br')
+    for ne in range(start_elem,len(branch_elems)):#len(branch_elems)):  # looping for all branchs in tree
+        node1 = branch_nodes[branch_elems[ne][1]][1:4]  # coor of start node of a branch element
+        node2 = branch_nodes[branch_elems[ne][2]][1:4]  # coor of end node of a branch element
+        node1in = pg_utilities.check_in_on_ellipsoid(node1[0], node1[1], node1[2], x_radius, y_radius, z_radius)
+        node2in = pg_utilities.check_in_on_ellipsoid(node2[0], node2[1], node2[2], x_radius, y_radius, z_radius)
+        if not node1in and not node2in:
+            print('Warning, element ' + str(ne) + 'is not in ellipsoid, if this is not expected check your geometry')
+            print('Skipping this element from analysis')
+            continue
+        elif not node1in or not node2in:
+            print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
+            print('The first node ' + str(node1) + ' is ' + srt(node1in) + ' (True means inside).')
+            print('The second node ' + str(node2) + ' is ' + srt(node2in) + ' (True means inside).')
+            print('Skipping this element from analysis')
+            continue
 
-        r = 0.1  #######artifical value at the moment, radius of individual branch
-        interval = 0.01
-        points = 8
-        unit_Vx = [1, 0, 0]  # Defining Unit vector along the X-direction
-        angle_N1N2 = np.arccos(np.dot(unit_Vx, np.subtract(N2, N1)) / (np.linalg.norm(unit_Vx) * np.linalg.norm(
-            np.subtract(N2, N1)))) * 180 / pi  # branching angle from unit vector
-        axis_rot = np.cross(unit_Vx, np.subtract(N2,
-                                                 N1))  # the axis of rotation (single rotation) to rotate the branch in % X-direction to the required arbitrary direction through cross product
-        length_br = np.linalg.norm(np.subtract(N2, N1))  # length of individual branch
-        branch_vol = pi * r ** 2 * length_br  # volume of individual branch
-        dp_along_length = np.linspace(interval, length_br, 10)  # linspace points along the length of branch
+        branch_vector = node2-node1
+        r = branch_radius[ne]
+        length = np.linalg.norm(branch_vector)
+        vol_each_br[ne] = np.pi*length*r**2.0
+        vol_per_point = vol_each_br[ne]/(np.double(num_accepted))
 
-        # generate evenly spaced points in the y and z vector cross section of branch
-        yp = np.linspace(-r, r, points)  # linspace along of cross-section of br
-        zp = np.linspace(-r, r, points)  # linspace along of cross-section of br
-        [yd, zd] = np.meshgrid(yp, zp)  # generate meshgrid
+        cyl_points[:,0:2]=unit_cyl_points[:,0:2]*r
+        cyl_points[:,2] = unit_cyl_points[:,2]*length
 
-        counter = 0
-        dp_cross_section = np.zeros((2, len(yd) * len(yd[0])))
+        desiredvector = branch_vector / np.linalg.norm(branch_vector)
 
-        for a in range(0, len(yd[0])):
-            for b in range(0, len(yd[0])):
-                if r - (math.sqrt(yd[a, b] ** 2 + zd[
-                    a, b] ** 2)) >= 0:  # include points only if points are inside or on boundary of cylinderical cross-section of br
+        rotation_axis = np.cross(desiredvector,cylindervector)
 
-                    dp_cross_section[0, counter] = yd[a, b]
-                    dp_cross_section[1, counter] = zd[a, b]
-                    counter = counter + 1
+        if np.linalg.norm(rotation_axis) == 0:#aligned
+            if node2[2]-node1[2] < 0:
+                cyl_points[:, 2] = -1.0*cyl_points[:, 2]
+        else:
+            angle = pg_utilities.angle_two_vectors(cylindervector,desiredvector)
+            rotation_mat = pg_utilities.rotation_matrix_3d(rotation_axis,angle)
+            cyl_points = np.array(np.matrix(cyl_points)*np.matrix(rotation_mat))
 
-        dp_cross_section = dp_cross_section[:, 0:counter]  # yz vector for one layer
-        dp_cross_section = np.matlib.repmat(dp_cross_section[:], 1,
-                                            len(dp_along_length))  # repeating yz vector for all layers along length
-        dp_whole_br = np.matlib.repmat(dp_along_length[0], 1, counter)  # x vector for one layer
+        cyl_points[:, 0] = cyl_points[:, 0] + node1[0]
+        cyl_points[:, 1] = cyl_points[:, 1] + node1[1]
+        cyl_points[:, 2] = cyl_points[:, 2] + node1[2]
 
-        for c in range(1, len(dp_along_length)):  # x vector for all layer
-            dp_whole_br = np.hstack([dp_whole_br, np.matlib.repmat(dp_along_length[c], 1, counter)])
+        for nt in range(0, num_accepted):
+            coord_point = cyl_points[nt][0:3]
+            inside=pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius, y_radius, z_radius)
+            if inside:
+                xelem_num = np.floor((coord_point[0] - startx) / xside)
+                yelem_num = np.floor((coord_point[1] - starty) / yside)
+                zelem_num = np.floor((coord_point[2] - startz) / zside)
+                nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+                total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
+                volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
+            else:
+                #Data points lie outside the ellipsoid - this is OK in some cases, so the code shouldn't exit. However,
+                #users should be able to check how much is outside of ellipsoid if they believe their branching geometry
+                #is set up NOT to go outside the ellipsoid at all.
+                volume_outside_ellipsoid = volume_outside_ellipsoid + vol_per_point
 
-        dp_whole_br = np.vstack((dp_whole_br, dp_cross_section))  # combine x and yz vector of datapoints
 
-        # Rotate branch cylinder to correct position as specified by its two end node locations
-        if angle_N1N2 != 0 or angle_N1N2 != 180:  # if angle is not 0 or 180
-            axis_rot = axis_rot[:] / np.linalg.norm(axis_rot)
-            R = np.eye(3)
+        #        print(nt,coord_point, nelem,total_vol_samp_gr[nelem])
 
-            for ii in range(0, 3):
-                v = R[:, ii]
-                R[:, ii] = v * math.cos(math.radians(angle_N1N2)) + np.cross(axis_rot, v) * math.sin(
-                    math.radians(angle_N1N2)) + sum((axis_rot * v)) * (
-                                       1 - math.cos(math.radians(angle_N1N2))) * axis_rot  # Rodrigues' formula
+    percent_outside = volume_outside_ellipsoid/np.sum(total_vol_samp_gr)*100.0
 
-        dp_whole_br_old = np.dot(R, dp_whole_br)
-        N1 = np.array([N1]).T
-        dp_whole_br_new = dp_whole_br_old + N1  # datapoints inside branch are also corrected accordingly, element by element binary operation
-        N2 = np.array([N2])
+    print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
+    print('Total branch volume analysed ' + str(volume_outside_ellipsoid + np.sum(total_vol_samp_gr)) + ' (' + str(np.sum(vol_each_br)) +')')
+    #
+    #     for num_points in range(0, len(datapoints)):
+    #         coord_datapoints = datapoints[num_points]
+    #         xelem_num = np.floor((coord_datapoints[0] - startx) / xside)
+    #         yelem_num = np.floor((coord_datapoints[1] - starty) / yside)
+    #         zelem_num = np.floor((coord_datapoints[2] - startz) / zside)
+    #         nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+    #         points_in_grid[nelem] = points_in_grid[nelem] + 1
+    #
+    #     points_in_grid = points_in_grid.T
+    #
+    #     vol_samp_gr = np.true_divide(points_in_grid,
+    #                                  len(datapoints)) * branch_vol  # distribute vol in different sampling grid
+    #
+    #     br_search = np.where(vol_samp_gr != 0)  # the samp_gr_el where br are allocated
+    #     temp_br_num_in_samp_gr[br_search] = 1
+    #     br_num_in_samp_gr[:, 0] = br_num_in_samp_gr[:, 0] + temp_br_num_in_samp_gr[:,
+    #                                                         0]  # adding up the number of branches in each loop
+    #
+    #     total_vol_samp_gr[:, 0] = total_vol_samp_gr[:,
+    #                               0] + vol_samp_gr  # adding up volume  as one samp_grid_el may have more than one branch element
+    #     total_vol_samp_gr[:, 1] = total_vol_samp_gr[:, 1] + vol_samp_gr * r * 2;  # adding up diam related variable
+    # #Alys:can we calculate this internally.
+    # #pl_vol_in_grid = p_vol['pl_vol_in_grid']
+    # #for i in range(0, len(total_vol_samp_gr)):  # just countercheck
+    # #    if pl_vol_in_grid[i] == 0 and total_vol_samp_gr[i, 0] != 0:  # this should not happen
+    # #        sys.exit("some datapoints of branches are allocated outside ellipsoid")
+    #
+    # print('Total number of branch assessed, branch in ellipsoid =  ' + str(b_count))
+    return {'br_vol_in_grid': br_vol_in_grid}
 
-        if angle_N1N2 == 0:  # if angle is 0, datapoints are corrected accordigly
-
-            dp_whole_br_new = dp_whole_br
-
-            dp_whole_br_new[0, :] = -1 * dp_whole_br_new[0, :] + N2[0, 0]
-            dp_whole_br_new[1, :] = dp_whole_br_new[1, :] + N2[0, 1]
-            dp_whole_br_new[2, :] = dp_whole_br_new[2, :] + N2[0, 2]
-
-        if angle_N1N2 == 180:  # if  angle is 180, datapoints are corrected accordinlgy
-
-            dp_whole_br_new = dp_whole_br
-            dp_whole_br_new[0, :] = dp_whole_br[0, :] + N2[0, 0]
-            dp_whole_br_new[1, :] = dp_whole_br_new[1, :] + N2[0, 1]
-            dp_whole_br_new[2, :] = dp_whole_br_new[2, :] + N2[0, 2]
-
-        datapoints = dp_whole_br_new.T  # corrected coor of datapoints in one branch element
-
-        vol_each_br[ne, 0] = branch_vol
-        b_count = b_count + 1
-        vol_samp_gr = np.zeros((total_elems, 1))
-        temp_br_num_in_samp_gr = np.zeros((total_elems, 1), dtype=int)
-        points_in_grid = np.zeros(total_elems, dtype=int)
-
-        elems = rectangular_mesh['elems']
-        nodes = rectangular_mesh['nodes']
-        startx = np.min(nodes[:, 0])
-        xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
-        endx = np.max(nodes[:, 0])
-        nelem_x = (endx - startx) / xside
-        starty = np.min(nodes[:, 1])
-        yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
-        endy = np.max(nodes[:, 1])
-        nelem_y = (endy - starty) / yside
-        startz = np.min(nodes[:, 2])
-        zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
-        endz = np.max(nodes[:, 2])
-        nelem_z = (endz - startz) / zside
-
-        for num_points in range(0, len(datapoints)):
-            coord_datapoints = datapoints[num_points]
-            xelem_num = np.floor((coord_datapoints[0] - startx) / xside)
-            yelem_num = np.floor((coord_datapoints[1] - starty) / yside)
-            zelem_num = np.floor((coord_datapoints[2] - startz) / zside)
-            nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
-            points_in_grid[nelem] = points_in_grid[nelem] + 1
-
-        points_in_grid = points_in_grid.T
-
-        vol_samp_gr = np.true_divide(points_in_grid,
-                                     len(datapoints)) * branch_vol  # distribute vol in different sampling grid
-
-        br_search = np.where(vol_samp_gr != 0)  # the samp_gr_el where br are allocated
-        temp_br_num_in_samp_gr[br_search] = 1
-        br_num_in_samp_gr[:, 0] = br_num_in_samp_gr[:, 0] + temp_br_num_in_samp_gr[:,
-                                                            0]  # adding up the number of branches in each loop
-
-        total_vol_samp_gr[:, 0] = total_vol_samp_gr[:,
-                                  0] + vol_samp_gr  # adding up volume  as one samp_grid_el may have more than one branch element
-        total_vol_samp_gr[:, 1] = total_vol_samp_gr[:, 1] + vol_samp_gr * r * 2;  # adding up diam related variable
-
-    pl_vol_in_grid = p_vol['pl_vol_in_grid']
-    for i in range(0, len(total_vol_samp_gr)):  # just countercheck
-        if pl_vol_in_grid[i] == 0 and total_vol_samp_gr[i, 0] != 0:  # this should not happen
-            sys.exit("some datapoints of branches are allocated outside ellipsoid")
-
-    print('Total number of branch assessed, branch in ellipsoid =  ' + str(b_count))
-    return {'total_vol_samp_gr': total_vol_samp_gr, 'br_num_in_samp_gr': br_num_in_samp_gr, 'vol_each_br': vol_each_br,
-            'total_br_vol': np.sum(vol_each_br)}
+        #, 'br_num_in_samp_gr': br_num_in_samp_gr, 'vol_each_br': vol_each_br,
+    #         'total_br_vol': np.sum(vol_each_br)}
