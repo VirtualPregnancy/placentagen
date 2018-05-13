@@ -412,6 +412,10 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
     4. calculate the volume of individual branch and total vol of all branches in the whole tree
          
     '''
+
+    #Define the resolution of cylinder for analysis
+    num_points_xy = 8
+    num_points_z = 8
     # Define information about sampling grid required to place data points in correct locations
     total_sample_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
@@ -433,9 +437,6 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
 
-    #Define the resolution of cylinder for analysis
-    num_points_xy = 8
-    num_points_z = 8
     unit_cyl_points = np.zeros((num_points_xy*num_points_xy*num_points_z,3))
     #Define a cylinder of points of radius 1 and length 1
     x = np.linspace(-1,1,num_points_xy)
@@ -560,7 +561,62 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
     # #        sys.exit("some datapoints of branches are allocated outside ellipsoid")
     #
     # print('Total number of branch assessed, branch in ellipsoid =  ' + str(b_count))
-    return {'br_vol_in_grid': br_vol_in_grid}
-
-        #, 'br_num_in_samp_gr': br_num_in_samp_gr, 'vol_each_br': vol_each_br,
+       #, 'br_num_in_samp_gr': br_num_in_samp_gr, 'vol_each_br': vol_each_br,
     #         'total_br_vol': np.sum(vol_each_br)}
+    return {'br_vol_in_grid': total_vol_samp_gr}
+
+
+
+def terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute):
+    """ This function calculates the average volume of a terminal villous based on structural
+    characteristics measured in the literature.
+
+    Inputs:
+       - num_int_gens: Number of generations of intermediate villous per terminal 'stem' villois
+       - num_convolutes: Number of terminal convolutes per intermediate villous
+       - len_int: Length of a typical intermediate villous
+       - rad_int: Radius of a typical intermediate villous
+       - len_convolute: Length of a typical terminal convolute
+       - rad_convolute: Radius of a typical terminal convolute
+
+    Returns:
+       - term_vill_volume: Typical volume of a terminal villous
+
+
+    A way you might want to use me is:
+
+    >>> num_int_gens = 3
+    >>> num_convolutes = 10
+    >>> len_int = 1.5 #mm
+    >>> rad_int = 0.03 #mm
+    >>> len_convolute = 3.0 #mm
+    >>> rad_convolute = 0.025 #mm
+    >>> terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convulute,rad_convolute)
+
+    This will take the normal average data from Leiser et al (1990, IBBN:3805554680) and calculate
+    average volume of terminal villi to be ~1.77 mm^3
+    """
+
+    #Each terminal stem villous branches to two immature intermediate villi
+    #and then to three generations of mature intermediate villi each with ~10 terminal conduits
+    num_ints = 1
+    term_vill_volume = 0.0
+    for i in range(0,4):
+        num_ints = num_ints*2.0
+        vol_ints = num_ints*np.pi*len_int*rad_int**2.0
+        if i > 0:
+            vol_convolutes = num_ints*num_convolutes*np.pi*len_convolute*rad_convolute**2.0
+        else:
+            vol_convolutes = 0.0
+        term_vill_volume = term_vill_volume + vol_ints + vol_convolutes
+
+    return term_vill_volume
+
+def tissue_vol_in_samp_gr(term_vill_volume,br_vol_in_grid,terminals_in_grid):
+
+    tissue_vol = br_vol_in_grid +term_vill_volume*terminals_in_grid
+
+    return tissue_vol
+
+
+
