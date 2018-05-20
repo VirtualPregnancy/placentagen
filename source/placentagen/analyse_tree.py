@@ -88,7 +88,9 @@ def evaluate_orders(node_loc, elems):
         maxgen = np.maximum(maxgen, generation[ne])
 
     # Now need to loop backwards to do ordering systems
+    
     for ne in range(num_elems - 1, -1, -1):
+        
         n_horsfield = np.maximum(horsfield[ne], 1)
         n_children = elem_downstream[ne][0]
         if n_children == 1:
@@ -115,7 +117,7 @@ def evaluate_orders(node_loc, elems):
             strahler_add = strahler[ne2]
         horsfield[ne] = n_horsfield
         strahler[ne] = temp_strahler + strahler_add
-
+        
     return {'strahler': strahler, 'horsfield': horsfield, 'generation': generation}
 
 
@@ -138,8 +140,10 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
     radius[ne] = inlet_radius
 
     for ne in range(0, num_elems):
+        
         radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
-
+      
+    
     return radius
 
 
@@ -289,6 +293,7 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
                         terminals_in_grid[ne] = terminals_in_grid[ne] + 1
                         terminal_mapped[nt] = 1
                         terminal_elems[nt] = ne
+   
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
 
 
@@ -431,12 +436,13 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
     startz = np.min(nodes[:, 2])
     zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
     endz = np.max(nodes[:, 2])
+    
     #Define the placental ellipsoid
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
-
+    
     unit_cyl_points = np.zeros((num_points_xy*num_points_xy*num_points_z,3))
     #Define a cylinder of points of radius 1 and length 1
     x = np.linspace(-1,1,num_points_xy)
@@ -452,27 +458,29 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
                     unit_cyl_points[num_accepted][2] = new_z
                     num_accepted = num_accepted+1
     unit_cyl_points.resize(num_accepted, 3, refcheck=False)
-    cyl_points = unit_cyl_points
+    cyl_points = np.copy(unit_cyl_points)
     cylindervector = np.array([0.0,0.0,1.0])
-
+    
     ###Define and initialise arrays to be populated
-    # number of branch in each samp_grid element (useful to see distribution)
-    br_num_in_samp_gr = np.zeros(total_sample_elems, dtype=int)
+
     #The volume of each branch
     vol_each_br = np.zeros(len(branch_elems))
     # Array for total volume of sampling grid in each element
     total_vol_samp_gr = np.zeros(total_sample_elems)
-
+    # Array for diameter variable of sampling grid in each element (this variable is to be used for weighted diameter calculation)
+    total_diameter_samp_gr = np.zeros(total_sample_elems)
     #initialise counters
     branch_count = 0
     volume_outside_ellipsoid = 0.0
     volume_inside_ellipsoid = 0.0
 
     for ne in range(start_elem,len(branch_elems)):#len(branch_elems)):  # looping for all branchs in tree
+        
         node1 = branch_nodes[branch_elems[ne][1]][1:4]  # coor of start node of a branch element
         node2 = branch_nodes[branch_elems[ne][2]][1:4]  # coor of end node of a branch element
         node1in = pg_utilities.check_in_on_ellipsoid(node1[0], node1[1], node1[2], x_radius, y_radius, z_radius)
         node2in = pg_utilities.check_in_on_ellipsoid(node2[0], node2[1], node2[2], x_radius, y_radius, z_radius)
+        
         if not node1in and not node2in:
             print('Warning, element ' + str(ne) + 'is not in ellipsoid, if this is not expected check your geometry')
             print('Skipping this element from analysis')
@@ -489,7 +497,7 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
         length = np.linalg.norm(branch_vector)
         vol_each_br[ne] = np.pi*length*r**2.0
         vol_per_point = vol_each_br[ne]/(np.double(num_accepted))
-
+        
         cyl_points[:,0:2]=unit_cyl_points[:,0:2]*r
         cyl_points[:,2] = unit_cyl_points[:,2]*length
 
@@ -509,7 +517,11 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
         cyl_points[:, 1] = cyl_points[:, 1] + node1[1]
         cyl_points[:, 2] = cyl_points[:, 2] + node1[2]
 
+        # Array for vol distribution of inidvidual branch (not total)
+        vol_distribution_each_br=np.zeros(total_sample_elems, dtype=float)
+               
         for nt in range(0, num_accepted):
+        
             coord_point = cyl_points[nt][0:3]
             inside=pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius, y_radius, z_radius)
             if inside:
@@ -518,52 +530,22 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
                 zelem_num = np.floor((coord_point[2] - startz) / zside)
                 nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
                 total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
+                vol_distribution_each_br[nelem]=vol_distribution_each_br[nelem]+vol_per_point
                 volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
             else:
                 #Data points lie outside the ellipsoid - this is OK in some cases, so the code shouldn't exit. However,
                 #users should be able to check how much is outside of ellipsoid if they believe their branching geometry
                 #is set up NOT to go outside the ellipsoid at all.
                 volume_outside_ellipsoid = volume_outside_ellipsoid + vol_per_point
-
-
-        #        print(nt,coord_point, nelem,total_vol_samp_gr[nelem])
-
+        
+        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br*2*r#this variable is calculated as summation of diameter * vol of branch in grid (to be used for weight_diam)
+    
     percent_outside = volume_outside_ellipsoid/np.sum(total_vol_samp_gr)*100.0
-
+    
     print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
     print('Total branch volume analysed ' + str(volume_outside_ellipsoid + np.sum(total_vol_samp_gr)) + ' (' + str(np.sum(vol_each_br)) +')')
-    #
-    #     for num_points in range(0, len(datapoints)):
-    #         coord_datapoints = datapoints[num_points]
-    #         xelem_num = np.floor((coord_datapoints[0] - startx) / xside)
-    #         yelem_num = np.floor((coord_datapoints[1] - starty) / yside)
-    #         zelem_num = np.floor((coord_datapoints[2] - startz) / zside)
-    #         nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
-    #         points_in_grid[nelem] = points_in_grid[nelem] + 1
-    #
-    #     points_in_grid = points_in_grid.T
-    #
-    #     vol_samp_gr = np.true_divide(points_in_grid,
-    #                                  len(datapoints)) * branch_vol  # distribute vol in different sampling grid
-    #
-    #     br_search = np.where(vol_samp_gr != 0)  # the samp_gr_el where br are allocated
-    #     temp_br_num_in_samp_gr[br_search] = 1
-    #     br_num_in_samp_gr[:, 0] = br_num_in_samp_gr[:, 0] + temp_br_num_in_samp_gr[:,
-    #                                                         0]  # adding up the number of branches in each loop
-    #
-    #     total_vol_samp_gr[:, 0] = total_vol_samp_gr[:,
-    #                               0] + vol_samp_gr  # adding up volume  as one samp_grid_el may have more than one branch element
-    #     total_vol_samp_gr[:, 1] = total_vol_samp_gr[:, 1] + vol_samp_gr * r * 2;  # adding up diam related variable
-    # #Alys:can we calculate this internally.
-    # #pl_vol_in_grid = p_vol['pl_vol_in_grid']
-    # #for i in range(0, len(total_vol_samp_gr)):  # just countercheck
-    # #    if pl_vol_in_grid[i] == 0 and total_vol_samp_gr[i, 0] != 0:  # this should not happen
-    # #        sys.exit("some datapoints of branches are allocated outside ellipsoid")
-    #
-    # print('Total number of branch assessed, branch in ellipsoid =  ' + str(b_count))
-       #, 'br_num_in_samp_gr': br_num_in_samp_gr, 'vol_each_br': vol_each_br,
-    #         'total_br_vol': np.sum(vol_each_br)}
-    return {'br_vol_in_grid': total_vol_samp_gr}
+    
+    return {'br_vol_in_grid': total_vol_samp_gr,'br_diameter_in_grid':total_diameter_samp_gr}
 
 
 
@@ -609,14 +591,49 @@ def terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_conv
         else:
             vol_convolutes = 0.0
         term_vill_volume = term_vill_volume + vol_ints + vol_convolutes
-
+    
     return term_vill_volume
 
 def tissue_vol_in_samp_gr(term_vill_volume,br_vol_in_grid,terminals_in_grid):
 
     tissue_vol = br_vol_in_grid +term_vill_volume*terminals_in_grid
-
+ 
     return tissue_vol
 
+
+def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute):
+  
+    """
+    The concept to calculate terminal villous diameter follows the same as terminal_villous_volume calculation
+    We multiply vol of each branch with diameter of each branch and summation of them to be able to calculate the weighted_diameter in the next subroutine
+    """
+    num_ints = 1
+    term_vill_diameter = 0.0
+    for i in range(0,4):
+        num_ints = num_ints*2.0
+        diameter_ints = num_ints*(np.pi*len_int*rad_int**2.0)*2*rad_int
+        if i > 0:
+            diameter_convolutes = num_ints*num_convolutes*(np.pi*len_convolute*rad_convolute**2.0)*2*rad_convolute
+        else:
+            diameter_convolutes = 0.0
+        term_vill_diameter = term_vill_diameter + diameter_ints + diameter_convolutes
+      
+    return term_vill_diameter
+
+
+def weighted_diameter_in_samp_gr(term_vill_diameter,br_diameter_in_grid,terminals_in_grid,tissue_vol):
+    """
+    Weighted_diameter is calculated as:
+
+    weighted_diameter each sampling grid = (d1*v1+d2*v2+d3*v3+...+dn*vn)/(v1+v2+v2+...+vn)
+    The numerater is calculated by summation of br_diameter_in_grid (output from cal_br_vol_samp_grid)  + term_vill_diameter (output from terminal_villous_diameter) *terminals_in_grid
+    The denominator comes from tissue_vol (output of tissue_vol_in_samp_gr)
+    """
+
+    tissue_diameter = br_diameter_in_grid +term_vill_diameter*terminals_in_grid
+    np.seterr(divide='ignore', invalid='ignore')
+    weighted_diameter = np.nan_to_num(tissue_diameter/tissue_vol)
+
+    return weighted_diameter
 
 
