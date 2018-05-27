@@ -14,21 +14,28 @@ from numpy import matlib
 
 
 def calc_terminal_branch(node_loc, elems):
-    """ What this function does
+    """ Generates a list of terminal nodes associated with a branching geometry
 
     Inputs:
-       - input name: A description of the input
-
+       - node_loc: array of coordinates (locations) of nodes of tree branches
+       - elems: array of elements showing element connectivity
+       
     Returns:
-       - output name: a description of the output
-            - can do sub points if there are complicated arrays
+       - terminal_elems: array of terminal element number
+       - terminal_nodes: array of terminal nodes
+       - total_terminals: total number of terminal branches in the whole tree
+            
+    A way you might want to use me is:    
 
+    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])
+    >>> elems = np.array([[0 ,0 ,1], [1 ,1 ,2], [2 ,1 ,3]])
+    >>> calc_terminal_branch(node_loc,elems)
 
-    A way you might want to use me is:
+    This will return:  
 
-    >>> include a simple example of how to call the function
-
-    Tell us what the function will do
+    >>>terminal_elems: [1 2]
+    >>>terminal_nodes: [2 3]
+    >>>total_terminals: 2
     """
     # This function generates a list of terminal nodes associated with a branching geometry
     # inputs are node locations and elements
@@ -223,12 +230,34 @@ def tree_statistics(node_loc, elems, radius, orders):
 
 
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
-    # This function counts the number of terminals in a sampling grid element, will only work with
-    # rectangular mesh created as in generate_shapes.gen_rectangular_mesh
-    # inputs are:
-    # Rectangular mesh - the sampling grid
-    # terminal_list - a list of terminal,
-    # node_loc - location of nodes
+    """ Counts the number of terminals in a sampling grid element, will only work with
+    rectangular mesh created as in generate_shapes.gen_rectangular_mesh
+
+    Inputs are:
+     - Rectangular mesh: the rectangular sampling grid
+     - terminal_list: a list of terminal branch
+     - node_loc: array of coordinates (locations) of nodes of tree branches
+
+    Return:
+     -terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     -terminal_elems: array showing the number of sampling grid element where terminal branches are located
+
+    A way you might want to use me is:
+
+    >>>terminal_list={}
+    >>>terminal_list['terminal_nodes']=[3]
+    >>>terminal_list['total_terminals']=1
+    >>>rectangular_mesh = {}
+    >>>rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+    >>>rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+    >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])   
+    >>>terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc)
+
+    This will return:
+
+    >>>terminals_in_grid: 1
+    >>>terminal_elems: 0
+    """
     num_terminals = terminal_list['total_terminals']
     terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
     terminal_elems = np.zeros(num_terminals, dtype=int)
@@ -259,11 +288,37 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
 
 
 def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc):
-    # This function counts the number of terminals in a sampling grid element
-    # inputs are:
-    # Rectangular mesh - the sampling grid
-    # terminal_list - a list of terminal,
-    # node_loc - location of nodes
+    """ Counts the number of terminals in a sampling grid element for general mesh
+
+    Inputs are:
+     - Rectangular mesh: the rectangular sampling grid
+     - placenta_list: array of sampling grid element that are located inside the ellipsoid
+     - terminal_list: a list of terminal branch
+     - node_loc: array of coordinates (locations) of nodes of tree branches
+
+    Return:
+     -terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     -terminal_elems: array showing the number of sampling grid element where terminal branches are located
+    
+    A way you might want to use me is:
+
+    >>>terminal_list = {}
+    >>>terminal_list['terminal_nodes'] = [3]
+    >>>terminal_list['total_terminals'] = 1
+    >>>placenta_list = [7]
+    >>>rectangular_mesh = {}
+    >>>rectangular_mesh['elems'] = np.zeros((8, 9), dtype=int)
+    >>>rectangular_mesh['nodes'] = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.],
+                                     [0., 1., 1.], [1., 1., 1.]]
+    >>>rectangular_mesh['elems'][7] = [0, 0, 1, 2, 3, 4, 5, 6, 7]
+    >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])  
+    >>>terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc)
+
+    This will return:
+
+    >>>terminals_in_grid[7]: 1
+    >>>terminal_elems[0]: 7
+    """
     num_sample_elems = len(placenta_list)
     num_terminals = terminal_list['total_terminals']
     terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
@@ -298,13 +353,38 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
 
 
 def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
-    # This subroutine calculates the placental volume associated with each element in a samplling grid
-    # inputs are:
-    # rectangular_mesh = the sampling grid nodes and elements
-    # volume = placental volume
-    # thickness = placental thickness
-    # ellipiticity = placental ellipticity
-    # num_test_points = resolution of integration quadrature
+    """ Calculates the placental volume associated with each element in a samplling grid
+
+    Inputs are:
+    - rectangular_mesh: the rectangular sampling grid
+    - volume: placental volume
+    - thickness: placental thickness
+    - ellipiticity: placental ellipticity
+    - num_test_points: resolution of integration quadrature
+
+    Return:
+    - pl_vol_in_grid: array of placental volume in each sampling grid element
+    - non_empty_rects: array of sampling grid elements that are occupied by placental tissue
+
+    A way you might want to use me is:
+
+    >>>thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  #mm
+    >>>ellipticity = 1.00  #no unit
+    >>>spacing = 1.0 #no unit
+    >>>volume=1 #mm3
+    >>>rectangular_mesh = {}
+    >>>rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
+    >>>rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+    >>>rectangular_mesh['total_nodes'] =8
+    >>>rectangular_mesh['total_elems'] = 1
+    >>>num_test_points=25
+    >>>ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points)
+
+    This will return:
+
+    >>>pl_vol_in_grid: 0.12485807941
+    >>>non_empty_rects: 0
+    """
     total_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
@@ -409,14 +489,44 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
 
 
 def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_radius, volume, thickness, ellipticity, start_elem):
-    '''
-    This subroutine is to:
-    1. calculate total volume of branches in each samp_grid_el (to use when calculate vol_frac/porosity)
-    2. calculate total daimeter variable of branches in each samp_grid_el(to use when calculate wt_diam)
-    3. count number of branches in each samp_grid_el
-    4. calculate the volume of individual branch and total vol of all branches in the whole tree
-         
-    '''
+    """ Calculate total volume and diameter of branches in each samp_grid_el 
+
+    Inputs are:
+    - rectangular_mesh: rectangular sampling grid 
+    - branch_nodes: array of coordinates (locations) of nodes of tree branches
+    - branch_elems: array of element showing element connectivity
+    - branch_radius: array of branch radius
+    - volume: volume of placenta
+    - thickness: thickness of placenta
+    - ellipticity: ellipticity of placenta
+    - start_elem: number of element to start calculating tissue volume
+
+    Return:
+    - br_vol_in_grid: array of total tissue volume in each sampling grid element      
+    - br_diameter_in_grid: array of total diameter*volume in each sampling grid element
+
+    A way you might want to use me is:
+
+    >>>thickness =  2.1  #mm
+    >>>ellipticity = 1.00  #no unit
+    >>>volume=5    #mm3
+    >>>rectangular_mesh = {}
+    >>>rectangular_mesh['nodes'] = np.array([[-0.5, -0.5, -1.5],[ 0.5, -0.5,-1.5],[-0.5,  0.5 ,-1.5],[ 0.5 , 0.5, -1.5],[-0.5 ,-0.5, -0.5],[ 0.5 ,-0.5 ,-0.5],[-0.5 , 0.5 ,-0.5],[ 0.5 , 0.5 ,-0.5],[-0.5, -0.5 , 0.5],[ 0.5, -0.5 , 0.5],[-0.5  ,0.5 , 0.5],[ 0.5 , 0.5  ,0.5]])
+    >>>rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7],[1,4,5,6,7,8,9,10,11]]
+    >>>rectangular_mesh['total_elems'] = 2
+    >>>branch_elems={}
+    >>>branch_elems['elems']=[[0 ,0, 1]]
+    >>>branch_nodes={}
+    >>>branch_nodes['nodes']=np.array([[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]])
+    >>>branch_radius=[0.1]
+    >>>start_elem=0
+    >>>cal_br_vol_samp_grid(rectangular_mesh,  branch_nodes['nodes'], branch_elems['elems'],branch_radius, volume, thickness,ellipticity, start_elem)
+
+    This will return:
+
+    >>>br_vol_in_grid[0]: 0.01396263
+    >>>br_diameter_in_grid[0]: 0.00279253
+    """
 
     #Define the resolution of cylinder for analysis
     num_points_xy = 8
@@ -603,9 +713,32 @@ def tissue_vol_in_samp_gr(term_vill_volume,br_vol_in_grid,terminals_in_grid):
 
 def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute):
   
-    """
-    The concept to calculate terminal villous diameter follows the same as terminal_villous_volume calculation
-    We multiply vol of each branch with diameter of each branch and summation of them to be able to calculate the weighted_diameter in the next subroutine
+    """ The concept to calculate terminal villous diameter follows the same as terminal_villous_volume calculation. 
+    Multiply vol of each branch with diameter of each branch and summation of them to be able to calculate the weighted_diameter in the next subroutine
+
+    Inputs:
+       - num_int_gens: Number of generations of intermediate villous per terminal 'stem' villus
+       - num_convolutes: Number of terminal convolutes per intermediate villous
+       - len_int: Length of a typical intermediate villous
+       - rad_int: Radius of a typical intermediate villous
+       - len_convolute: Length of a typical terminal convolute
+       - rad_convolute: Radius of a typical terminal convolute
+   
+    Return:
+    - term_vill_diameter: diameter value of terminal conduits
+    
+    A way you might want to use me is:
+
+    >>> num_int_gens = 3
+    >>> num_convolutes = 10
+    >>> len_int = 1.5 #mm
+    >>> rad_int = 0.03 #mm
+    >>> len_convolute = 3.0 #mm
+    >>> rad_convolute = 0.025 #mm
+
+    This will return:
+
+    >>>term_vill_diameter: 0.09
     """
     num_ints = 1
     term_vill_diameter = 0.0
@@ -622,12 +755,17 @@ def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_co
 
 
 def weighted_diameter_in_samp_gr(term_vill_diameter,br_diameter_in_grid,terminals_in_grid,tissue_vol):
-    """
-    Weighted_diameter is calculated as:
+    """ Calculated weighted_diameter. 
+    Weighted_diameter each sampling grid = (d1*v1+d2*v2+d3*v3+...+dn*vn)/(v1+v2+v2+...+vn)
 
-    weighted_diameter each sampling grid = (d1*v1+d2*v2+d3*v3+...+dn*vn)/(v1+v2+v2+...+vn)
-    The numerater is calculated by summation of br_diameter_in_grid (output from cal_br_vol_samp_grid)  + term_vill_diameter (output from terminal_villous_diameter) *terminals_in_grid
-    The denominator comes from tissue_vol (output of tissue_vol_in_samp_gr)
+    Inputs are:
+    -term_vill_diameter: diameter of terminal conduits
+    -br_diameter_in_grid: diameter of branches in each sampling grid
+    -terminals_in_grid: number of terminals in each sampling grid
+    -tissue_vol: tissue volume in each sampling grid
+     
+    Return:
+    -weighted_diameter: weighted diameter of each sampling grid element
     """
 
     tissue_diameter = br_diameter_in_grid +term_vill_diameter*terminals_in_grid
