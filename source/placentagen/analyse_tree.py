@@ -124,6 +124,7 @@ def evaluate_orders(node_loc, elems):
             strahler_add = strahler[ne2]
         horsfield[ne] = n_horsfield
         strahler[ne] = temp_strahler + strahler_add
+
         
     return {'strahler': strahler, 'horsfield': horsfield, 'generation': generation}
 
@@ -226,7 +227,6 @@ def tree_statistics(node_loc, elems, radius, orders):
             branches[0][N - 1] = branches[0][N - 1] + lengths[ne_next]
             mean_diameter = mean_diameter + diameters[ne_next]
             n_segments = n_segments + 1
-            print(n_segments)
 
 
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
@@ -350,6 +350,94 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
                         terminal_elems[nt] = ne
    
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
+
+
+def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, thickness, ellipticity,term_total_vol, term_tissue_vol, term_tissue_diam):
+    """ Calculates the volume of terminal unit associated with each sampling grid element
+
+    Inputs are:
+     - Rectangular mesh: the rectangular sampling grid
+     - terminal_list: a list of terminal branch
+     - node_loc: array of coordinates (locations) of nodes of tree branches """
+
+
+    # Define the resolution of block for analysis
+    num_points_xyz = 8
+    #number of terminals to assess
+    num_terminals = terminal_list['total_terminals']
+
+    # Define information about sampling grid required to place data points in correct locations
+    total_sample_elems = rectangular_mesh['total_elems']
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    startx = np.min(nodes[:, 0])
+    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
+    endx = np.max(nodes[:, 0])
+    nelem_x = (endx - startx) / xside
+    starty = np.min(nodes[:, 1])
+    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
+    endy = np.max(nodes[:, 1])
+    nelem_y = (endy - starty) / yside
+    startz = np.min(nodes[:, 2])
+    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
+    endz = np.max(nodes[:, 2])
+
+    # Array for total volume  and diameter of sampling grid in each element
+    total_vol_samp_gr = np.zeros(total_sample_elems)
+    total_diameter_samp_gr = np.zeros(total_sample_elems)
+
+    # Define the placental ellipsoid
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
+    term_vol_points = np.zeros((num_points_xyz * num_points_xyz * num_points_xyz, 3))
+    # Define a cylinder of points of radius 1 and length 1
+    x = np.linspace(-1, 1, num_points_xyz)
+    y = np.linspace(-1, 1, num_points_xyz)
+    zlist = np.linspace(-1, 1, num_points_xyz)
+    num_accepted = 0
+    for k in range(0, num_points_xyz):
+        for i in range(0, num_points_xyz):
+            for j in range(0, num_points_xyz):
+                    new_z = zlist[k]
+                    term_vol_points[num_accepted][0] = x[i]
+                    term_vol_points[num_accepted][1] = y[j]
+                    term_vol_points[num_accepted][2] = new_z
+                    num_accepted = num_accepted + 1
+    term_vol_points.resize(num_accepted, 3, refcheck=False)
+    term_vol_points = term_vol_points*term_total_vol**(1.0/3.0)
+    vol_per_point = term_tissue_vol/(num_points_xyz * num_points_xyz *num_points_xyz)
+    total_volume = 0.0
+    for nt in range(0, num_terminals):
+        coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
+        local_term_points = np.copy(term_vol_points)
+
+        local_term_points[:, 0] = local_term_points[:, 0] + coord_terminal[0]
+        local_term_points[:, 1] = local_term_points[:, 1] + coord_terminal[1]
+        local_term_points[:, 2] = local_term_points[:, 2] + coord_terminal[2]
+
+        # Array for vol distribution of inidvidual branch (not total)
+        vol_distribution_each_br=np.zeros(total_sample_elems, dtype=float)
+
+        for npoint in range(0, num_accepted):
+
+            coord_point = local_term_points[npoint][0:3]
+            inside = pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius,
+                                                        y_radius, z_radius)
+            if inside:
+                xelem_num = np.floor((coord_point[0] - startx) / xside)
+                yelem_num = np.floor((coord_point[1] - starty) / yside)
+                zelem_num = np.floor((coord_point[2] - startz) / zside)
+                nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+                total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
+                total_volume = total_volume + vol_per_point
+                vol_distribution_each_br[nelem] = vol_distribution_each_br[nelem] + vol_per_point
+
+        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br * 2 * term_tissue_diam
+
+    return {'term_vol_in_grid': total_vol_samp_gr,'term_diameter_in_grid':total_diameter_samp_gr}
 
 
 def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
@@ -704,12 +792,42 @@ def terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_conv
     
     return term_vill_volume
 
-def tissue_vol_in_samp_gr(term_vill_volume,br_vol_in_grid,terminals_in_grid):
+def tissue_vol_in_samp_gr(term_vol_in_grid,br_vol_in_grid):
 
-    tissue_vol = br_vol_in_grid +term_vill_volume*terminals_in_grid
+    tissue_vol = br_vol_in_grid + term_vol_in_grid
  
     return tissue_vol
 
+
+def vol_frac_in_samp_gr(tissue_vol,sampling_grid_vol):
+
+    volumes = sampling_grid_vol['pl_vol_in_grid']
+    non_empties = sampling_grid_vol['non_empty_rects']
+    vol_frac = np.zeros(len(volumes))
+
+    for i in range(0,len(non_empties)):
+        ne = non_empties[i]
+        vol_frac[ne] = tissue_vol[ne]/volumes[ne]
+        if vol_frac[ne] > 1.0:
+            vol_frac[ne] = 1.0
+
+
+    return vol_frac
+
+
+def conductivity_samp_gr(vol_frac,weighted_diameter,non_empties):
+    max_cond = 0.52
+    conductivity = np.zeros(len(vol_frac))
+    for i in range(0,len(non_empties)):
+        ne = non_empties[i]
+        if vol_frac[ne] != 0.0:
+            conductivity[ne] = weighted_diameter[ne]**2*(1-vol_frac[ne])**(180.0*vol_frac[ne]**2)
+        elif vol_frac[ne] == 0.0:#see mabelles thesis
+            conductivity[ne] = max_cond
+        if conductivity[ne] > max_cond:
+            conductivity[ne] = max_cond
+
+    return conductivity
 
 def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute):
   
@@ -754,7 +872,7 @@ def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_co
     return term_vill_diameter
 
 
-def weighted_diameter_in_samp_gr(term_vill_diameter,br_diameter_in_grid,terminals_in_grid,tissue_vol):
+def weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissue_vol):
     """ Calculated weighted_diameter. 
     Weighted_diameter each sampling grid = (d1*v1+d2*v2+d3*v3+...+dn*vn)/(v1+v2+v2+...+vn)
 
@@ -768,7 +886,7 @@ def weighted_diameter_in_samp_gr(term_vill_diameter,br_diameter_in_grid,terminal
     -weighted_diameter: weighted diameter of each sampling grid element
     """
 
-    tissue_diameter = br_diameter_in_grid +term_vill_diameter*terminals_in_grid
+    tissue_diameter = br_diameter_in_grid + term_diameter_in_grid
     np.seterr(divide='ignore', invalid='ignore')
     weighted_diameter = np.nan_to_num(tissue_diameter/tissue_vol)
 

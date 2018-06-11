@@ -143,7 +143,6 @@ def check_colinear(x0, x1, x2):
     array_test1 = np.equal(vector1,vector2)
     array_test2 = np.equal(vector1,-1*vector2)
     if array_test1.all is True:
-        print(array_test1)
         colinear = True
     elif array_test2.all is True:
         colinear = True
