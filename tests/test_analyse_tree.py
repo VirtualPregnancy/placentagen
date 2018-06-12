@@ -211,17 +211,6 @@ class Test_terminals_villous_volume(TestCase):
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
 
-class Test_tissue_volume_gr(TestCase):
-        
-    def test_tissue_vol(self):
-
-        tissue_vol=placentagen.tissue_vol_in_samp_gr(1.77, 0.014,2)
-        
-        self.assertTrue(np.isclose(tissue_vol,3.554))
-
-
-
-
 class Test_terminals_villous_diameter(TestCase):
         
     def test_terminals_vill_diameter(self):
@@ -235,17 +224,20 @@ class Test_terminals_villous_diameter(TestCase):
         term_vill_diameter=placentagen.terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
         
         self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
-
-
-class Test_weighted_diameter(TestCase):
-        
-    def test_wt_diameter(self):
-        br_diameter_in_grid=np.array([0.0023])
-        tissue_vol=np.array([3.554])
-        wt_D=placentagen.weighted_diameter_in_samp_gr(0.09,br_diameter_in_grid,2,tissue_vol)
-        self.assertTrue(np.isclose(wt_D,0.05129432))
-        
+    
       
+class Test_radius_br(TestCase):
+        
+    def test_radius_by_order(self):
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        eldata = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        system='strahler'
+        inlet_elem=0
+        inlet_radius=0.1
+        radius_ratio=1.53
+        radius=placentagen.define_radius_by_order(noddata['nodes'], eldata['elems'], system, inlet_elem, inlet_radius, radius_ratio)
+        self.assertTrue(np.isclose(radius[1],0.0653594771242))
+
 if __name__ == '__main__':
    unittest.main()
 
