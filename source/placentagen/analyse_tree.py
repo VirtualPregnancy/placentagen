@@ -821,7 +821,7 @@ def conductivity_samp_gr(vol_frac,weighted_diameter,non_empties):
     for i in range(0,len(non_empties)):
         ne = non_empties[i]
         if vol_frac[ne] != 0.0:
-            conductivity[ne] = weighted_diameter[ne]**2*(1-vol_frac[ne])**(180.0*vol_frac[ne]**2)
+            conductivity[ne] = weighted_diameter[ne]**2*(1-vol_frac[ne])**3/(180.0*vol_frac[ne]**2)
         elif vol_frac[ne] == 0.0:#see mabelles thesis
             conductivity[ne] = max_cond
         if conductivity[ne] > max_cond:
