@@ -211,15 +211,6 @@ class Test_terminals_villous_volume(TestCase):
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
 
-class Test_tissue_volume_gr(TestCase):
-        
-    def test_tissue_vol(self):
-
-        tissue_vol=placentagen.tissue_vol_in_samp_gr(1.77, 0.014,2)
-        
-        self.assertTrue(np.isclose(tissue_vol,3.554))
-
-
 
 
 class Test_terminals_villous_diameter(TestCase):
@@ -240,12 +231,13 @@ class Test_terminals_villous_diameter(TestCase):
 class Test_weighted_diameter(TestCase):
         
     def test_wt_diameter(self):
-        br_diameter_in_grid=np.array([0.0023])
-        tissue_vol=np.array([3.554])
-        wt_D=placentagen.weighted_diameter_in_samp_gr(0.09,br_diameter_in_grid,2,tissue_vol)
-        self.assertTrue(np.isclose(wt_D,0.05129432))
+        term_diameter_in_grid= 0.08003529
+        br_diameter_in_grid= 1.37118148e-03
+        tissue_vol=0.45255089
+        wt_D=placentagen.weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissue_vol)
+        self.assertTrue(np.isclose(wt_D,0.17988357))
         
-      
+     
 if __name__ == '__main__':
    unittest.main()
 
