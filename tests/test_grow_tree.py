@@ -50,7 +50,9 @@ class Test_refine_trees(TestCase):
         initial_geom['elems'] = [[0, 0, 1]]
         initial_geom['elem_up'] = [[0, 0, 0]]
         initial_geom['elem_down'] = [[0, 0, 0]]
-        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        project={}
+        project['status']=[]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem,project)
         self.assertTrue(refined_geom['nodes'][1][3], 0.5)
 
     def test_refine_cnct(self):
@@ -60,7 +62,9 @@ class Test_refine_trees(TestCase):
         initial_geom['elems'] = [[0, 0, 1]]
         initial_geom['elem_up'] = [[0, 0, 0]]
         initial_geom['elem_down'] = [[0, 0, 0]]
-        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        project={}
+        project['status']=[]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem,project)
         self.assertTrue(refined_geom['elem_up'][1][0], 1)
 
     def test_refine_node_from(self):
@@ -70,7 +74,9 @@ class Test_refine_trees(TestCase):
         initial_geom['elems'] = [[0, 0, 1], [1, 1, 2], [1, 1, 3]]
         initial_geom['elem_up'] = [[0, 0, 0], [1, 0, 0], [1, 0, 0]]
         initial_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
-        refined_geom = placentagen.refine_1D(initial_geom, from_elem)
+        project={}
+        project['status']=[]
+        refined_geom = placentagen.refine_1D(initial_geom, from_elem,project)
         self.assertTrue(refined_geom['nodes'][2][1], 0.5)
 
 class Test_add_villi(TestCase):
@@ -83,3 +89,5 @@ class Test_add_villi(TestCase):
         initial_geom['elem_down'] = [[1, 1, 0], [0, 0, 0]]
         chorion_and_stem = placentagen.add_stem_villi(initial_geom, from_elem, 0.2)
         self.assertTrue(chorion_and_stem['nodes'][3][3], -0.2)
+if __name__ == '__main__':
+   unittest.main()
