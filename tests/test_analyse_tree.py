@@ -211,6 +211,7 @@ class Test_terminals_villous_volume(TestCase):
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
 
+
 class Test_tissue_volume_gr(TestCase):
         
     def test_tissue_vol(self):
@@ -233,6 +234,7 @@ class Test_terminals_villous_diameter(TestCase):
         term_vill_diameter=placentagen.terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
         
         self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
+
 
 
 
@@ -279,6 +281,18 @@ class Test_term_vol_grid(TestCase):
 
         
 
+class Test_weighted_diameter(TestCase):
+        
+    def test_wt_diameter(self):
+        term_diameter_in_grid= 0.08003529
+        br_diameter_in_grid= 1.37118148e-03
+        tissue_vol=0.45255089
+        wt_D=placentagen.weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissue_vol)
+        self.assertTrue(np.isclose(wt_D,0.17988357))
+        
+     
+
+
       
 class Test_radius_br(TestCase):
         
@@ -291,6 +305,7 @@ class Test_radius_br(TestCase):
         radius_ratio=1.53
         radius=placentagen.define_radius_by_order(noddata['nodes'], eldata['elems'], system, inlet_elem, inlet_radius, radius_ratio)
         self.assertTrue(np.isclose(radius[1],0.0653594771242))
+
 
 if __name__ == '__main__':
    unittest.main()
