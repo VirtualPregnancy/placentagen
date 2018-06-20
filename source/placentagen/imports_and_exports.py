@@ -184,6 +184,110 @@ def export_exelem_3d_linear(data, groupname, filename):
 
     f.close()
 
+def export_exelem_3d_linear_list(data, list, groupname, filename):
+    # Exports element locations to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(list)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape. Dimension=3 line*line*line\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           8\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) coordinates, coordinate, rectangular cartesian, #Components=3\n")
+    f.write("   x.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("   y.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("   z.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, standard node based.\n")
+    f.write("     #Nodes= 8\n")
+    f.write("      1.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      2.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      3.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      4.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      5.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      6.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      7.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    f.write("      8.  #Values=1\n")
+    f.write("       Value indices:     1\n")
+    f.write("       Scale factor indices:   0\n")
+    for x in range(0, data_num):
+        y = list[x]
+        f.write(" Element:            %s 0 0\n" % int(data[x][0] + 1))
+        f.write("   Nodes:")
+        f.write(
+            "                %s            %s            %s            %s            %s            %s            %s            %s\n" % (
+                int(data[y][1] + 1), int(data[y][2] + 1), int(data[y][3] + 1), int(data[y][4] + 1),
+                int(data[y][5] + 1),
+                int(data[y][6] + 1), int(data[y][7] + 1), int(data[y][8] + 1)))
+
+    f.close()
+
 def export_exfield_3d_linear(data, groupname, fieldname, filename):
     # Exports element locations to exelem format
     # data = array of data
@@ -208,6 +312,34 @@ def export_exfield_3d_linear(data, groupname, fieldname, filename):
         f.write(
             "           %s       %s       %s       %s       %s       %s       %s       %s\n" % (
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
+
+    f.close()
+
+def export_exfield_3d_linear_list(data, list, groupname, fieldname, filename):
+    # Exports element locations to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(list)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape. Dimension=3 line*line*line\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           0\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, field, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write("   %s.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, grid based.\n" % fieldname)
+    f.write("   #xi1=1 \n")
+    f.write("   #xi2=1 \n")
+    f.write("   #xi3=1 \n")
+    for x in range(0, data_num):
+        exp_data = data[list[x]]
+        f.write(" Element:            %s 0 0\n" % int(x + 1))
+        f.write("   Values:\n")
+        f.write(
+            "           %s       %s       %s       %s       %s       %s       %s       %s\n" % (
+                exp_data, exp_data, exp_data, exp_data, exp_data, exp_data, exp_data, exp_data))
 
     f.close()
 

@@ -455,7 +455,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 
-def refine_1D(initial_geom, from_elem):
+def refine_1D(initial_geom, from_elem,project):
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -501,6 +501,8 @@ def refine_1D(initial_geom, from_elem):
         mid_point = np.zeros(3)
         for i in range(0, 3):
             mid_point[i] = (in_point[i] + out_point[i]) / 2.0
+        if project['status']:
+            mid_point[2] = pg_utilities.z_from_xy(mid_point[0], mid_point[1], project['x_radius'], project['y_radius'], project['z_radius'])
         # Create a new node at midpoint
         nnod = nnod + 1
         node_loc[nnod][1:4] = mid_point
