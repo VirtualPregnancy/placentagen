@@ -176,8 +176,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                     if count_data != 0:  # If there were any data points associated
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
-                    #else:
-                    #    print('no dta associated',ne_parent)
 
             # .......Copy the temporary list of branches to NE_OLD. These become the
             # .......parent elements for the next branching
