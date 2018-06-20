@@ -211,6 +211,7 @@ class Test_terminals_villous_volume(TestCase):
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
 
+
 class Test_tissue_volume_gr(TestCase):
         
     def test_tissue_vol(self):
@@ -236,6 +237,7 @@ class Test_terminals_villous_diameter(TestCase):
 
 
 
+
 class Test_vol_frac_samp_gr(TestCase):
         
     def test_volume_fraction(self):
@@ -247,6 +249,63 @@ class Test_vol_frac_samp_gr(TestCase):
         self.assertTrue(np.isclose(vol_frac, 0.7248))
 
         
+
+
+class Test_term_vol_grid(TestCase):
+        
+    def test_terminal_vol_grid(self):
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = np.array([[-2., -2. ,-2.],[ 0. ,-2. ,-2.],[ 2. ,-2. ,-2.],[-2. , 0., -2.],[ 0. , 0. ,-2.],[ 2. , 0. ,-2.],[-2. ,-2. , 0.],[ 0. ,-2. , 0.],[ 2. ,-2. , 0.],[-2. , 0. ,0.],[ 0. , 0.,  0.],[ 2.,  0. , 0.],[-2. ,-2. , 2.],[ 0. ,-2. , 2.],[ 2., -2.,  2.],[-2. , 0. , 2.],[ 0.,  0. , 2.],[ 2. , 0.,  2.]])
+        rectangular_mesh['elems'] = [[ 0,0,1,3,4,6,7,9,10],[ 1,  1,2,4,5,7,8,10,11],[2,6,7,9,10,12,13,15,16],[4,7,8,10,11,13,14,16,17]]
+        rectangular_mesh['total_elems'] = 4
+        terminal_list={}
+        terminal_list['total_terminals']=1
+        terminal_list['terminal_nodes']=[2]
+        volume=5
+        thickness=2.1
+        ellipticity=1
+        term_total_vol=0.04#artificial value to match with a smaller ellipsoid
+        term_tissue_vol=1.77657064561
+        term_tissue_diam=0.090100877305
+        term_vol=placentagen.terminal_volume_to_grid(rectangular_mesh, terminal_list, noddata['nodes'],volume, thickness,ellipticity,term_total_vol,term_tissue_vol, term_tissue_diam)
+        self.assertTrue(np.isclose(term_vol['term_vol_in_grid'][0],0.44414266))
+
+
+
+    def test_terminal_diam_grid(self):
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        rectangular_mesh = {}
+        rectangular_mesh['nodes'] = np.array([[-2., -2. ,-2.],[ 0. ,-2. ,-2.],[ 2. ,-2. ,-2.],[-2. , 0., -2.],[ 0. , 0. ,-2.],[ 2. , 0. ,-2.],[-2. ,-2. , 0.],[ 0. ,-2. , 0.],[ 2. ,-2. , 0.],[-2. , 0. ,0.],[ 0. , 0.,  0.],[ 2.,  0. , 0.],[-2. ,-2. , 2.],[ 0. ,-2. , 2.],[ 2., -2.,  2.],[-2. , 0. , 2.],[ 0.,  0. , 2.],[ 2. , 0.,  2.]])
+        rectangular_mesh['elems'] = [[ 0,0,1,3,4,6,7,9,10],[ 1,  1,2,4,5,7,8,10,11],[2,6,7,9,10,12,13,15,16],[4,7,8,10,11,13,14,16,17]]
+        rectangular_mesh['total_elems'] = 4
+        terminal_list={}
+        terminal_list['total_terminals']=1
+        terminal_list['terminal_nodes']=[2]
+        volume=5
+        thickness=2.1
+        ellipticity=1
+        term_total_vol=0.04#artificial value to match with a smaller ellipsoid
+        term_tissue_vol=1.77657064561
+        term_tissue_diam=0.090100877305
+        term_vol=placentagen.terminal_volume_to_grid(rectangular_mesh, terminal_list, noddata['nodes'],volume, thickness,ellipticity,term_total_vol,term_tissue_vol, term_tissue_diam)
+        self.assertTrue(np.isclose(term_vol['term_diameter_in_grid'][0],0.08003529))
+      
+
+        
+
+class Test_weighted_diameter(TestCase):
+        
+    def test_wt_diameter(self):
+        term_diameter_in_grid= 0.08003529
+        br_diameter_in_grid= 1.37118148e-03
+        tissue_vol=0.45255089
+        wt_D=placentagen.weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissue_vol)
+        self.assertTrue(np.isclose(wt_D,0.17988357))
+        
+     
+
+
 
       
 class Test_radius_br(TestCase):
@@ -260,6 +319,7 @@ class Test_radius_br(TestCase):
         radius_ratio=1.53
         radius=placentagen.define_radius_by_order(noddata['nodes'], eldata['elems'], system, inlet_elem, inlet_radius, radius_ratio)
         self.assertTrue(np.isclose(radius[1],0.0653594771242))
+
 
 if __name__ == '__main__':
    unittest.main()
