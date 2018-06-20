@@ -42,6 +42,7 @@ class Test_grow_trees(TestCase):
                                                               1, 1, 1, data, seed_geom)
         self.assertTrue(geom['nodes'][6][3], 0.22301891)
 
+
 class Test_refine_trees(TestCase):
     def test_refine_node(self):
         from_elem = 0
@@ -78,6 +79,7 @@ class Test_refine_trees(TestCase):
         project['status']=[]
         refined_geom = placentagen.refine_1D(initial_geom, from_elem,project)
         self.assertTrue(refined_geom['nodes'][2][1], 0.5)
+
 
 class Test_add_villi(TestCase):
     def test_add_villi(self):
