@@ -211,7 +211,6 @@ class Test_terminals_villous_volume(TestCase):
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
 
-
 class Test_tissue_volume_gr(TestCase):
         
     def test_tissue_vol(self):
@@ -235,6 +234,20 @@ class Test_terminals_villous_diameter(TestCase):
         
         self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
 
+
+
+class Test_conductivity_samp_gr(TestCase):
+        
+    def test_conductivity(self):
+
+        vol_frac= [0.72401065]
+        weighted_diameter=[0.17988357]
+        non_empties=[0]
+        conductivity=placentagen.conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
+        self.assertTrue(np.isclose(conductivity, 7.20937313e-06))
+  
+
+        
 
 
 
@@ -304,6 +317,7 @@ class Test_weighted_diameter(TestCase):
         self.assertTrue(np.isclose(wt_D,0.17988357))
         
      
+
 
 
 
