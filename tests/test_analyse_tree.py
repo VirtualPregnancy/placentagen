@@ -210,6 +210,13 @@ class Test_terminals_villous_volume(TestCase):
         term_vill_vol=placentagen.terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
         self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
       
+class Test_tissue_volume_gr(TestCase):
+        
+    def test_tissue_vol(self):
+
+        tissue_vol=placentagen.tissue_vol_in_samp_gr(0.444, 0.008)
+        
+        self.assertTrue(np.isclose(tissue_vol,0.452))
 
 class Test_terminals_villous_diameter(TestCase):
         
@@ -224,7 +231,6 @@ class Test_terminals_villous_diameter(TestCase):
         term_vill_diameter=placentagen.terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
         
         self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
-    
       
 class Test_radius_br(TestCase):
         
