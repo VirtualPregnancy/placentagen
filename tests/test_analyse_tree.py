@@ -238,6 +238,19 @@ class Test_terminals_villous_diameter(TestCase):
 
 
 
+class Test_vol_frac_samp_gr(TestCase):
+        
+    def test_volume_fraction(self):
+        tissue_vol=[0.453]
+        placental_volume={}
+        placental_volume['non_empty_rects']=[0]
+        placental_volume['pl_vol_in_grid']=[0.625]
+        vol_frac=placentagen.vol_frac_in_samp_gr(tissue_vol,placental_volume)
+        self.assertTrue(np.isclose(vol_frac, 0.7248))
+
+        
+
+
 class Test_term_vol_grid(TestCase):
         
     def test_terminal_vol_grid(self):
@@ -291,6 +304,7 @@ class Test_weighted_diameter(TestCase):
         self.assertTrue(np.isclose(wt_D,0.17988357))
         
      
+
 
 
       
