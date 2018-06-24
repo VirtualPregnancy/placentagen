@@ -40,40 +40,30 @@ class Test_gen_rectangular_mesh(TestCase):
 class Test_darcy_mesh(TestCase):
 
       def test_darcy_node(self):
-          volume=50
-          thickness=5
+          volume=5
+          thickness=2.1
           ellipticity=1
-          rectangular_mesh={}
-          rectangular_mesh['nodes']=np.array([[-3.,-3.,-3.],[-1.,-3.,-3.],[1.,-3.,-3.],[3.,-3.,-3.],[-3.,-1.,-3.],[-1.,-1.,-3.],[1.,-1.,-3.],[3.,-1.,-3.],[-3.,1.,-3.],[-1.,1.,-3.],[3.,1.,-3.],[-3.,3.,-3.],[-1.,3.,-3.],[1.,3.,-3.],[3.,3.,-3.],[-3.,-3.,-1.],[-1.,-3.,-1.],[1.,-3.,-1.],[3.,-3.,-1.],[-3.,-1.,-1.],[-1.,-1.,-1.],[1.,-1.,-1.],[3.,-1.,-1.],[-3.,1.,-1.],[-1.,1.,-1.],[1.,1.,-1.],[3.,1.,-1.],[-3.,3.,-1.], [-1.,  3., -1.], [ 1. , 3., -1.], [ 3. , 3., -1.], [-3., -3. , 1.], [-1. ,-3., 1.],[ 1. ,-3. , 1.], [ 3., -3. , 1.], [-3. ,-1.,  1.], [-1. ,-1.,  1.], [ 1., -1.,  1.], [ 3. ,-1. , 1.], [-3. , 1., 1.], [-1. , 1.,1.],[1.,1.,1.],[3.,1.,1.],[-3.,3.,1.],[-1.,3.,1.],[1.,3.,1.],[3.,3.,1.],[-3.,-3.,3.],[-1.,-3.,3.],[1.,-3.,3.],[3.,-3.,3.],[-3.,-1.,3.],[-1.,-1.,3.],[1.,-1.,3.],[3.,-1.,3.],[-3.,1.,3.],[-1.,1.,3.],[ 1.,1., 3.],[3.,1.,3.],[-3.,3.,3.],[-1.,3.,3.],[1.,3.,3.],[3.,3.,3.]]
-)
-          mesh_node = placentagen.gen_mesh_darcy(rectangular_mesh,volume, thickness, ellipticity)
-          self.assertTrue(mesh_node['nodes'][0,0] == -1)
-          self.assertTrue(mesh_node['nodes'][0,1] == -1)
-          self.assertTrue(np.isclose(mesh_node['nodes'][0,2],-1.90578229))
-
+          mesh_node = placentagen.gen_mesh_darcy(volume, thickness, ellipticity,28)
+          self.assertTrue(np.isclose(mesh_node['nodes'][0,0],0))
+          self.assertTrue(np.isclose(mesh_node['nodes'][0,1],-1.06621809))
+          self.assertTrue(np.isclose(mesh_node['nodes'][0,2],0))
       def test_darcy_el(self):
-          volume=50
-          thickness=5
+          volume=5
+          thickness=2.1
           ellipticity=1
-          rectangular_mesh={}
-          rectangular_mesh['nodes']=np.array([[-3.,-3.,-3.],[-1.,-3.,-3.],[1.,-3.,-3.],[3.,-3.,-3.],[-3.,-1.,-3.],[-1.,-1.,-3.],[1.,-1.,-3.],[3.,-1.,-3.],[-3.,1.,-3.],[-1.,1.,-3.],[3.,1.,-3.],[-3.,3.,-3.],[-1.,3.,-3.],[1.,3.,-3.],[3.,3.,-3.],[-3.,-3.,-1.],[-1.,-3.,-1.],[1.,-3.,-1.],[3.,-3.,-1.],[-3.,-1.,-1.],[-1.,-1.,-1.],[1.,-1.,-1.],[3.,-1.,-1.],[-3.,1.,-1.],[-1.,1.,-1.],[1.,1.,-1.],[3.,1.,-1.],[-3.,3.,-1.], [-1.,  3., -1.], [ 1. , 3., -1.], [ 3. , 3., -1.], [-3., -3. , 1.], [-1. ,-3., 1.],[ 1. ,-3. , 1.], [ 3., -3. , 1.], [-3. ,-1.,  1.], [-1. ,-1.,  1.], [ 1., -1.,  1.], [ 3. ,-1. , 1.], [-3. , 1., 1.], [-1. , 1.,1.],[1.,1.,1.],[3.,1.,1.],[-3.,3.,1.],[-1.,3.,1.],[1.,3.,1.],[3.,3.,1.],[-3.,-3.,3.],[-1.,-3.,3.],[1.,-3.,3.],[3.,-3.,3.],[-3.,-1.,3.],[-1.,-1.,3.],[1.,-1.,3.],[3.,-1.,3.],[-3.,1.,3.],[-1.,1.,3.],[ 1.,1., 3.],[3.,1.,3.],[-3.,3.,3.],[-1.,3.,3.],[1.,3.,3.],[3.,3.,3.]]
-)
-          mesh_node = placentagen.gen_mesh_darcy(rectangular_mesh,volume, thickness, ellipticity)
-          self.assertTrue(mesh_node['elems'][0,0] == 7 )
-          self.assertTrue(mesh_node['elems'][0,1] == 3 )
-          self.assertTrue(mesh_node['elems'][0,2] == 2 )
-          self.assertTrue(mesh_node['elems'][0,3] == 1 )
-
+          mesh_node = placentagen.gen_mesh_darcy(volume, thickness, ellipticity,28)
+          self.assertTrue(np.isclose(mesh_node['elems'][0,0],4))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,1],5))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,2],7))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,3],2))
+ 
       def test_darcy_el_node_array(self):
-          volume=50
-          thickness=5
+          volume=5
+          thickness=2.1
           ellipticity=1
-          rectangular_mesh={}
-          rectangular_mesh['nodes']=np.array([[-3.,-3.,-3.],[-1.,-3.,-3.],[1.,-3.,-3.],[3.,-3.,-3.],[-3.,-1.,-3.],[-1.,-1.,-3.],[1.,-1.,-3.],[3.,-1.,-3.],[-3.,1.,-3.],[-1.,1.,-3.],[3.,1.,-3.],[-3.,3.,-3.],[-1.,3.,-3.],[1.,3.,-3.],[3.,3.,-3.],[-3.,-3.,-1.],[-1.,-3.,-1.],[1.,-3.,-1.],[3.,-3.,-1.],[-3.,-1.,-1.],[-1.,-1.,-1.],[1.,-1.,-1.],[3.,-1.,-1.],[-3.,1.,-1.],[-1.,1.,-1.],[1.,1.,-1.],[3.,1.,-1.],[-3.,3.,-1.], [-1.,  3., -1.], [ 1. , 3., -1.], [ 3. , 3., -1.], [-3., -3. , 1.], [-1. ,-3., 1.],[ 1. ,-3. , 1.], [ 3., -3. , 1.], [-3. ,-1.,  1.], [-1. ,-1.,  1.], [ 1., -1.,  1.], [ 3. ,-1. , 1.], [-3. , 1., 1.], [-1. , 1.,1.],[1.,1.,1.],[3.,1.,1.],[-3.,3.,1.],[-1.,3.,1.],[1.,3.,1.],[3.,3.,1.],[-3.,-3.,3.],[-1.,-3.,3.],[1.,-3.,3.],[3.,-3.,3.],[-3.,-1.,3.],[-1.,-1.,3.],[1.,-1.,3.],[3.,-1.,3.],[-3.,1.,3.],[-1.,1.,3.],[ 1.,1., 3.],[3.,1.,3.],[-3.,3.,3.],[-1.,3.,3.],[1.,3.,3.],[3.,3.,3.]]
-)
-          mesh_node = placentagen.gen_mesh_darcy(rectangular_mesh,volume, thickness, ellipticity)
+          mesh_node = placentagen.gen_mesh_darcy(volume, thickness, ellipticity,28)
           self.assertTrue(mesh_node['element_array'][0] == 1)
-          self.assertTrue(mesh_node['node_array'][7] == 8)
+          self.assertTrue(mesh_node['node_array'][0] == 1)
 
 if __name__ == '__main__':
     unittest.main()

@@ -211,14 +211,14 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
             'total_elems': (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)}
 
 
-def gen_mesh_darcy(rectangular_mesh,volume,thickness,ellipticity):
+def gen_mesh_darcy(volume,thickness,ellipticity,n):
     """ Generates ellipsoid placental mesh to solve darcy flow
 
     Inputs:
-       - rectangular_mesh: rectangular mesh grid
        - volume: volume of placental ellipsoid
        - thickness: placental thickness (z-dimension)
        - ellipticity: ratio of y to x axis dimensions
+       - n: number of datapoints (optimal is 682000)
 
     Returns:
        - nodes: nodes location of mesh
@@ -226,11 +226,20 @@ def gen_mesh_darcy(rectangular_mesh,volume,thickness,ellipticity):
        - node_array: array of nodes
        - element_array: array of elements"""
 
-    nodes=rectangular_mesh['nodes']
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
+
+    nodeSpacing = (n/(2*x_radius*2*y_radius*2*z_radius)) **(1./3)
+
+    #Set up edge node vectors:
+    xVector = np.linspace(-x_radius, x_radius, 2*x_radius*nodeSpacing)
+    yVector = np.linspace(-y_radius, y_radius, 2*y_radius*nodeSpacing)
+    zVector = np.linspace(-z_radius, z_radius, 2*z_radius*nodeSpacing)
+
+    #Use these vectors to make a uniform cuboid grid
+    nodes = np.vstack(np.meshgrid(xVector,yVector,zVector)).reshape(3,-1).T
 
     #nodes inside the ellipsoid    
     ellipsoid_node=np.zeros((len(nodes),3))
@@ -290,6 +299,6 @@ def gen_mesh_darcy(rectangular_mesh,volume,thickness,ellipticity):
        elems[i] = [x+1 for x in elems[i]]
     element_array = range(1, len(elems)+1)
     node_array = range(1, len(node_loc)+1)
-    
+
     return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array}
 
