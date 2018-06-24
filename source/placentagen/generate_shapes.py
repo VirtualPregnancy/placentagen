@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-
+from scipy.spatial import Delaunay
 from . import pg_utilities
 
 
@@ -209,3 +209,87 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
 
     return {'nodes': node_loc, 'elems': elems, 'total_nodes': nnod_x * nnod_y * nnod_z,
             'total_elems': (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)}
+
+
+def gen_mesh_darcy(rectangular_mesh,volume,thickness,ellipticity):
+    """ Generates ellipsoid placental mesh to solve darcy flow
+
+    Inputs:
+       - rectangular_mesh: rectangular mesh grid
+       - volume: volume of placental ellipsoid
+       - thickness: placental thickness (z-dimension)
+       - ellipticity: ratio of y to x axis dimensions
+
+    Returns:
+       - nodes: nodes location of mesh
+       - elems: element connectivity of mesh (tetrahedral element)
+       - node_array: array of nodes
+       - element_array: array of elements"""
+
+    nodes=rectangular_mesh['nodes']
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
+    #nodes inside the ellipsoid    
+    ellipsoid_node=np.zeros((len(nodes),3))
+    count=0
+    for nnode in range (0, len(nodes)):
+       coord_point = nodes[nnode][0:3]
+       inside=pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius, y_radius, z_radius)
+       if inside:
+          ellipsoid_node[count,:]=coord_point[:]
+          count=count+1
+    ellipsoid_node.resize(count,3)     
+      
+    xyList = ellipsoid_node[:,[0,1]]
+    xyListUnique = np.vstack({tuple(row) for row in xyList})
+    #looking for z_coordinate of surface nodes
+    for xyColumn in xyListUnique:
+        
+        xyNodes = np.where(np.all(xyList == xyColumn, axis = 1))[0]
+        if len(xyNodes) > 1:
+           x_coord=ellipsoid_node[xyNodes[0],0]
+           y_coord=ellipsoid_node[xyNodes[0],1]
+           ellipsoid_node[xyNodes[len(xyNodes) - 1],2] = pg_utilities.z_from_xy(x_coord, y_coord, x_radius, y_radius, z_radius)   
+           ellipsoid_node[xyNodes[0],2] =-1*( pg_utilities.z_from_xy(x_coord, y_coord, x_radius, y_radius, z_radius))
+
+    #generate tetrahedral mesh
+    pyMesh = Delaunay(ellipsoid_node)
+
+    #Build arrays to pass into openCMISS conversion:
+    node_loc = pyMesh.points
+    temp_elems = pyMesh.simplices
+    #CHECK ELEMENTS FOR 0 VOLUME:
+    min_vol = 0.00001
+    index = 0
+    indexArr = []
+
+    for element in temp_elems:
+     x_coor = []
+     y_coor = []
+     z_coor = []
+     for node in element:
+        x_coor.append(node_loc[node][0])
+        y_coor.append(node_loc[node][1])
+        z_coor.append(node_loc[node][2])
+          
+     vmat = np.vstack((x_coor,y_coor,z_coor,[1.0,1.0,1.0,1.0]))#matrix of coor of element
+     elem_volume = (1/6.0) * abs(np.linalg.det(vmat))#volume of each tetrahedral element
+     
+     #if volume is not zero
+     if elem_volume > min_vol:
+       
+       indexArr.append(index)
+     index = index+1
+     
+    #update arrays without 0 volume elements, to pass into openCMISS
+    elems = temp_elems[indexArr,:]
+    for i in range(len(elems)):
+       elems[i] = [x+1 for x in elems[i]]
+    element_array = range(1, len(elems)+1)
+    node_array = range(1, len(node_loc)+1)
+    
+    return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array}
+
