@@ -33,9 +33,9 @@ def calc_terminal_branch(node_loc, elems):
 
     This will return:  
 
-    >>>terminal_elems: [1 2]
-    >>>terminal_nodes: [2 3]
-    >>>total_terminals: 2
+    >>> terminal_elems: [1 2]
+    >>> terminal_nodes: [2 3]
+    >>> total_terminals: 2
     """
     # This function generates a list of terminal nodes associated with a branching geometry
     # inputs are node locations and elements
@@ -133,29 +133,29 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
     """ This function defines radii in a branching tree by 'order' of the vessel
 
      Inputs are:
-     -node_loc: The nodes in the branching tree
-     -elems: The elements in the branching tree
-     -system: 'strahler','horsfield' or 'generation' to define vessel order
-     -inlet_elem: element number that you want to define as having inlet_radius
-     -inlet_radius: the radius of your inlet vessel
-     -radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
+     - node_loc: The nodes in the branching tree
+     - elems: The elements in the branching tree
+     - system: 'strahler','horsfield' or 'generation' to define vessel order
+     - inlet_elem: element number that you want to define as having inlet_radius
+     - inlet_radius: the radius of your inlet vessel
+     - radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
 
      Returns: 
      -radius of each branch
 
      A way you might want to use me is: 
 
-     >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])
-     >>>elems = np.array([[0 ,0 ,1], [1 ,1 ,2], [2 ,1 ,3]])
-     >>>system='strahler'
-     >>>inlet_elem=0
-     >>>inlet_radius=0.1
-     >>>radius_ratio=1.53
-     >>>define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, radius_ratio)
+     >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])
+     >>> elems = np.array([[0 ,0 ,1], [1 ,1 ,2], [2 ,1 ,3]])
+     >>> system='strahler'
+     >>> inlet_elem=0
+     >>> inlet_radius=0.1
+     >>> radius_ratio=1.53
+     >>> define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, radius_ratio)
 
     This will return:
 
-    >>radius: [ 0.1, 0.06535948 , 0.06535948]"""
+    >> radius: [ 0.1, 0.06535948 , 0.06535948]"""
     num_elems = len(elems)
     radius = np.zeros(num_elems)  # initialise radius array
     # Evaluate orders in the system
@@ -257,24 +257,24 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
      - node_loc: array of coordinates (locations) of nodes of tree branches
 
     Return:
-     -terminals_in_grid: array showing how many terminal branches are in each sampling grid element
-     -terminal_elems: array showing the number of sampling grid element where terminal branches are located
+     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
 
     A way you might want to use me is:
 
-    >>>terminal_list={}
-    >>>terminal_list['terminal_nodes']=[3]
-    >>>terminal_list['total_terminals']=1
-    >>>rectangular_mesh = {}
-    >>>rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
-    >>>rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
-    >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])   
-    >>>terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc)
+    >>> terminal_list={}
+    >>> terminal_list['terminal_nodes']=[3]
+    >>> terminal_list['total_terminals']=1
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+    >>> rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])   
+    >>> terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc)
 
     This will return:
 
-    >>>terminals_in_grid: 1
-    >>>terminal_elems: 0
+    >>> terminals_in_grid: 1
+    >>> terminal_elems: 0
     """
     num_terminals = terminal_list['total_terminals']
     terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
@@ -315,27 +315,27 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
      - node_loc: array of coordinates (locations) of nodes of tree branches
 
     Return:
-     -terminals_in_grid: array showing how many terminal branches are in each sampling grid element
-     -terminal_elems: array showing the number of sampling grid element where terminal branches are located
+     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
     
     A way you might want to use me is:
 
-    >>>terminal_list = {}
-    >>>terminal_list['terminal_nodes'] = [3]
-    >>>terminal_list['total_terminals'] = 1
-    >>>placenta_list = [7]
-    >>>rectangular_mesh = {}
-    >>>rectangular_mesh['elems'] = np.zeros((8, 9), dtype=int)
-    >>>rectangular_mesh['nodes'] = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.],
+    >>> terminal_list = {}
+    >>> terminal_list['terminal_nodes'] = [3]
+    >>> terminal_list['total_terminals'] = 1
+    >>> placenta_list = [7]
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['elems'] = np.zeros((8, 9), dtype=int)
+    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.],
                                      [0., 1., 1.], [1., 1., 1.]]
-    >>>rectangular_mesh['elems'][7] = [0, 0, 1, 2, 3, 4, 5, 6, 7]
-    >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])  
-    >>>terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc)
+    >>> rectangular_mesh['elems'][7] = [0, 0, 1, 2, 3, 4, 5, 6, 7]
+    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])  
+    >>> terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc)
 
     This will return:
 
-    >>>terminals_in_grid[7]: 1
-    >>>terminal_elems[0]: 7
+    >>> terminals_in_grid[7]: 1
+    >>> terminal_elems[0]: 7
     """
     num_sample_elems = len(placenta_list)
     num_terminals = terminal_list['total_terminals']
@@ -386,30 +386,30 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, th
 
     Return:
 
-     -term_vol_in_grid
-     -term_diameter_in_grid
+     - term_vol_in_grid
+     - term_diameter_in_grid
 
     A way you might want to use me is:
 
-      >>>node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])
-      >>>rectangular_mesh = {}
-      >>>rectangular_mesh['nodes'] = np.array([[-2., -2. ,-2.],[ 0. ,-2. ,-2.],[ 2. ,-2. ,-2.],[-2. , 0., -2.],[ 0. , 0. ,-2.],[ 2. , 0. ,-2.],[-2. ,-2. , 0.],[ 0. ,-2. , 0.],[ 2. ,-2. , 0.],[-2. , 0. ,0.],[ 0. , 0.,  0.],[ 2.,  0. , 0.],[-2. ,-2. , 2.],[ 0. ,-2. , 2.],[ 2., -2.,  2.],[-2. , 0. , 2.],[ 0.,  0. , 2.],[ 2. , 0.,  2.]])
-      >>>rectangular_mesh['elems'] = [[ 0,0,1,3,4,6,7,9,10],[ 1,  1,2,4,5,7,8,10,11],[2,6,7,9,10,12,13,15,16],[4,7,8,10,11,13,14,16,17]]
-      >>>rectangular_mesh['total_elems'] = 4
-      >>>terminal_list={}
-      >>>terminal_list['total_terminals']=1
-      >>>terminal_list['terminal_nodes']=[2]
-      >>>volume=5
-      >>>thickness=2.1
-      >>>ellipticity=1
-      >>>term_total_vol=0.04#artificial value to match with a smaller ellipsoid
-      >>>term_tissue_vol=1.77657064561
-      >>>term_tissue_diam=0.090100877305
-      >>>terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, thickness, ellipticity,term_total_vol, term_tissue_vol, term_tissue_diam)
+      >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])
+      >>> rectangular_mesh = {}
+      >>> rectangular_mesh['nodes'] = np.array([[-2., -2. ,-2.],[ 0. ,-2. ,-2.],[ 2. ,-2. ,-2.],[-2. , 0., -2.],[ 0. , 0. ,-2.],[ 2. , 0. ,-2.],[-2. ,-2. , 0.],[ 0. ,-2. , 0.],[ 2. ,-2. , 0.],[-2. , 0. ,0.],[ 0. , 0.,  0.],[ 2.,  0. , 0.],[-2. ,-2. , 2.],[ 0. ,-2. , 2.],[ 2., -2.,  2.],[-2. , 0. , 2.],[ 0.,  0. , 2.],[ 2. , 0.,  2.]])
+      >>> rectangular_mesh['elems'] = [[ 0,0,1,3,4,6,7,9,10],[ 1,  1,2,4,5,7,8,10,11],[2,6,7,9,10,12,13,15,16],[4,7,8,10,11,13,14,16,17]]
+      >>> rectangular_mesh['total_elems'] = 4
+      >>> terminal_list={}
+      >>> terminal_list['total_terminals']=1
+      >>> terminal_list['terminal_nodes']=[2]
+      >>> volume=5
+      >>> thickness=2.1
+      >>> ellipticity=1
+      >>> term_total_vol=0.04#artificial value to match with a smaller ellipsoid
+      >>> term_tissue_vol=1.77657064561
+      >>> term_tissue_diam=0.090100877305
+      >>> terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, thickness, ellipticity,term_total_vol, term_tissue_vol, term_tissue_diam)
      
     This will return:
-      >>>term_vol_in_grid[0]: 0.44414266
-      >>>term_diameter_in_grid[0]: 0.08003529"""
+      >>> term_vol_in_grid[0]: 0.44414266
+      >>> term_diameter_in_grid[0]: 0.08003529"""
 
 
     # Define the resolution of block for analysis
@@ -507,22 +507,22 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
 
     A way you might want to use me is:
 
-    >>>thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  #mm
-    >>>ellipticity = 1.00  #no unit
-    >>>spacing = 1.0 #no unit
-    >>>volume=1 #mm3
-    >>>rectangular_mesh = {}
-    >>>rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
-    >>>rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
-    >>>rectangular_mesh['total_nodes'] =8
-    >>>rectangular_mesh['total_elems'] = 1
-    >>>num_test_points=25
-    >>>ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points)
+    >>> thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  #mm
+    >>> ellipticity = 1.00  #no unit
+    >>> spacing = 1.0 #no unit
+    >>> volume=1 #mm3
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
+    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+    >>> rectangular_mesh['total_nodes'] =8
+    >>> rectangular_mesh['total_elems'] = 1
+    >>> num_test_points=25
+    >>> ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points)
 
     This will return:
 
-    >>>pl_vol_in_grid: 0.12485807941
-    >>>non_empty_rects: 0
+    >>> pl_vol_in_grid: 0.12485807941
+    >>> non_empty_rects: 0
     """
     total_elems = rectangular_mesh['total_elems']
     elems = rectangular_mesh['elems']
@@ -646,25 +646,25 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
 
     A way you might want to use me is:
 
-    >>>thickness =  2.1  #mm
-    >>>ellipticity = 1.00  #no unit
-    >>>volume=5    #mm3
-    >>>rectangular_mesh = {}
-    >>>rectangular_mesh['nodes'] = np.array([[-0.5, -0.5, -1.5],[ 0.5, -0.5,-1.5],[-0.5,  0.5 ,-1.5],[ 0.5 , 0.5, -1.5],[-0.5 ,-0.5, -0.5],[ 0.5 ,-0.5 ,-0.5],[-0.5 , 0.5 ,-0.5],[ 0.5 , 0.5 ,-0.5],[-0.5, -0.5 , 0.5],[ 0.5, -0.5 , 0.5],[-0.5  ,0.5 , 0.5],[ 0.5 , 0.5  ,0.5]])
-    >>>rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7],[1,4,5,6,7,8,9,10,11]]
-    >>>rectangular_mesh['total_elems'] = 2
-    >>>branch_elems={}
-    >>>branch_elems['elems']=[[0 ,0, 1]]
-    >>>branch_nodes={}
-    >>>branch_nodes['nodes']=np.array([[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]])
-    >>>branch_radius=[0.1]
-    >>>start_elem=0
-    >>>cal_br_vol_samp_grid(rectangular_mesh,  branch_nodes['nodes'], branch_elems['elems'],branch_radius, volume, thickness,ellipticity, start_elem)
+    >>> thickness =  2.1  #mm
+    >>> ellipticity = 1.00  #no unit
+    >>> volume=5    #mm3
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] = np.array([[-0.5, -0.5, -1.5],[ 0.5, -0.5,-1.5],[-0.5,  0.5 ,-1.5],[ 0.5 , 0.5, -1.5],[-0.5 ,-0.5, -0.5],[ 0.5 ,-0.5 ,-0.5],[-0.5 , 0.5 ,-0.5],[ 0.5 , 0.5 ,-0.5],[-0.5, -0.5 , 0.5],[ 0.5, -0.5 , 0.5],[-0.5  ,0.5 , 0.5],[ 0.5 , 0.5  ,0.5]])
+    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7],[1,4,5,6,7,8,9,10,11]]
+    >>> rectangular_mesh['total_elems'] = 2
+    >>> branch_elems={}
+    >>> branch_elems['elems']=[[0 ,0, 1]]
+    >>> branch_nodes={}
+    >>> branch_nodes['nodes']=np.array([[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]])
+    >>> branch_radius=[0.1]
+    >>> start_elem=0
+    >>> cal_br_vol_samp_grid(rectangular_mesh,  branch_nodes['nodes'], branch_elems['elems'],branch_radius, volume, thickness,ellipticity, start_elem)
 
     This will return:
 
-    >>>br_vol_in_grid[0]: 0.01396263
-    >>>br_diameter_in_grid[0]: 0.00279253
+    >>> br_vol_in_grid[0]: 0.01396263
+    >>> br_diameter_in_grid[0]: 0.00279253
     """
 
     #Define the resolution of cylinder for analysis
@@ -847,19 +847,19 @@ def tissue_vol_in_samp_gr(term_vol_in_grid,br_vol_in_grid):
     """Calculate the total tissue volume (i.e. including terminal conduits) of tree branches
 
        Inputs are:
-       -term_vol_in_grid:total volume of terminal conduits
-       -br_vol_in_grid:total volume of branches before terminal conduits
+       - term_vol_in_grid:total volume of terminal conduits
+       - br_vol_in_grid:total volume of branches before terminal conduits
 
        Return:
        tissue_vol: total tissue volume of whole tree
       
        A way you might want to use me is:
 
-       >>>term_vol_in_grid=0.444
-       >>>br_vol_in_grid=0.008
+       >>> term_vol_in_grid=0.444
+       >>> br_vol_in_grid=0.008
 
        This will return:
-       >>>tissue_vol: 0.452"""
+       >>> tissue_vol: 0.452"""
 
     tissue_vol = br_vol_in_grid + term_vol_in_grid
  
@@ -871,22 +871,22 @@ def vol_frac_in_samp_gr(tissue_vol,sampling_grid_vol):
     """Calculate volume fraction of sampling grid mesh where the villous branches are located
 
        Inputs are: 
-       -tissue_vol: tissue volume in each sampling grid
-       -sampling_grid_vol:volume of sampling grid element where placental tissue are located
+       - tissue_vol: tissue volume in each sampling grid
+       - sampling_grid_vol:volume of sampling grid element where placental tissue are located
 
        Return:
-       -vol_frac: volume fraction of sampling grid element where the placental tissue are located
+       - vol_frac: volume fraction of sampling grid element where the placental tissue are located
 
        A way you might want to use me:
 
-       >>>tissue_vol=[0.453]
-       >>>sampling_grid_vol={}
-       >>>sampling_grid_vol['non_empty_rects']=[0]
-       >>>sampling_grid_vol['pl_vol_in_grid']=[0.625]
+       >>> tissue_vol=[0.453]
+       >>> sampling_grid_vol={}
+       >>> sampling_grid_vol['non_empty_rects']=[0]
+       >>> sampling_grid_vol['pl_vol_in_grid']=[0.625]
        vol_frac_in_samp_gr(tissue_vol,sampling_grid_vol)
       
        This will return:
-       >>>vol_frac: 0.7248"""
+       >>> vol_frac: 0.7248"""
 
     volumes = sampling_grid_vol['pl_vol_in_grid']
     non_empties = sampling_grid_vol['non_empty_rects']
@@ -906,23 +906,23 @@ def conductivity_samp_gr(vol_frac,weighted_diameter,non_empties):
     """Calculate conductivity of sampling grid element where villous branches are located
 
     Inputs are: 
-    -vol_frac: tissue volume fraction of sampling grid element
-    -weighted_diameter: weighted diameter of sampling grid element
-    -non_empties: volume of sampling grid element where placenta tissue are located
+    - vol_frac: tissue volume fraction of sampling grid element
+    - weighted_diameter: weighted diameter of sampling grid element
+    - non_empties: volume of sampling grid element where placenta tissue are located
 
     Return:
-    -conductivity: conductivity of sampling grid element where the placental tissue are located
+    - conductivity: conductivity of sampling grid element where the placental tissue are located
 
     A way you might want to use me:
 
-    >>>vol_frac= [0.72401065]
-    >>>weighted_diameter=[0.17988357]
-    >>>non_empties=[0]
-    >>>conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
+    >>> vol_frac= [0.72401065]
+    >>> weighted_diameter=[0.17988357]
+    >>> non_empties=[0]
+    >>> conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
 
     This will return:
 
-    >>>conductivity: 7.20937313e-06"""
+    >>> conductivity: 7.20937313e-06"""
     max_cond = 0.52
     conductivity = np.zeros(len(vol_frac))
     for i in range(0,len(non_empties)):
@@ -963,7 +963,7 @@ def terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_co
 
     This will return:
 
-    >>>term_vill_diameter: 0.09
+    >>> term_vill_diameter: 0.09
     """
     num_ints = 1
     term_vill_diameter = 0.0
@@ -984,13 +984,13 @@ def weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissu
     Weighted_diameter each sampling grid = (d1*v1+d2*v2+d3*v3+...+dn*vn)/(v1+v2+v2+...+vn)
 
     Inputs are:
-    -term_vill_diameter: diameter of terminal conduits
-    -br_diameter_in_grid: diameter of branches in each sampling grid
-    -terminals_in_grid: number of terminals in each sampling grid
-    -tissue_vol: tissue volume in each sampling grid
+    - term_vill_diameter: diameter of terminal conduits
+    - br_diameter_in_grid: diameter of branches in each sampling grid
+    - terminals_in_grid: number of terminals in each sampling grid
+    - tissue_vol: tissue volume in each sampling grid
      
     Return:
-    -weighted_diameter: weighted diameter of each sampling grid element
+    - weighted_diameter: weighted diameter of each sampling grid element
     """
 
     tissue_diameter = br_diameter_in_grid + term_diameter_in_grid
@@ -1000,3 +1000,16 @@ def weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissu
     return weighted_diameter
 
 
+def porosity(vol_frac):
+    """ Calculate porosity
+
+    Input is: 
+     - vol_frac: volume fraction of element
+
+    Return: 
+     - porosity: porosity of element
+    
+    """
+    porosity= np.zeros(len(vol_frac))
+    porosity=1-vol_frac
+    return porosity
