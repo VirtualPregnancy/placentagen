@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import numpy as np
-import scipy.spatial
 from scipy.spatial import Delaunay
 from . import pg_utilities
 
