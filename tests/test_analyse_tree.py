@@ -299,12 +299,5 @@ class Test_porosity(TestCase):
           porosity=placentagen.porosity(vol_frac)
           self.assertTrue(np.isclose(porosity,0.7))
 if __name__ == '__main__':
-   unittest.main()
-
-
-
-
-
-    
-    
+   unittest.main()   
 
