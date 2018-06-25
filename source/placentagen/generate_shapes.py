@@ -163,7 +163,6 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
 
-    print(x_radius,y_radius,z_radius)
     # z height of ellipsoid is 2* zradius
     # We want number of nodes to cover height and have prescribed spaing
     nnod_x = int(np.ceil(x_radius * 2.0 / x_spacing)) + 1
@@ -172,19 +171,8 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     y_width = y_spacing * (nnod_y - 1)
     nnod_z = int(np.ceil(z_radius * 2.0 / z_spacing)) + 1
     z_width = z_spacing * (nnod_z - 1)
-
-    # Create linspaces for x y and z coordinates
-    x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
-    y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
-    z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis
-    node_loc_temp = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
-
-    node_loc = np.zeros((nnod_x*nnod_y*nnod_z,3))
-    for i in range(0,len(node_loc)):
-        node_loc[i][0] = node_loc_temp[i][2]
-        node_loc[i][1] = node_loc_temp[i][0]
-        node_loc[i][2] = node_loc_temp[i][1]
-
+    
+    node_loc=gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z)
     # Generating the element connectivity of each cube element, 8 nodes for each 3D cube element
     num_elems = (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)
     elems = np.zeros((num_elems, 9),
@@ -230,17 +218,14 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
-
+    
     nodeSpacing = (n/(2*x_radius*2*y_radius*2*z_radius)) **(1./3)
-
-    #Set up edge node vectors:
-    xVector = np.linspace(-x_radius, x_radius, 2*x_radius*nodeSpacing)
-    yVector = np.linspace(-y_radius, y_radius, 2*y_radius*nodeSpacing)
-    zVector = np.linspace(-z_radius, z_radius, 2*z_radius*nodeSpacing)
-
-    #Use these vectors to make a uniform cuboid grid
-    nodes = np.vstack(np.meshgrid(xVector,yVector,zVector)).reshape(3,-1).T
-
+        
+    nnod_x=2*x_radius*nodeSpacing
+    nnod_y=2*y_radius*nodeSpacing
+    nnod_z=2*z_radius*nodeSpacing
+    nodes=gen_rectangular_node(x_radius*2, y_radius*2, z_radius*2, nnod_x, nnod_y, nnod_z)
+    
     #nodes inside the ellipsoid    
     ellipsoid_node=np.zeros((len(nodes),3))
     count=0
@@ -251,7 +236,6 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
           ellipsoid_node[count,:]=coord_point[:]
           count=count+1
     ellipsoid_node.resize(count,3)     
-      
     xyList = ellipsoid_node[:,[0,1]]
     xyListUnique = np.vstack({tuple(row) for row in xyList})
     #looking for z_coordinate of surface nodes
@@ -301,4 +285,21 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
     node_array = range(1, len(node_loc)+1)
 
     return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array}
+
+
+
+def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
+      
+    # Create linspaces for x y and z coordinates
+    x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
+    y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
+    z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis
+    node_loc_temp = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
+    node_loc = np.zeros((len(node_loc_temp),3))
+    for i in range(0,len(node_loc)):
+        node_loc[i][0] = node_loc_temp[i][2]
+        node_loc[i][1] = node_loc_temp[i][0]
+        node_loc[i][2] = node_loc_temp[i][1]
+    
+    return node_loc
 

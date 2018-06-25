@@ -45,17 +45,17 @@ class Test_darcy_mesh(TestCase):
           ellipticity=1
           mesh_node = placentagen.gen_mesh_darcy(volume, thickness, ellipticity,28)
           self.assertTrue(np.isclose(mesh_node['nodes'][0,0],0))
-          self.assertTrue(np.isclose(mesh_node['nodes'][0,1],-1.06621809))
-          self.assertTrue(np.isclose(mesh_node['nodes'][0,2],0))
+          self.assertTrue(np.isclose(mesh_node['nodes'][0,1],0))
+          self.assertTrue(np.isclose(mesh_node['nodes'][0,2],-1.05))
       def test_darcy_el(self):
           volume=5
           thickness=2.1
           ellipticity=1
           mesh_node = placentagen.gen_mesh_darcy(volume, thickness, ellipticity,28)
           self.assertTrue(np.isclose(mesh_node['elems'][0,0],4))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,1],5))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,2],7))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,3],2))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,1],7))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,2],6))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,3],3))
  
       def test_darcy_el_node_array(self):
           volume=5
@@ -65,5 +65,12 @@ class Test_darcy_mesh(TestCase):
           self.assertTrue(mesh_node['element_array'][0] == 1)
           self.assertTrue(mesh_node['node_array'][0] == 1)
 
+
+class Test_rect_node(TestCase):
+      def test_rectangular_node(self):
+          rect_node = placentagen.gen_rectangular_node(1, 1, 1, 2, 2, 2)
+          self.assertTrue(rect_node[0,0],-0.5)
+          self.assertTrue(rect_node[0,1],-0.5)
+          self.assertTrue(rect_node[0,2],-0.5)
 if __name__ == '__main__':
     unittest.main()
