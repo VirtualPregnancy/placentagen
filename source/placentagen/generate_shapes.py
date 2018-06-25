@@ -3,7 +3,6 @@ import numpy as np
 from scipy.spatial import Delaunay
 from . import pg_utilities
 
-
 """
 .. module:: generate_shapes
   :synopsis: Contains code to generate placental shapes for generic placental models.
