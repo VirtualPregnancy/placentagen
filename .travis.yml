@@ -7,5 +7,6 @@ python:
 install:
   - pip install nose coverage
   - python setup.py develop
+  - pip install scipy
 script:
   - nosetests --with-coverage --cover-package=placentagen
