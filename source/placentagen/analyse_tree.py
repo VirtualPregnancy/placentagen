@@ -1013,3 +1013,62 @@ def porosity(vol_frac):
     porosity= np.zeros(len(vol_frac))
     porosity=1-vol_frac
     return porosity
+
+def darcynode_in_sampling_grid(rectangular_mesh, darcy_node_loc):
+    """Locate where the darcy_mesh nodes are located inside the sampling grid mesh
+
+     Inputs are:
+      - rectangular mesh: rectangular sampling grid mesh
+      - darcy_node_loc: node locations of darcy mesh
+
+     Return:
+      - darcy_node_elems: array which shows the sampling grid element where the darcy mesh nodes are located
+
+    """  
+    darcy_node_elems = np.zeros(len(darcy_node_loc), dtype=int)
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    startx = np.min(nodes[:, 0])
+    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
+    endx = np.max(nodes[:, 0])
+    nelem_x = (endx - startx) / xside
+    starty = np.min(nodes[:, 1])
+    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
+    endy = np.max(nodes[:, 1])
+    nelem_y = (endy - starty) / yside
+    startz = np.min(nodes[:, 2])
+    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
+    endz = np.max(nodes[:, 2])
+    nelem_z = (endz - startz) / zside
+
+    for nt in range(0, len(darcy_node_loc)):
+        coord_node = darcy_node_loc[nt][0:3]
+        xelem_num = np.floor((coord_node[0] - startx) / xside)
+        yelem_num = np.floor((coord_node[1] - starty) / yside)
+        zelem_num = np.floor((coord_node[2] - startz) / zside)
+        nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+        darcy_node_elems[nt] = nelem  # record what element the darcy node is in
+    
+    return darcy_node_elems
+
+def mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosity):
+    """Map the conductivity and porosity value of darcy_nodes with sampling grid element
+
+      Inputs are:
+       - darcy_node_elems: array showing where darcy nodes are located inside the sampling grid 
+       - non_empty_rects: array of non empty sampling grid element
+       - conductiviy: conductivity of non-empty sampling grid element
+       - porosity: porosity of non-empty sampling grid element
+
+     Return:
+       - mapped_con_por: mapped value of conductivity and porosity of each darcy mesh node"""
+
+    mapped_con_por=np.zeros((len(darcy_node_elems),3)).astype(object)
+    mapped_con_por[:,0]= mapped_con_por[:,0].astype(int)
+    
+    for el in range (0,len(darcy_node_elems)):
+         mapped_con_por[el,0]=el+1
+         mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==darcy_node_elems[el])][0,0]
+         mapped_con_por[el,2]=porosity[np.where(non_empty_rects==darcy_node_elems[el])][0]
+     
+    return mapped_con_por
