@@ -279,27 +279,11 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
     num_terminals = terminal_list['total_terminals']
     terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
     terminal_elems = np.zeros(num_terminals, dtype=int)
-    elems = rectangular_mesh['elems']
-    nodes = rectangular_mesh['nodes']
-    startx = np.min(nodes[:, 0])
-    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
-    endx = np.max(nodes[:, 0])
-    nelem_x = (endx - startx) / xside
-    starty = np.min(nodes[:, 1])
-    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
-    endy = np.max(nodes[:, 1])
-    nelem_y = (endy - starty) / yside
-    startz = np.min(nodes[:, 2])
-    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
-    endz = np.max(nodes[:, 2])
-    nelem_z = (endz - startz) / zside
-
+    gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+    
     for nt in range(0, num_terminals):
         coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
-        xelem_num = np.floor((coord_terminal[0] - startx) / xside)
-        yelem_num = np.floor((coord_terminal[1] - starty) / yside)
-        zelem_num = np.floor((coord_terminal[2] - startz) / zside)
-        nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_terminal)
         terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
         terminal_elems[nt] = nelem  # record what element the terminal is in
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
@@ -419,20 +403,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, th
 
     # Define information about sampling grid required to place data points in correct locations
     total_sample_elems = rectangular_mesh['total_elems']
-    elems = rectangular_mesh['elems']
-    nodes = rectangular_mesh['nodes']
-    startx = np.min(nodes[:, 0])
-    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
-    endx = np.max(nodes[:, 0])
-    nelem_x = (endx - startx) / xside
-    starty = np.min(nodes[:, 1])
-    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
-    endy = np.max(nodes[:, 1])
-    nelem_y = (endy - starty) / yside
-    startz = np.min(nodes[:, 2])
-    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
-    endz = np.max(nodes[:, 2])
-
+    gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
     # Array for total volume  and diameter of sampling grid in each element
     total_vol_samp_gr = np.zeros(total_sample_elems)
     total_diameter_samp_gr = np.zeros(total_sample_elems)
@@ -478,10 +449,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, th
             inside = pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius,
                                                         y_radius, z_radius)
             if inside:
-                xelem_num = np.floor((coord_point[0] - startx) / xside)
-                yelem_num = np.floor((coord_point[1] - starty) / yside)
-                zelem_num = np.floor((coord_point[2] - startz) / zside)
-                nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_point)
                 total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
                 total_volume = total_volume + vol_per_point
                 vol_distribution_each_br[nelem] = vol_distribution_each_br[nelem] + vol_per_point
@@ -672,20 +640,7 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
     num_points_z = 8
     # Define information about sampling grid required to place data points in correct locations
     total_sample_elems = rectangular_mesh['total_elems']
-    elems = rectangular_mesh['elems']
-    nodes = rectangular_mesh['nodes']
-    startx = np.min(nodes[:, 0])
-    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
-    endx = np.max(nodes[:, 0])
-    nelem_x = (endx - startx) / xside
-    starty = np.min(nodes[:, 1])
-    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
-    endy = np.max(nodes[:, 1])
-    nelem_y = (endy - starty) / yside
-    startz = np.min(nodes[:, 2])
-    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
-    endz = np.max(nodes[:, 2])
-    
+    gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
     #Define the placental ellipsoid
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
     z_radius = radii['z_radius']
@@ -774,10 +729,7 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
             coord_point = cyl_points[nt][0:3]
             inside=pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius, y_radius, z_radius)
             if inside:
-                xelem_num = np.floor((coord_point[0] - startx) / xside)
-                yelem_num = np.floor((coord_point[1] - starty) / yside)
-                zelem_num = np.floor((coord_point[2] - startz) / zside)
-                nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_point)
                 total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
                 vol_distribution_each_br[nelem]=vol_distribution_each_br[nelem]+vol_per_point
                 volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
@@ -1026,30 +978,14 @@ def darcynode_in_sampling_grid(rectangular_mesh, darcy_node_loc):
 
     """  
     darcy_node_elems = np.zeros(len(darcy_node_loc), dtype=int)
-    elems = rectangular_mesh['elems']
-    nodes = rectangular_mesh['nodes']
-    startx = np.min(nodes[:, 0])
-    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
-    endx = np.max(nodes[:, 0])
-    nelem_x = (endx - startx) / xside
-    starty = np.min(nodes[:, 1])
-    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
-    endy = np.max(nodes[:, 1])
-    nelem_y = (endy - starty) / yside
-    startz = np.min(nodes[:, 2])
-    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
-    endz = np.max(nodes[:, 2])
-    nelem_z = (endz - startz) / zside
-
+    gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
     for nt in range(0, len(darcy_node_loc)):
         coord_node = darcy_node_loc[nt][0:3]
-        xelem_num = np.floor((coord_node[0] - startx) / xside)
-        yelem_num = np.floor((coord_node[1] - starty) / yside)
-        zelem_num = np.floor((coord_node[2] - startz) / zside)
-        nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_node)
         darcy_node_elems[nt] = nelem  # record what element the darcy node is in
     
     return darcy_node_elems
+
 
 def mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosity):
     """Map the conductivity and porosity value of darcy_nodes with sampling grid element
@@ -1070,5 +1006,6 @@ def mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosi
          mapped_con_por[el,0]=el+1
          mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==darcy_node_elems[el])][0,0]
          mapped_con_por[el,2]=porosity[np.where(non_empty_rects==darcy_node_elems[el])][0]
-     
-    return mapped_con_por
+    
+    return mapped_con_por    
+
