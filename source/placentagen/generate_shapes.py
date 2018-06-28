@@ -283,7 +283,7 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
     element_array = range(1, len(elems)+1)
     node_array = range(1, len(node_loc)+1)
 
-    return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array}
+    return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array,'nodeSpacing':nodeSpacing}
 
 
 
