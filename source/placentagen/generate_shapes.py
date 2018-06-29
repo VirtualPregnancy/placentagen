@@ -211,7 +211,8 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
        - nodes: nodes location of mesh
        - elems: element connectivity of mesh (tetrahedral element)
        - node_array: array of nodes
-       - element_array: array of elements"""
+       - element_array: array of elements
+    """
 
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
