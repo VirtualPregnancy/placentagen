@@ -148,3 +148,31 @@ def check_colinear(x0, x1, x2):
         colinear = True
 
     return colinear
+
+
+def samp_gr_for_node_loc(rectangular_mesh):
+    
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+    startx = np.min(nodes[:, 0])
+    xside = nodes[elems[0][8]][0] - nodes[elems[0][1]][0]
+    endx = np.max(nodes[:, 0])
+    nelem_x = (endx - startx) / xside
+    starty = np.min(nodes[:, 1])
+    yside = nodes[elems[0][8]][1] - nodes[elems[0][1]][1]
+    endy = np.max(nodes[:, 1])
+    nelem_y = (endy - starty) / yside
+    startz = np.min(nodes[:, 2])
+    zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
+    endz = np.max(nodes[:, 2])
+    nelem_z = (endz - startz) / zside
+    
+    return startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,nelem_z
+    
+def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_node):
+       
+    xelem_num = np.floor((coord_node[0] - startx) / xside)
+    yelem_num = np.floor((coord_node[1] - starty) / yside)
+    zelem_num = np.floor((coord_node[2] - startz) / zside)
+    nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+    return nelem
