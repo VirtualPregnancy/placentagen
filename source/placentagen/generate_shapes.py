@@ -173,26 +173,7 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     
     node_loc=gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z)
     # Generating the element connectivity of each cube element, 8 nodes for each 3D cube element
-    num_elems = (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)
-    elems = np.zeros((num_elems, 9),
-                     dtype=int)  # this stores first element number and then the nodes of each mesh element
-    element_number = 0
-
-    ne = 0
-    # loop through elements
-    for k in range(1, nnod_z):
-        for j in range(1, nnod_y):
-            for i in range(1, nnod_x):
-                elems[ne][0] = ne  # store element number
-                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) #lowest coordinates
-                elems[ne][2] = elems[ne][1] + 1 #add one in x
-                elems[ne][3] = elems[ne][1] + nnod_x #go through x and find first in y
-                elems[ne][4] = elems[ne][3] + 1 #add one in y
-                elems[ne][5] = elems[ne][1] + nnod_x * nnod_y #same as 1 -4 but at higher z -coord
-                elems[ne][6] = elems[ne][2] + nnod_x * nnod_y
-                elems[ne][7] = elems[ne][3] + nnod_x * nnod_y
-                elems[ne][8] = elems[ne][4] + nnod_x * nnod_y
-                ne = ne + 1
+    elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)
 
     return {'nodes': node_loc, 'elems': elems, 'total_nodes': nnod_x * nnod_y * nnod_z,
             'total_elems': (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)}
@@ -287,7 +268,6 @@ def gen_mesh_darcy(volume,thickness,ellipticity,n):
     return {'nodes': node_loc, 'elems': elems, 'element_array':element_array,'node_array': node_array,'nodeSpacing':nodeSpacing}
 
 
-
 def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
       
     # Create linspaces for x y and z coordinates
@@ -302,4 +282,91 @@ def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
         node_loc[i][2] = node_loc_temp[i][1]
     
     return node_loc
+
+
+def gen_placental_mesh(nel,volume,thickness,ellipticity):
+
+    """ Generates ellipsoid placental mesh to solve darcy flow
+
+    Inputs:
+       - nel: number of element in x,y,z axis , the more nel, the rounder the mesh
+       - volume: volume of placental ellipsoid
+       - thickness: placental thickness (z-dimension)
+       - ellipticity: ratio of y to x axis dimensions
+       
+    Returns:
+       - placental_node_coor: nodes location of mesh
+       - placental_el_con: element connectivity of mesh (tetrahedral element)
+       - node_array: array of nodes
+       - element_array: array of elements
+    """
+    #creating cube between -1 and 1 with n number of element 
+    cubelength=2 
+    nnod_x= int(nel+1)
+    nnod_y = nnod_x
+    nnod_z = nnod_x
+
+    node=gen_rectangular_node(cubelength, cubelength, cubelength, nnod_x, nnod_y, nnod_z)#getting nodes
+    elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)#getting elem connectivity
+
+    #convert cube into unit sphere
+    sphere=np.zeros((len(node),3))
+    for ii in range(0,len(node)):
+
+     sphere[ii,0]=node[ii,0]*np.sqrt((1)-(node[ii,1]**2/2.0)-(node[ii,2]**2/2.0)+((node[ii,1]**2*node[ii,2]**2/3.0)))#for x_coor
+     sphere[ii,1]=node[ii,1]*np.sqrt((1)-(node[ii,2]**2/2.0)-(node[ii,0]**2/2.0)+((node[ii,2]**2*node[ii,0]**2/3.0)))#for y_coor
+     sphere[ii,2]=node[ii,2]*np.sqrt((1)-(node[ii,0]**2/2.0)-(node[ii,1]**2/2.0)+((node[ii,0]**2*node[ii,1]**2/3.0)))#for z_coor
+    
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)#getting radii of ellipsoid
+    z_rad = radii['z_radius']
+    x_rad = radii['x_radius']
+    y_rad = radii['y_radius']
+
+    #convert unit sphere into ellipsoid with actual radius
+    ellipsoid_coor=np.zeros((len(sphere),3))
+
+    for i in range(0,len(sphere)):
+      ellipsoid_coor[i,0] = sphere[i,0]*x_rad#x_coor
+      ellipsoid_coor[i,1] = sphere[i,1]*y_rad#y_coor
+      ellipsoid_coor[i,2] = sphere[i,2]*z_rad#z_coor
+
+
+    element_array = range(1, len(elems)+1)
+    node_array = range(1, len(ellipsoid_coor)+1)
+   
+    return{'placental_node_coor':ellipsoid_coor,'placental_el_con':elems,'element_array':element_array,'node_array':node_array}
+
+
+def cube_mesh_connectivity(nnod_x,nnod_y,nnod_z):
+    """Generates element connectivity in cube mesh
+      
+       Inputs:
+         - nnod_x:number of node in x axis
+         - nnod_y:number of node in y axis
+         - nnod_z:number of node in z axis
+
+       Outputs:
+         - elems: array of element connectivity
+
+    """
+    num_elems = (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)
+    elems = np.zeros((num_elems, 9),dtype=int)  # this stores first element number and then the nodes of each mesh element
+    element_number = 0
+    ne = 0
+    # loop through elements
+    for k in range(1, nnod_z):
+        for j in range(1, nnod_y):
+            for i in range(1, nnod_x):
+                elems[ne][0] = ne  # store element number
+                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) #lowest coordinates
+                elems[ne][2] = elems[ne][1] + 1 #add one in x
+                elems[ne][3] = elems[ne][1] + nnod_x #go through x and find first in y
+                elems[ne][4] = elems[ne][3] + 1 #add one in y
+                elems[ne][5] = elems[ne][1] + nnod_x * nnod_y #same as 1 -4 but at higher z -coord
+                elems[ne][6] = elems[ne][2] + nnod_x * nnod_y
+                elems[ne][7] = elems[ne][3] + nnod_x * nnod_y
+                elems[ne][8] = elems[ne][4] + nnod_x * nnod_y
+                ne = ne + 1
+
+    return elems
 
