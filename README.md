@@ -57,8 +57,8 @@ Windows, OS X, and GNU/Linux.
 ## Error Codes
 
 ## List of contributors
-Alys Clark
-Win Min Tun
+- Alys Clark
+- Win Min Tun
 
 ## Licencing
 Apache 2.0
