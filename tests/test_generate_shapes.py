@@ -36,7 +36,6 @@ class Test_gen_rectangular_mesh(TestCase):
         mesh_el = placentagen.gen_rectangular_mesh(1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
         self.assertTrue(np.isclose(mesh_el['nodes'][14][2],0.5))
 
-
 class Test_darcy_mesh(TestCase):
 
       def test_darcy_node(self):
@@ -65,12 +64,33 @@ class Test_darcy_mesh(TestCase):
           self.assertTrue(mesh_node['element_array'][0] == 1)
           self.assertTrue(mesh_node['node_array'][0] == 1)
 
-
 class Test_rect_node(TestCase):
       def test_rectangular_node(self):
           rect_node = placentagen.gen_rectangular_node(1, 1, 1, 2, 2, 2)
           self.assertTrue(rect_node[0,0],-0.5)
           self.assertTrue(rect_node[0,1],-0.5)
           self.assertTrue(rect_node[0,2],-0.5)
+
+class Test_cube_mesh_con(TestCase):
+      def test_mesh_con(self):
+          mesh_connectivity = placentagen.cube_mesh_connectivity(2,2,2)
+          self.assertTrue((mesh_connectivity[0] == [0,0,1,2,3,4,5,6,7]).all())        
+          
+class Test_pl_mesh(TestCase):
+      def test_placental_node(self):
+          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)          
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,0],-0.892062058076))
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,1],-0.892062058076))
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,2],-0.28867513))
+
+      def test_placental_el(self):
+          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)
+          self.assertTrue((pl_mesh['placental_el_con'][0] == [0,0,1,2,3,4,5,6,7]).all())
+
+      def test_el_node_array(self):
+          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)
+          self.assertTrue(pl_mesh['element_array'] == [1])
+          self.assertTrue(pl_mesh['node_array'] == [1, 2, 3, 4, 5, 6, 7, 8])
+
 if __name__ == '__main__':
     unittest.main()
