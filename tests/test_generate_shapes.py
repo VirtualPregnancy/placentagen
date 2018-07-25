@@ -89,8 +89,9 @@ class Test_pl_mesh(TestCase):
 
       def test_el_node_array(self):
           pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)
-          self.assertTrue(pl_mesh['element_array'] == [1])
-          self.assertTrue(pl_mesh['node_array'] == [1, 2, 3, 4, 5, 6, 7, 8])
 
+          self.assertTrue(pl_mesh['element_array'][0] == 1)
+          self.assertTrue(pl_mesh['node_array'][0] == 1)
+          self.assertTrue(pl_mesh['node_array'][7] == 8)
 if __name__ == '__main__':
     unittest.main()
