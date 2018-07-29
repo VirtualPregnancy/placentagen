@@ -151,6 +151,19 @@ def check_colinear(x0, x1, x2):
 
 
 def samp_gr_for_node_loc(rectangular_mesh):
+    #calculate parameter of generated rectangular mesh
+    #Input:
+    # - rectangular_mesh: generated mesh
+    #Outputs:
+    # - startx:starting point in x axis
+    # - starty:starting point in y axis 
+    # - startz:starting point in z axis
+    # - xside:lenght of each el in x axis
+    # - yside:lenght of each el in y axis
+    # - zside:lenght of each el in z axis
+    # - nelem_x:number of element in x axis
+    # - nelem_y:number of element in y axis
+    # - nelem_z:number of element in z axis
     
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
@@ -170,9 +183,22 @@ def samp_gr_for_node_loc(rectangular_mesh):
     return startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,nelem_z
     
 def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_node):
-       
+    #calculate where a give point/node is located in a give rectangular mesh
+    #Inputs:
+    # - startx:starting point in x axis
+    # - starty:starting point in y axis 
+    # - startz:starting point in z axis
+    # - xside:lenght of each el in x axis
+    # - yside:lenght of each el in y axis
+    # - zside:lenght of each el in z axis
+    # - nelem_x:number of element in x axis
+    # - nelem_y:number of element in y axis
+    # - nelem_z:number of element in z axis
+    # - coord_node: the node that needs to be located
+    #Outputs: 
+    # - nelem:number of element in rectangular mesh where the node/point is located  
     xelem_num = np.floor((coord_node[0] - startx) / xside)
     yelem_num = np.floor((coord_node[1] - starty) / yside)
     zelem_num = np.floor((coord_node[2] - startz) / zside)
-    nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))
+    nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))#this is the element where the point/node located
     return nelem

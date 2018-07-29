@@ -36,8 +36,8 @@ Windows, OS X, and GNU/Linux.
 
 
 ## List of contributors
-Alys Clark
-Win Min Tun
+- Alys Clark
+- Win Min Tun
 
 ## Licencing
 Apache 2.0
