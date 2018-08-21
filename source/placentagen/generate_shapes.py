@@ -161,7 +161,7 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
     y_radius = radii['y_radius']
-
+    
     # z height of ellipsoid is 2* zradius
     # We want number of nodes to cover height and have prescribed spaing
     nnod_x = int(np.ceil(x_radius * 2.0 / x_spacing)) + 1
@@ -284,7 +284,7 @@ def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
     return node_loc
 
 
-def gen_placental_mesh(nel,volume,thickness,ellipticity):
+def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_type):
 
     """ Generates ellipsoid placental mesh to solve darcy flow
 
@@ -302,13 +302,21 @@ def gen_placental_mesh(nel,volume,thickness,ellipticity):
     """
     #creating cube between -1 and 1 with n number of element 
     cubelength=2 
-    nnod_x= int(nel+1)
-    nnod_y = nnod_x
-    nnod_z = nnod_x
+    if element_type==1: #linear element
+       nnod_x= int(nel_x+1)
+       nnod_y = int(nel_y+1)
+       nnod_z = int(nel_z+1)
+    elif element_type==2: #quadratic element
+       nnod_x =  int((nel_x*2)+1)
+       nnod_y =  int((nel_y*2)+1)
+       nnod_z =  int((nel_z*2)+1)
 
     node=gen_rectangular_node(cubelength, cubelength, cubelength, nnod_x, nnod_y, nnod_z)#getting nodes
-    elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)#getting elem connectivity
-
+    if  element_type==1:#linear element
+       elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)#getting elem connectivity
+    elif element_type==2:#quadrantic element
+       elems=cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z)#getting element connectivity
+       
     #convert cube into unit sphere
     sphere=np.zeros((len(node),3))
     for ii in range(0,len(node)):
@@ -370,3 +378,64 @@ def cube_mesh_connectivity(nnod_x,nnod_y,nnod_z):
 
     return elems
 
+def cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
+    """Generates element connectivity in quadrantic cube mesh
+      
+       Inputs:
+         - nnod_x:number of node in x axis
+         - nnod_y:number of node in y axis
+         - nnod_z:number of node in z axis
+
+       Outputs:
+         - elems: array of element connectivity in quadrantic
+
+    """
+
+    num_elems = nel_x*nel_y*nel_z
+    elems = np.zeros((num_elems, 28),dtype=int)  
+    
+    element_number = 0
+    ne = 0
+    #Got the element  
+    for k in range(1,nnod_z,2):
+        for j in range(1, nnod_y,2):
+            for i in range(1,nnod_x, 2):
+                #1st layer
+                elems[ne][0] = ne  
+                elems[ne][1] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) #1st node
+                elems[ne][2] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) +1#right subsequent node
+                elems[ne][3] = (i - 1) + (nnod_x) * (j - 1) + nnod_x * nnod_y * (k - 1) +2#right subsequent node
+                elems[ne][4] = elems[ne][1] + nnod_x #1st node in another y layer
+                elems[ne][5] = elems[ne][1] + nnod_x +1#right subsequent node
+                elems[ne][6] = elems[ne][1] + nnod_x +2#right subsequent node
+                elems[ne][7] = elems[ne][1] + 2*(nnod_x )#1st node in another y layer
+                elems[ne][8] = elems[ne][1] + 2*(nnod_x )+1#right subsequent node
+                elems[ne][9] = elems[ne][1] + 2*(nnod_x )+2#right subsequent node
+
+                #2nd layer
+                elems[ne][10] = elems[ne][1] + nnod_x * nnod_y #same in one z layer
+                elems[ne][11] = elems[ne][2] + nnod_x * nnod_y
+                elems[ne][12] = elems[ne][3] + nnod_x * nnod_y
+                elems[ne][13] = elems[ne][4] + nnod_x * nnod_y
+                elems[ne][14] = elems[ne][5] + nnod_x * nnod_y
+                elems[ne][15] = elems[ne][6] + nnod_x * nnod_y             
+                elems[ne][16] = elems[ne][7] + nnod_x * nnod_y
+                elems[ne][17] = elems[ne][8] + nnod_x * nnod_y
+                elems[ne][18] = elems[ne][9] + nnod_x * nnod_y
+
+                #thrid layer
+
+                elems[ne][19] = elems[ne][1] + nnod_x * nnod_y*2 #same in another z layer
+                elems[ne][20] = elems[ne][2] + nnod_x * nnod_y*2
+                elems[ne][21] = elems[ne][3] + nnod_x * nnod_y*2
+                elems[ne][22] = elems[ne][4] + nnod_x * nnod_y*2
+                elems[ne][23] = elems[ne][5] + nnod_x * nnod_y*2
+                elems[ne][24] = elems[ne][6] + nnod_x * nnod_y*2                 
+                elems[ne][25] = elems[ne][7] + nnod_x * nnod_y*2
+                elems[ne][26] = elems[ne][8] + nnod_x * nnod_y*2
+                elems[ne][27] = elems[ne][9] + nnod_x * nnod_y*2
+
+
+                ne = ne + 1
+               
+    return elems
