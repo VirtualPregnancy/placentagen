@@ -76,22 +76,33 @@ class Test_cube_mesh_con(TestCase):
           mesh_connectivity = placentagen.cube_mesh_connectivity(2,2,2)
           self.assertTrue((mesh_connectivity[0] == [0,0,1,2,3,4,5,6,7]).all())        
           
-class Test_pl_mesh(TestCase):
+class Test_pl_mesh_linear(TestCase):
       def test_placental_node(self):
-          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)          
+          pl_mesh = placentagen.gen_placental_mesh(1,1,1,5,1,1,1)          
           self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,0],-0.892062058076))
           self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,1],-0.892062058076))
           self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,2],-0.28867513))
 
       def test_placental_el(self):
-          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)
+          pl_mesh = placentagen.gen_placental_mesh(1,1,1,5,1,1,1)
           self.assertTrue((pl_mesh['placental_el_con'][0] == [0,0,1,2,3,4,5,6,7]).all())
 
       def test_el_node_array(self):
-          pl_mesh = placentagen.gen_placental_mesh(1,5,1,1)
+          pl_mesh = placentagen.gen_placental_mesh(1,1,1,5,1,1,1)
 
           self.assertTrue(pl_mesh['element_array'][0] == 1)
           self.assertTrue(pl_mesh['node_array'][0] == 1)
           self.assertTrue(pl_mesh['node_array'][7] == 8)
+
+class Test_pl_mesh_qua(TestCase):
+      def test_placental_node_q(self):
+          pl_mesh = placentagen.gen_placental_mesh(1,1,1,5,1,1,2)          
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,0],-0.892062058076))
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,1],-0.892062058076))
+          self.assertTrue(np.isclose(pl_mesh['placental_node_coor'][0,2],-0.288675134595))
+      def test_placental_el_q(self):
+          pl_mesh = placentagen.gen_placental_mesh(1,1,1,5,1,1,2)
+          self.assertTrue((pl_mesh['placental_el_con'][0] == [0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26]).all())
+
 if __name__ == '__main__':
     unittest.main()
