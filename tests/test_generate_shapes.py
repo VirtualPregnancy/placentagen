@@ -115,8 +115,7 @@ class Test_vessel_node(TestCase):
       def test_vs_node(self):
           ellipsoid_coor=np.array([[-58.1785453,-58.1785453,6.37972047],[-55.26961804,-59.57977309, 6.53337577],[-52.36069077,-60.87933747,-6.6758829 ]])
           surfacenode=np.array([1,2,3])
-          v_node = placentagen.identify_vessel_node(ellipsoid_coor,surfacenode,TESTDATA_FILENAME)  
-          print v_node                     
+          v_node = placentagen.identify_vessel_node(ellipsoid_coor,surfacenode,TESTDATA_FILENAME)                              
           self.assertTrue(v_node['spiral_array'] == 2)
           self.assertTrue(v_node['decidual_array'] == 1)
           self.assertTrue((v_node['vesselnode'] == [2,1]).all())  
