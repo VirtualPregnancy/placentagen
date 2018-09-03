@@ -439,3 +439,163 @@ def cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
                 ne = ne + 1
                
     return elems
+
+
+
+def identify_surface_node(nel_x,nel_y,nel_z):
+    """Generates collection of nodes that are on the surface of in quadrantic placental mesh
+      
+       Inputs:
+         - nel_x:number of elem in x axis
+         - nel_y:number of elem in y axis
+         - nel_z:number of elem in z axis
+
+       Outputs:
+         - surfacenode: collection of nodes on the surface of placental mesh
+
+    """
+    nnod_x =  int((nel_x*2)+1)#number of nodes in x axis
+    nnod_y =  int((nel_y*2)+1)#number of nodes in y axis
+    nnod_z =  int((nel_z*2)+1)#number of nodes in z axis
+    #For left and right surface
+    sIEN=np.zeros((9,nel_y*nel_z),dtype=int)#to store surface indiviaul element nodes (sIEN)
+    e=0
+    for k in range( 1,nnod_x*nnod_y*(nnod_z-1),(nnod_x*nnod_y)*2):#go up
+            for j in range(  1,nnod_x*(nnod_y-1),2*nnod_x):#go left         
+          
+                sIEN[0,e] = j+(k-1) #1st node
+                sIEN[1,e] = sIEN[0,e]+(nnod_x)*(nnod_y)#2nd node
+                sIEN[2,e] = sIEN[1,e]+(nnod_x)*(nnod_y)#3rd node
+                sIEN[3,e] = sIEN[0,e]+nnod_x#4th node
+                sIEN[4,e] = sIEN[1,e]+nnod_x#5th node
+                sIEN[5,e] = sIEN[2,e]+nnod_x#6th node
+                sIEN[6,e] = sIEN[3,e]+nnod_x#7th node
+                sIEN[7,e]=sIEN[4,e]+nnod_x#8th node
+                sIEN[8,e]=sIEN[5,e]+nnod_x#9th node
+                e = e+1            
+   
+            left=np.unique(sIEN)#collection of nodes of left surface
+            right=np.unique(sIEN.T+(nnod_x-1))#collection of nodes on right surface
+
+    #For front and back surface
+    sIEN=np.zeros((9,nel_x*nel_z),dtype=int)
+    e=0
+    for k in range (1,nnod_x*nnod_y*(nnod_z-2),(nnod_x*nnod_y)*2):#go up
+            for i in range( 1,nnod_x-1,2):#go right            
+                sIEN[0,e] = i+(k-1)           
+                sIEN[1,e] = sIEN[0,e]+1
+                sIEN[2,e] = sIEN[0,e]+2                    
+                sIEN[3,e]=sIEN[0,e]+(nnod_x*nnod_y)
+                sIEN[4,e] = sIEN[3,e]+1
+                sIEN[5,e] = sIEN[3,e]+2
+                sIEN[6,e] = sIEN[3,e]+(nnod_x*nnod_y)
+                sIEN[7,e] = sIEN[6,e]+1    
+                sIEN[8,e] = sIEN[6,e]+2            
+                e = e+1      
+    
+            front=np.unique(sIEN)#collection of nodes on front surface
+            back=np.unique(sIEN.T+(nnod_x*(nnod_y-1)))#collection of nodes on back surface
+
+    #For top and bottom surface
+    sIEN=np.zeros((9,nel_x*nel_y),dtype=int)
+    e=0
+    for j in range( 1,nnod_x*(nnod_y-1),nnod_x*2):#go up
+            for i in range (  1,nnod_x-1,2):#go back                                   
+                sIEN[0,e] = i+(j-1)
+                sIEN[1,e] = sIEN[0,e]+1
+                sIEN[2,e] = sIEN[0,e]+2
+                sIEN[3,e] = sIEN[0,e]+nnod_x          
+                sIEN[4,e] = sIEN[3,e]+1
+                sIEN[5,e] = sIEN[3,e]+2
+                sIEN[6,e] = sIEN[3,e]+nnod_x          
+                sIEN[7,e] = sIEN[6,e]+1
+                sIEN[8,e] = sIEN[6,e]+2
+                e = e+1
+
+            bottom=np.unique(sIEN)    #collection of nodes on bottom surface
+            top=np.unique(sIEN.T+(nnod_x*nnod_y)*(nnod_z-1))#collection of nodes on top surface
+
+    surfacenode=np.hstack((front,back,left,right,bottom,top))
+    surfacenode=np.unique(surfacenode)#collection of surface nodes from all surface
+    return surfacenode
+
+def identify_vessel_node(ellipsoid_coor,surfacenode,stem_file):
+    """Generates array of spiral artery nodes and decidual vein nodes. Spiral artery nodes are mapped with stem villi.
+      
+       Inputs:
+         - ellipsoid_coor:coordinate of nodes of placental mesh
+         - surfacenode:array of surface nodes
+         - stem_file:txt file that described stem villi locations
+
+       Outputs:
+         - spiral_array: array of spiral artery nodes 
+         - decidual_array: array of decidual artery nodes
+         - vesselnode: array of both spiral and decidual nodes
+         - surfnode_ex_vessel: array of surface node excluding vessel nodes
+    """    
+    xyList=np.zeros((len(surfacenode),2))
+    count=0
+    for i in range (0,len(surfacenode)):#taking only x and y coordinates
+     if ellipsoid_coor[surfacenode[i]-1,2]>0:#take if uppersurface node cos we are looking for the vessel node location from upper surface nodes only
+      xyList[count,0]=ellipsoid_coor[surfacenode[i]-1,0]
+      xyList[count,1]=ellipsoid_coor[surfacenode[i]-1,1]
+      count=count+1
+
+    xyList=xyList[0:count,:]
+
+    vesselnode_temp = np.vstack({tuple(row) for row in xyList})#Remove duplicates#mignt not need this one
+
+    #reading in the stem vessel to map the spiral artery location
+    stem_xy = open(stem_file, 'r')
+    stem_coor = stem_xy.readlines()#readlines
+    startLines = range(0,len(stem_coor))
+
+    for i in range(len(stem_coor)):
+         stem_coor[i] = stem_coor[i].split()
+    stem_xyList = []
+    for i in startLines:
+         node = []
+         node.append(float(stem_coor[i][0]))#x coor of stem villi
+         node.append((float(stem_coor[i][1]))) #y coor of stem villi     
+         stem_xyList.append(node)
+    stem_xy.close()
+
+    vessel_mapped_stem=stem_xyList#this is the x,y location where we want to put spiral artery
+    spiral_array=np.zeros((len(vessel_mapped_stem)),dtype=int)#store the node nuber of spiral artery
+    decidual_array=np.zeros((len(vessel_mapped_stem)),dtype=int)#store the node number of decidual vein
+
+    check=ellipsoid_coor[:,0:2]  
+    np.random.seed(0) 
+    for i in range(0,len(vessel_mapped_stem)): #for each blood vessel,Cycle through to find closest nodes
+     
+         distance = []
+         for nodeX in vesselnode_temp:
+           distance.append(np.sqrt((vessel_mapped_stem[i][0] - nodeX[0])**2 + (vessel_mapped_stem[i][1] - nodeX[1])**2))#distance from the nodes
+         
+         A=sorted(distance)[0]#taking the nearest node
+         V=np.random.choice(sorted(distance)[1:])#choosing random , but it won't repeat with artery since it is started from 1, [0] is artery
+          
+         arterynode= vesselnode_temp[np.where(distance==A)]#this is artery node coor        
+         veinnode=vesselnode_temp[np.where(distance==V)]#this is vein node coor
+
+         xyNodes_A = np.where(np.all(check == arterynode[0], axis = 1))[0]#collection of nodes number that have same x,y of artery nodes 
+         xyNodes_A = [x+1 for x in xyNodes_A]#adding 1 to get the right node number
+     
+         xyNodes_V = np.where(np.all(check == veinnode[0], axis = 1))[0]#collection of nodes number that have x,y of vein nodes 
+         xyNodes_V = [x+1 for x in xyNodes_V]#adding 1 to get the right node number
+
+         spiral_array[i] = xyNodes_A[len(xyNodes_A) - 1]#just taking the last node (cos we want from top surface)
+         decidual_array[i] = xyNodes_V[len(xyNodes_V) - 1]#just taking the last node (cos we want from top surface)
+         #remove the taken artery and vein nodes so that won't select again
+         vesselnode_temp=np.delete(vesselnode_temp,np.where(np.all(arterynode[0] ==vesselnode_temp, axis=1)),0)#remove taken artery node             
+         vesselnode_temp=np.delete(vesselnode_temp,np.where(np.all(veinnode [0]==vesselnode_temp, axis=1)),0)#remove taken vein node
+
+    vesselnode=np.hstack((spiral_array,decidual_array))#array of vessel nodes (both artery and vein)
+    index=[]
+    for i in range (0,len(vesselnode)):
+      idx= np.where(surfacenode==vesselnode[i])#index where surface node = vessel node to remove
+      index.append(idx)
+
+    surfnode_ex_vessel = np.delete(surfacenode, index)#array of surface node excluding vessel node
+
+    return {'spiral_array':spiral_array,'decidual_array':decidual_array,'vesselnode':vesselnode,'surfnode_ex_vessel':surfnode_ex_vessel}
