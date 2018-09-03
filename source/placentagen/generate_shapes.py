@@ -443,7 +443,7 @@ def cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
 
 
 def identify_surface_node(nel_x,nel_y,nel_z):
-    """Generates collection of nodes that are on the surface of in quadrantic placental mesh
+    """Generates collection of nodes that are on the surface of in quadratic placental mesh
       
        Inputs:
          - nel_x:number of elem in x axis
