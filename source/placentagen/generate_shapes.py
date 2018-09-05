@@ -283,7 +283,7 @@ def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
     
     return node_loc
 
-def gen_rectangular_mesh(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
+def gen_rectangular_mesh2(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
     if element_type==1: #linear element
        nnod_x= int(nel_x+1)
        nnod_y = int(nel_y+1)
