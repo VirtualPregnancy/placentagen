@@ -107,7 +107,7 @@ class Test_pl_mesh_qua(TestCase):
 
 class Test_surface_node(TestCase):
       def test_surf_node(self):
-          surfacenode = placentagen.identify_surface_node(1,1,1)          
+          surfacenode = placentagen.identify_surface_node_quad(1,1,1)
           self.assertTrue((surfacenode == [1,2,3,4,5,6,7,8,9,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,26,27]).all())   
 
 TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'Testdata/stem_xy.txt')

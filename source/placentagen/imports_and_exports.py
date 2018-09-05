@@ -437,7 +437,7 @@ def is_float(str):
     return True
 
 
-def export_exelem_3d_quadrantic(data, groupname, filename):
+def export_exelem_3d_quadratic(data, groupname, filename):
     # Exports element locations to exelem format
     # data = array of data
     # groupname = what you want your data to be called in cmgui
