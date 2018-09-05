@@ -283,6 +283,35 @@ def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
     
     return node_loc
 
+def gen_rectangular_mesh(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
+    if element_type==1: #linear element
+       nnod_x= int(nel_x+1)
+       nnod_y = int(nel_y+1)
+       nnod_z = int(nel_z+1)
+    elif element_type==2: #quadratic element
+       nnod_x =  int((nel_x*2)+1)
+       nnod_y =  int((nel_y*2)+1)
+       nnod_z =  int((nel_z*2)+1)
+
+    node = gen_rectangular_node(xdim, ydim, zdim, nnod_x, nnod_y, nnod_z)  # getting nodes
+
+    if element_type == 1:  # linear element
+        elems = cube_mesh_connectivity(nnod_x, nnod_y, nnod_z)  # getting elem connectivity
+    elif element_type == 2:  # quadratic element
+        elems = cube_mesh_connectivity_quadratic(nel_x, nel_y, nel_z, nnod_x, nnod_y,
+                                                 nnod_z)  # getting element connectivity
+
+    element_array = range(1, len(elems)+1)
+    node_array = range(1, len(node)+1)
+    if element_type==2:
+        surfacenodes = identify_surface_node_quad(nel_x,nel_y,nel_z)
+    else:
+        print("This element type has no implemented surface node definition")
+        surfacenodes = 0
+
+    return{'nodes':node,'elems':elems,'element_array':element_array,
+           'node_array':node_array,'surface_nodes':surfacenodes}
+
 
 def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_type):
 
@@ -341,8 +370,14 @@ def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_ty
 
     element_array = range(1, len(elems)+1)
     node_array = range(1, len(ellipsoid_coor)+1)
+    if element_type==2:
+        surfacenodes = identify_surface_node_quad(nel_x,nel_y,nel_z)
+    else:
+        print("This element type has no implemented surface node definition")
+        surfacenodes = 0
    
-    return{'placental_node_coor':ellipsoid_coor,'placental_el_con':elems,'element_array':element_array,'node_array':node_array}
+    return{'placental_node_coor':ellipsoid_coor,'placental_el_con':elems,'element_array':element_array,
+           'node_array':node_array,'surface_nodes':surfacenodes}
 
 
 def cube_mesh_connectivity(nnod_x,nnod_y,nnod_z):
@@ -442,7 +477,7 @@ def cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
 
 
 
-def identify_surface_node(nel_x,nel_y,nel_z):
+def identify_surface_node_quad(nel_x,nel_y,nel_z):
     """Generates collection of nodes that are on the surface of in quadratic placental mesh
       
        Inputs:
