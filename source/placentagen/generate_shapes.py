@@ -314,8 +314,8 @@ def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_ty
     node=gen_rectangular_node(cubelength, cubelength, cubelength, nnod_x, nnod_y, nnod_z)#getting nodes
     if  element_type==1:#linear element
        elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)#getting elem connectivity
-    elif element_type==2:#quadrantic element
-       elems=cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z)#getting element connectivity
+    elif element_type==2:#quadratic element
+       elems=cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z)#getting element connectivity
        
     #convert cube into unit sphere
     sphere=np.zeros((len(node),3))
@@ -378,8 +378,8 @@ def cube_mesh_connectivity(nnod_x,nnod_y,nnod_z):
 
     return elems
 
-def cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
-    """Generates element connectivity in quadrantic cube mesh
+def cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
+    """Generates element connectivity in quadratic cube mesh
       
        Inputs:
          - nnod_x:number of node in x axis
@@ -387,7 +387,7 @@ def cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
          - nnod_z:number of node in z axis
 
        Outputs:
-         - elems: array of element connectivity in quadrantic
+         - elems: array of element connectivity in quadratic
 
     """
 
@@ -443,7 +443,7 @@ def cube_mesh_connectivity_quadrantic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z):
 
 
 def identify_surface_node(nel_x,nel_y,nel_z):
-    """Generates collection of nodes that are on the surface of in quadrantic placental mesh
+    """Generates collection of nodes that are on the surface of in quadratic placental mesh
       
        Inputs:
          - nel_x:number of elem in x axis
