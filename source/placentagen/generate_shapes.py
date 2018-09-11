@@ -314,9 +314,9 @@ def gen_rectangular_mesh2(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
            'node_array':node_array,'surface_nodes':surfacenodes}
 
 
-def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_type):
+def gen_3d_ellipsoid(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_type):
 
-    """ Generates ellipsoid placental mesh to solve 3D problems
+    """ Generates ellipsoid placental mesh to solve 3D problems (note this is not a quality structured mesh)
 
     Inputs:
        - nel: number of element in x,y,z axis , the more nel, the rounder the mesh
