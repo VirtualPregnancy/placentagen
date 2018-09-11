@@ -148,7 +148,7 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     return chorion_data
 
 
-def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z_spacing):
+def gen_rect_cover_ellipsoid(volume, thickness, ellipticity, x_spacing, y_spacing, z_spacing):
     # Generates equally spaced data nodes and elements and constructs a rectangular 'mesh' that covers the space that is
     # made up of an ellipsoidal placenta
     # volume=volume of ellipsoid
@@ -179,14 +179,14 @@ def gen_rectangular_mesh(volume, thickness, ellipticity, x_spacing, y_spacing, z
             'total_elems': (nnod_x - 1) * (nnod_y - 1) * (nnod_z - 1)}
 
 
-def gen_mesh_darcy(volume,thickness,ellipticity,n):
-    """ Generates ellipsoid placental mesh to solve darcy flow
+def gen_ellip_mesh_tet(volume,thickness,ellipticity,n):
+    """ Generates ellipsoid tetrahedral mesh for 3D problems
 
     Inputs:
        - volume: volume of placental ellipsoid
        - thickness: placental thickness (z-dimension)
        - ellipticity: ratio of y to x axis dimensions
-       - n: number of datapoints (optimal is 682000)
+       - n: number of datapoints generated to create the mesh
 
     Returns:
        - nodes: nodes location of mesh
@@ -284,6 +284,7 @@ def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
     return node_loc
 
 def gen_rectangular_mesh2(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
+    #generates a rectangular mesh of defined dimenions using either linear or quadratic elements
     if element_type==1: #linear element
        nnod_x= int(nel_x+1)
        nnod_y = int(nel_y+1)
@@ -315,7 +316,7 @@ def gen_rectangular_mesh2(nel_x,nel_y,nel_z,xdim,ydim,zdim,element_type):
 
 def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_type):
 
-    """ Generates ellipsoid placental mesh to solve darcy flow
+    """ Generates ellipsoid placental mesh to solve 3D problems
 
     Inputs:
        - nel: number of element in x,y,z axis , the more nel, the rounder the mesh
@@ -330,7 +331,7 @@ def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_ty
        - element_array: array of elements
     """
     #creating cube between -1 and 1 with n number of element 
-    cubelength=2 
+    #cubelength=2
     if element_type==1: #linear element
        nnod_x= int(nel_x+1)
        nnod_y = int(nel_y+1)
@@ -340,35 +341,33 @@ def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_ty
        nnod_y =  int((nel_y*2)+1)
        nnod_z =  int((nel_z*2)+1)
 
-    node=gen_rectangular_node(cubelength, cubelength, cubelength, nnod_x, nnod_y, nnod_z)#getting nodes
-    if  element_type==1:#linear element
-       elems=cube_mesh_connectivity(nnod_x,nnod_y,nnod_z)#getting elem connectivity
-    elif element_type==2:#quadratic element
-       elems=cube_mesh_connectivity_quadratic(nel_x,nel_y,nel_z,nnod_x,nnod_y,nnod_z)#getting element connectivity
-       
-    #convert cube into unit sphere
-    sphere=np.zeros((len(node),3))
-    for ii in range(0,len(node)):
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
 
-     sphere[ii,0]=node[ii,0]*np.sqrt((1)-(node[ii,1]**2/2.0)-(node[ii,2]**2/2.0)+((node[ii,1]**2*node[ii,2]**2/3.0)))#for x_coor
-     sphere[ii,1]=node[ii,1]*np.sqrt((1)-(node[ii,2]**2/2.0)-(node[ii,0]**2/2.0)+((node[ii,2]**2*node[ii,0]**2/3.0)))#for y_coor
-     sphere[ii,2]=node[ii,2]*np.sqrt((1)-(node[ii,0]**2/2.0)-(node[ii,1]**2/2.0)+((node[ii,0]**2*node[ii,1]**2/3.0)))#for z_coor
-    
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)#getting radii of ellipsoid
-    z_rad = radii['z_radius']
-    x_rad = radii['x_radius']
-    y_rad = radii['y_radius']
+    cube_node = gen_rectangular_node(2*x_radius, 2*y_radius, 2*z_radius, nnod_x, nnod_y, nnod_z)
+    if element_type == 1:  # linear element
+        cube_elems = cube_mesh_connectivity(nnod_x, nnod_y, nnod_z)  # getting elem connectivity
+    elif element_type == 2:  # quadratic element
+        cube_elems = cube_mesh_connectivity_quadratic(nel_x, nel_y, nel_z, nnod_x, nnod_y,
+                                                 nnod_z)  # getting element connectivity
 
-    #convert unit sphere into ellipsoid with actual radius
-    ellipsoid_coor=np.zeros((len(sphere),3))
+    ellipsoid_coor = np.zeros((len(cube_node),3))
 
-    for i in range(0,len(sphere)):
-      ellipsoid_coor[i,0] = sphere[i,0]*x_rad#x_coor
-      ellipsoid_coor[i,1] = sphere[i,1]*y_rad#y_coor
-      ellipsoid_coor[i,2] = sphere[i,2]*z_rad#z_coor
+    for ii in range(0, len(cube_node)):
+        ellipsoid_coor[ii, 0] = cube_node[ii, 0] * np.sqrt(1.0 - cube_node[ii, 1] ** 2 / (2.0*y_radius **2) -
+                                cube_node[ii, 2] ** 2 / (2.0 * z_radius**2) + cube_node[ii, 1] ** 2 *
+                                cube_node[ii,2] ** 2 / (3.0* y_radius**2 * z_radius**2))  # for  x_coor
+        ellipsoid_coor[ii, 1] = cube_node[ii, 1] * np.sqrt(1.0 - cube_node[ii, 0] ** 2 / (2.0*x_radius **2) -
+                                cube_node[ii, 2] ** 2 / (2.0 * z_radius**2) + cube_node[ii, 0] ** 2 * cube_node[ii, 2] ** 2
+                                / (3.0* x_radius**2 * z_radius**2))  # for  y_coor
+        ellipsoid_coor[ii, 2] = cube_node[ii, 2] * np.sqrt(1.0 - cube_node[ii, 1] ** 2 / (2.0*y_radius **2) -
+                                cube_node[ii, 0] ** 2 / (2.0 * x_radius**2) + cube_node[ii, 1] ** 2 * cube_node[ii, 0] ** 2
+                                / (3.0* y_radius**2 * x_radius**2))  # for  z_coor
 
 
-    element_array = range(1, len(elems)+1)
+    element_array = range(1, len(cube_elems)+1)
     node_array = range(1, len(ellipsoid_coor)+1)
     if element_type==2:
         surfacenodes = identify_surface_node_quad(nel_x,nel_y,nel_z)
@@ -376,7 +375,7 @@ def gen_placental_mesh(nel_x,nel_y,nel_z,volume,thickness,ellipticity,element_ty
         print("This element type has no implemented surface node definition")
         surfacenodes = 0
    
-    return{'placental_node_coor':ellipsoid_coor,'placental_el_con':elems,'element_array':element_array,
+    return{'placental_node_coor':ellipsoid_coor,'placental_el_con':cube_elems,'element_array':element_array,
            'node_array':node_array,'surface_nodes':surfacenodes}
 
 
@@ -553,6 +552,34 @@ def identify_surface_node_quad(nel_x,nel_y,nel_z):
     surfacenode=np.hstack((front,back,left,right,bottom,top))
     surfacenode=np.unique(surfacenode)#collection of surface nodes from all surface
     return surfacenode
+
+def identify_node_from_coord(nodes,filename):
+    # reading in the node location
+    xyz = open(filename, 'r')
+    xyz_coor = xyz.readlines()  # readlines
+    startLines = range(0, len(xyz_coor))
+
+    for i in range(len(xyz_coor)):
+        xyz_coor[i] = xyz_coor[i].split()
+    xyzList = []
+    for i in startLines:
+        targetpoint = []
+        targetpoint.append(float(xyz_coor[i][0]))  # x coor
+        targetpoint.append((float(xyz_coor[i][1])))  # y coor
+        targetpoint.append((float(xyz_coor[i][1])))  # y coor
+        xyzList.append(targetpoint)
+    xyz.close()
+
+    node_list = np.zeros(len(xyzList))
+
+    mindist = 100000
+    for i in range(0,len(xyzList)):
+        print xyzList[i]
+        for j in range(0,len(nodes)):
+            print(xyzList[i][0],nodes[j][0])
+
+    return i
+
 
 def identify_vessel_node(ellipsoid_coor,surfacenode,stem_file):
     """Generates array of spiral artery nodes and decidual vein nodes. Spiral artery nodes are mapped with stem villi.
