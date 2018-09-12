@@ -582,7 +582,6 @@ def identify_node_from_coord(nodes, filename):
 
     mindist = 100000
     for i in range(0, len(xyzList)):
-        print xyzList[i]
         for j in range(0, len(nodes)):
             print(xyzList[i][0], nodes[j][0])
 
@@ -704,8 +703,6 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
 
     spiral_array = np.resize(spiral_array,sa_nodes)
     decidual_array = np.resize(decidual_array, dv_nodes)
-
-    print(spiral_array,sa_nodes)
 
     return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
