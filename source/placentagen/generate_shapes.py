@@ -603,6 +603,8 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
          - vesselnode: array of both spiral and decidual nodes
          - surfnode_ex_vessel: array of surface node excluding vessel nodes
     """
+    sa_radius = 3.7/2.0
+    dv_radius = sa_radius
 
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -612,20 +614,20 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     xyList = np.zeros((len(surfacenode), 4))
     count = 0
     for i in range(0, len(surfacenode)):  # taking only x and y coordinates
-        if ellipsoid_coor[surfacenode[
-                              i] - 1, 2] > 0:  # take if uppersurface node cos we are looking for the vessel node location from upper surface nodes only
-            xyList[count, 0] = ellipsoid_coor[surfacenode[i] - 1, 0]
-            xyList[count, 1] = ellipsoid_coor[surfacenode[i] - 1, 1]
-            xyList[count, 2] = ellipsoid_coor[surfacenode[i] - 1, 2]
-            xyList[count, 3] = ellipsoid_coor[surfacenode[i] - 1, 3]
+        if ellipsoid_coor[surfacenode[i] - 1, 3] > 0:  # take if upper surface nodes as this is where vessele reside
+            # location from upper surface nodes only
+            xyList[count, 0] = ellipsoid_coor[surfacenode[i] - 1, 0] #node number
+            xyList[count, 1] = ellipsoid_coor[surfacenode[i] - 1, 1] #x-coordinate
+            xyList[count, 2] = ellipsoid_coor[surfacenode[i] - 1, 2]  #y-coordinate
+            xyList[count, 3] = ellipsoid_coor[surfacenode[i] - 1, 3]   #z-coordinate
 
             count = count + 1
 
     xyList = xyList[0:count, :]
 
-    surfnode_ex_vessel = np.copy(surfacenode)
 
-    vesselnode_temp = np.vstack({tuple(row) for row in xyList})  # Remove duplicates#mignt not need this one
+    surfnode_ex_vessel = np.copy(surfacenode)
+    vesselnode_temp = np.vstack({tuple(row) for row in xyList})  #nodes that might be vessels
 
     # reading in the stem vessel to map the spiral artery location
     stem_xy = open(stem_file, 'r')
@@ -643,41 +645,67 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     stem_xy.close()
 
     vessel_mapped_stem = stem_xyList  # this is the x,y location where we want to put spiral artery
-    spiral_array = np.zeros((len(vessel_mapped_stem)), dtype=int)  # store the node nuber of spiral artery
-    decidual_array = np.zeros((len(vessel_mapped_stem)), dtype=int)  # store the node number of decidual vein
+    spiral_array = np.zeros((len(xyList)), dtype=int)  # store the node nuber of spiral artery
+    decidual_array = np.zeros((len(xyList)), dtype=int)  # store the node number of decidual vein
 
     check = ellipsoid_coor[:, 0:2]
     np.random.seed(0)
+    sa_nodes = 0
+    dv_nodes = 0
     for i in range(0, len(vessel_mapped_stem)):  # for each blood vessel,Cycle through to find closest nodes
 
-        min_distance = 10000
         closest_node = 0
         for nodeX in vesselnode_temp:
-            distance=(np.sqrt((vessel_mapped_stem[i][0] - nodeX[1]) ** 2 + (
-                        vessel_mapped_stem[i][1] - nodeX[2]) ** 2 +
-                        (pg_utilities.z_from_xy(vessel_mapped_stem[i][0], vessel_mapped_stem[i][1], x_radius, y_radius,
-                                   z_radius)-nodeX[3])**2 ))  # distance from the nodes
-            if(distance < min_distance):
-                min_distance = distance
-                closest_node = nodeX
-        arterynode = closest_node[0]
-        A = np.where(vesselnode_temp == arterynode)
-        vesselnode_temp =  np.delete(vesselnode_temp, A[0], axis=0)
-        A2 = np.where(surfnode_ex_vessel == int(arterynode))
-        surfnode_ex_vessel = np.delete(surfnode_ex_vessel, A2)
+            distance=np.sqrt((vessel_mapped_stem[i][0] - nodeX[1]) ** 2 + (
+                        vessel_mapped_stem[i][1] - nodeX[2]) ** 2 )  # distance from the nodes
+            if(distance < sa_radius):
+                print(nodeX[0])
+                arterynode = nodeX[0]
+                A = np.where(vesselnode_temp == arterynode)
+                vesselnode_temp = np.delete(vesselnode_temp, A[0], axis=0)
+                A2 = np.where(surfnode_ex_vessel == int(arterynode))
+                surfnode_ex_vessel = np.delete(surfnode_ex_vessel, A2)
+                spiral_array[sa_nodes] = arterynode
+                sa_nodes = sa_nodes +1
+
+        #print(closest_node[0])
+        #arterynode = closest_node[0]
+        #A = np.where(vesselnode_temp == arterynode)
+        #vesselnode_temp =  np.delete(vesselnode_temp, A[0], axis=0)
+        #A2 = np.where(surfnode_ex_vessel == int(arterynode))
+        #surfnode_ex_vessel = np.delete(surfnode_ex_vessel, A2)
+        #spiral_array[i] = arterynode
+        #sa_nodes = sa_nodes +1
+
+    #Doing decidual veins after arteries to make sure we dont take up any spots that arteries would have otherwise beein
+    for i in range(0, len(vessel_mapped_stem)): #need same number of arteries as veins
+        V = np.random.choice(len(vesselnode_temp))  # choosing random , won't repeat arteries as they are already
+            #  removed from list
+        for nodeX in vesselnode_temp:
+            distance=np.sqrt((vessel_mapped_stem[i][0] - nodeX[1]) ** 2 + (
+                        vessel_mapped_stem[i][1] - nodeX[2]) ** 2 )  # distance from the nodes
+            if(distance < dv_radius):
+                print(nodeX[0])
+                veinnode = nodeX[0]
+                V = np.where(vesselnode_temp == veinnode)
+                vesselnode_temp = np.delete(vesselnode_temp, V[0], axis=0)
+                V2 = np.where(surfnode_ex_vessel == int(veinnode))
+                surfnode_ex_vessel = np.delete(surfnode_ex_vessel, V2)
+                decidual_array[dv_nodes] = veinnode
+                dv_nodes = dv_nodes +1
 
 
-        V = np.random.choice(len(vesselnode_temp))  # choosing random , but it won't repeat with artery since it is
-        veinnode = vesselnode_temp[V][0]
-        vesselnode_temp = np.delete(vesselnode_temp, V, axis=0)
-        V2 = np.where(surfnode_ex_vessel == int(veinnode))
-        surfnode_ex_vessel = np.delete(surfnode_ex_vessel, V2)
+        #veinnode = vesselnode_temp[V][0]
+        #vesselnode_temp = np.delete(vesselnode_temp, V, axis=0)
+        #V2 = np.where(surfnode_ex_vessel == int(veinnode))
+        #surfnode_ex_vessel = np.delete(surfnode_ex_vessel, V2)
+        #decidual_array[i] = veinnode
+        #dv_nodes = dv_nodes+1
 
-        # started from 1, [0] is artery
+    spiral_array = np.resize(spiral_array,sa_nodes)
+    decidual_array = np.resize(decidual_array, dv_nodes)
 
-        spiral_array[i] = arterynode#xyNodes_A[len(xyNodes_A) - 1]  # just taking the last node (cos we want from top
-        # surface)
-        decidual_array[i] = veinnode#xyNodes_V[len(xyNodes_V) - 1]  # just taking the last node (cos we want from top
+    print(spiral_array,sa_nodes)
 
     return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
