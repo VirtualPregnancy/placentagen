@@ -679,9 +679,7 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
         # surface)
         decidual_array[i] = veinnode#xyNodes_V[len(xyNodes_V) - 1]  # just taking the last node (cos we want from top
 
-    vesselnode = np.hstack((spiral_array, decidual_array))  # array of vessel nodes (both artery and vein)
-    return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'vesselnode': vesselnode,
-            'surfnode_ex_vessel': surfnode_ex_vessel}
+    return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
 
 def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareSizeRatio, circle_prop, el_type, debug):
