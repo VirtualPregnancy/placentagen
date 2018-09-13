@@ -679,10 +679,10 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     #Doing decidual veins after arteries to make sure we dont take up any spots that arteries would have otherwise beein
     for i in range(0, len(vessel_mapped_stem)): #need same number of arteries as veins
         V = np.random.choice(len(vesselnode_temp))  # choosing random , won't repeat arteries as they are already
-            #  removed from list
+        vessel_location = vesselnode_temp[V]
         for nodeX in vesselnode_temp:
-            distance=np.sqrt((vessel_mapped_stem[i][0] - nodeX[1]) ** 2 + (
-                        vessel_mapped_stem[i][1] - nodeX[2]) ** 2 )  # distance from the nodes
+            distance=np.sqrt((vessel_location[1] - nodeX[1]) ** 2 + (
+                        vessel_location[2] - nodeX[2]) ** 2 )  # distance from the nodes
             if(distance < dv_radius):
                 print(nodeX[0])
                 veinnode = nodeX[0]
@@ -703,6 +703,7 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
 
     spiral_array = np.resize(spiral_array,sa_nodes)
     decidual_array = np.resize(decidual_array, dv_nodes)
+    print('dec',decidual_array)
 
     return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
