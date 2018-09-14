@@ -739,7 +739,7 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
                 #is set up NOT to go outside the ellipsoid at all.
                 volume_outside_ellipsoid = volume_outside_ellipsoid + vol_per_point
         
-        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br*2*r#this variable is calculated as summation of diameter * vol of branch in grid (to be used for weight_diam)
+        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br*2.0*r#this variable is calculated as summation of diameter * vol of branch in grid (to be used for weight_diam)
     
     percent_outside = volume_outside_ellipsoid/np.sum(total_vol_samp_gr)*100.0
     
@@ -864,6 +864,7 @@ def conductivity_samp_gr(vol_frac,weighted_diameter,non_empties):
 
     Return:
     - conductivity: conductivity of sampling grid element where the placental tissue are located
+    will be in the same units as the weighted diameter (typically mm)
 
     A way you might want to use me:
 
@@ -966,29 +967,30 @@ def porosity(vol_frac):
     porosity=1-vol_frac
     return porosity
 
-def darcynode_in_sampling_grid(rectangular_mesh, darcy_node_loc):
-    """Locate where the darcy_mesh nodes are located inside the sampling grid mesh
+def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
+    """Locate where the 3D mesh nodes are located inside the sampling grid mesh
 
      Inputs are:
       - rectangular mesh: rectangular sampling grid mesh
-      - darcy_node_loc: node locations of darcy mesh
+      - mesh_node_loc: node locations of mesh
 
      Return:
-      - darcy_node_elems: array which shows the sampling grid element where the darcy mesh nodes are located
+      - mesh_node_elems: array which shows the sampling grid element where the mesh nodes are located
 
-    """  
-    darcy_node_elems = np.zeros(len(darcy_node_loc), dtype=int)
+    """
+    mesh_node_elems = np.zeros((len(mesh_node_loc),2), dtype=int)
     gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
-    for nt in range(0, len(darcy_node_loc)):
-        coord_node = darcy_node_loc[nt][0:3]
+    for nt in range(0, len(mesh_node_loc)):
+        coord_node = mesh_node_loc[nt][1:4]
         nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_node)
-        darcy_node_elems[nt] = nelem  # record what element the darcy node is in
-    
-    return darcy_node_elems
+        mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
+        mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
+        #print(mesh_node_elems[nt])
+    return mesh_node_elems
 
 
-def mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosity):
-    """Map the conductivity and porosity value of darcy_nodes with sampling grid element
+def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects,conductivity,porosity,export,exportfile):
+    """Map the conductivity and porosity value of mesh node with sampling grid element
 
       Inputs are:
        - darcy_node_elems: array showing where darcy nodes are located inside the sampling grid 
@@ -999,13 +1001,48 @@ def mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosi
      Return:
        - mapped_con_por: mapped value of conductivity and porosity of each darcy mesh node"""
 
-    mapped_con_por=np.zeros((len(darcy_node_elems),3)).astype(object)
+    mapped_con_por=np.zeros((len(mesh_node_elems),3)).astype(object)
     mapped_con_por[:,0]= mapped_con_por[:,0].astype(int)
+
+    if(export):
+        f = open(exportfile, 'w')
     
-    for el in range (0,len(darcy_node_elems)):
-         mapped_con_por[el,0]=el+1
-         mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==darcy_node_elems[el])][0,0]
-         mapped_con_por[el,2]=porosity[np.where(non_empty_rects==darcy_node_elems[el])][0]
+    for el in range (0,len(mesh_node_elems)):
+        mapped_con_por[el,0]=el+1
+        if(np.argwhere(non_empty_rects==mesh_node_elems[el][1])):
+            mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==mesh_node_elems[el][1])][0,0]
+            mapped_con_por[el,2]=porosity[np.where(non_empty_rects==mesh_node_elems[el][1])][0]
+        else: #node sits right on surface, assume empty
+            #print('surface node',mesh_node_elems[el][1])
+            mapped_con_por[el,1]=0.52
+            mapped_con_por[el,2] = 1.0
+        if (export):
+            f.write("%s %s %s\n" % (mesh_node_elems[el][0], mapped_con_por[el,1],mapped_con_por[el,2]))
+
+    if (export):
+        f.close()
     
     return mapped_con_por    
 
+
+def map_mesh_terminals(mesh_nodes,terminal_nodes,branch_nodes,export, exportfile):
+
+
+    node_info = np.zeros((len(mesh_nodes),2),dtype = int)
+    for nnod in terminal_nodes:
+        min_distance = 10000
+        for i in range(0,len(mesh_nodes)):
+            distance = np.sqrt((mesh_nodes[i][1]-branch_nodes[nnod][1])**2.0+(mesh_nodes[i][2]-branch_nodes[nnod][2])**2.0+(mesh_nodes[i][3]-branch_nodes[nnod][3])**2.0)
+            if(distance < min_distance):
+                min_distance = distance
+                close_node = int(mesh_nodes[i][0])
+        node_info[close_node-1][1] = node_info[close_node-1][1] + 1
+    if(export):
+        f = open(exportfile, 'w')
+    for i in range(0,len(mesh_nodes)):
+        node_info[i][0] = int(mesh_nodes[i][0])
+        if (export):
+            f.write("%s %s\n" % (node_info[i][0], node_info[i][1]))
+
+    if (export):
+        f.close()

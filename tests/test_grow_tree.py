@@ -89,7 +89,7 @@ class Test_add_villi(TestCase):
         initial_geom['elems'] = [[0, 0, 1], [1, 1, 2]]
         initial_geom['elem_up'] = [[0, 0, 0], [1, 0, 0]]
         initial_geom['elem_down'] = [[1, 1, 0], [0, 0, 0]]
-        chorion_and_stem = placentagen.add_stem_villi(initial_geom, from_elem, 0.2)
+        chorion_and_stem = placentagen.add_stem_villi(initial_geom, from_elem, 0.2, False, 'test.txt')
         self.assertTrue(chorion_and_stem['nodes'][3][3], -0.2)
 if __name__ == '__main__':
    unittest.main()

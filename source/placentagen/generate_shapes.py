@@ -643,6 +643,8 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
         stem_xyList.append(node)
     stem_xy.close()
 
+    print('Total stem read = '+ str(len(stem_xyList)))
+
     vessel_mapped_stem = stem_xyList  # this is the x,y location where we want to put spiral artery
     spiral_array = np.zeros((len(xyList)), dtype=int)  # store the node nuber of spiral artery
     decidual_array = np.zeros((len(xyList)), dtype=int)  # store the node number of decidual vein
@@ -658,7 +660,7 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
             distance=np.sqrt((vessel_mapped_stem[i][0] - nodeX[1]) ** 2 + (
                         vessel_mapped_stem[i][1] - nodeX[2]) ** 2 )  # distance from the nodes
             if(distance < sa_radius):
-                print('SA Node', int(nodeX[0]))
+                #print('SA Node', int(nodeX[0]),nodeX[1],nodeX[2],vessel_mapped_stem[i][0],vessel_mapped_stem[i][1])
                 arterynode = nodeX[0]
                 A = np.where(vesselnode_temp == arterynode)
                 vesselnode_temp = np.delete(vesselnode_temp, A[0], axis=0)
@@ -683,8 +685,9 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
         for nodeX in vesselnode_temp:
             distance=np.sqrt((vessel_location[1] - nodeX[1]) ** 2 + (
                         vessel_location[2] - nodeX[2]) ** 2 )  # distance from the nodes
-            if(distance < dv_radius):
-                print('DV Node', int(nodeX[0]))
+            dv_from_centre = np.sqrt(nodeX[1] ** 2 +  nodeX[2] ** 2 )
+            if(distance < dv_radius and dv_from_centre < 0.9*x_radius):
+                #print('DV Node', int(nodeX[0]))
                 veinnode = nodeX[0]
                 V = np.where(vesselnode_temp == veinnode)
                 vesselnode_temp = np.delete(vesselnode_temp, V[0], axis=0)
@@ -702,8 +705,9 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
         #dv_nodes = dv_nodes+1
 
     spiral_array = np.resize(spiral_array,sa_nodes)
+    print('SAs found = ' + str(sa_nodes))
     decidual_array = np.resize(decidual_array, dv_nodes)
-    print('dec',decidual_array)
+    #print('dec',decidual_array)
 
     return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
@@ -763,7 +767,7 @@ def identify_vessel_node_test_mesh(ellipsoid_coor, surfacenode,volume, thickness
             distance = np.sqrt((vessel_mapped_stem[0] - nodeX[1]) ** 2 + (
                     vessel_mapped_stem[1] - nodeX[2]) ** 2)  # distance from the nodes
             if (distance < sa_radius):
-                print('SA Node', int(nodeX[0]))
+                #print('SA Node', int(nodeX[0]))
                 arterynode = nodeX[0]
                 A = np.where(vesselnode_temp == arterynode)
                 vesselnode_temp = np.delete(vesselnode_temp, A[0], axis=0)
@@ -778,7 +782,7 @@ def identify_vessel_node_test_mesh(ellipsoid_coor, surfacenode,volume, thickness
             distance = np.sqrt((vessel_mapped_stem_v[0] - nodeX[1]) ** 2 + (
                     vessel_mapped_stem_v[1] - nodeX[2]) ** 2)  # distance from the nodes
             if (distance < dv_radius):
-                print('DV Node', int(nodeX[0]))
+                #print('DV Node', int(nodeX[0]))
                 veinnode = nodeX[0]
                 V = np.where(vesselnode_temp == veinnode)
                 vesselnode_temp = np.delete(vesselnode_temp, V[0], axis=0)
@@ -790,7 +794,7 @@ def identify_vessel_node_test_mesh(ellipsoid_coor, surfacenode,volume, thickness
 
     spiral_array = np.resize(spiral_array, sa_nodes)
     decidual_array = np.resize(decidual_array, dv_nodes)
-    print('dec', decidual_array)
+    #print('dec', decidual_array)
 
     return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
 
