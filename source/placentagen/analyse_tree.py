@@ -985,7 +985,7 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
         nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_node)
         mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
         mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
-        print(mesh_node_elems[nt])
+        #print(mesh_node_elems[nt])
     return mesh_node_elems
 
 
@@ -1013,7 +1013,7 @@ def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects,conductivity,porosity
             mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==mesh_node_elems[el][1])][0,0]
             mapped_con_por[el,2]=porosity[np.where(non_empty_rects==mesh_node_elems[el][1])][0]
         else: #node sits right on surface, assume empty
-            print('surface node',mesh_node_elems[el][1])
+            #print('surface node',mesh_node_elems[el][1])
             mapped_con_por[el,1]=0.52
             mapped_con_por[el,2] = 1.0
         if (export):
