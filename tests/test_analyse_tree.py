@@ -309,16 +309,16 @@ class Test_node_in_sampling_grid(TestCase):
          node_grid =placentagen.node_in_sampling_grid(rectangular_mesh, node_loc)
          self.assertTrue(node_grid[0][1] == 0)
 
-class Test_mapping_node(TestCase):
-      def test_mapping(self):
-          comp_node_elems=np.array([3])
-          non_empty_rects=np.array([2,3])
-          conductivity=np.array([0.4,0.5])
-          porosity=np.array([0.3,0.7])
-          mapping=placentagen.mapping_mesh_sampl_gr(comp_node_elems, non_empty_rects,conductivity,porosity,False,'test.txt')
-          self.assertTrue(np.isclose(mapping[0,0], 1))
-          self.assertTrue(np.isclose(mapping[0,1], 0.5)) 
-          self.assertTrue(np.isclose(mapping[0,2],0.7))
+#class Test_mapping_node(TestCase):
+#      def test_mapping(self):
+#          comp_node_elems=np.array([3])
+#          non_empty_rects=np.array([2,3])
+#          conductivity=np.array([0.4,0.5])
+#          porosity=np.array([0.3,0.7])
+#          mapping=placentagen.mapping_mesh_sampl_gr(comp_node_elems, non_empty_rects,conductivity,porosity,False,'test.txt')
+#          self.assertTrue(np.isclose(mapping[0,0], 1))
+#          self.assertTrue(np.isclose(mapping[0,1], 0.5)) 
+#          self.assertTrue(np.isclose(mapping[0,2],0.7))
 
 if __name__ == '__main__':
    unittest.main()   
