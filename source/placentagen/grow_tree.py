@@ -527,11 +527,12 @@ def refine_1D(initial_geom, from_elem,project):
 
     elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
 
+
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
             'elem_down': elem_connectivity['elem_down']}
 
 
-def add_stem_villi(initial_geom, from_elem, sv_length):
+def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file):
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -554,7 +555,8 @@ def add_stem_villi(initial_geom, from_elem, sv_length):
 
     node_loc[0:num_nodes_old][:] = initial_geom['nodes']
     elems[0:num_elems_old][:] = initial_geom['elems']
-
+    if(export_stem):
+        f = open(stem_xy_file, 'w')
     # Create new elements
     nnod = num_nodes_old - 1
     ne0 = num_elems_old - 1
@@ -569,8 +571,14 @@ def add_stem_villi(initial_geom, from_elem, sv_length):
 
             node_loc[nnod][1:3] = node_loc[elems[ne][2]][1:3]
             node_loc[nnod][3] = node_loc[elems[ne][2]][3] - sv_length
+            if(export_stem):
+                f.write("%s %s\n" % (node_loc[nnod][1], node_loc[nnod][2]))
 
     elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
+    if(export_stem):
+        f.close()
+
+
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_connectivity['elem_up'],
             'elem_down': elem_connectivity['elem_down']}

@@ -299,23 +299,23 @@ class Test_porosity(TestCase):
           porosity=placentagen.porosity(vol_frac)
           self.assertTrue(np.isclose(porosity,0.7))
 
-class Test_darcynode_in_sampling_grid(TestCase):
+class Test_node_in_sampling_grid(TestCase):
         
-      def test_darcy_in_grid(self):
-         darcy_node_loc=np.array([[ 0.,0.,-1.05]])
+      def test_node_in_grid(self):
+         node_loc=np.array([[0., 0.,0.,-1.05]])
          rectangular_mesh = {}
          rectangular_mesh['nodes'] =np.array( [[0.,0.,-2.],[2.,0.,-2.],[0.,2.,-2.],[2.,2.,-2.],[0.,0.,0.],[2.,0.,0.],[0.,2.,0.],[2.,2., 0.]])
          rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
-         darcy_grid =placentagen.darcynode_in_sampling_grid(rectangular_mesh, darcy_node_loc)
-         self.assertTrue(darcy_grid == 0)     
+         node_grid =placentagen.node_in_sampling_grid(rectangular_mesh, node_loc)
+         self.assertTrue(node_grid[0][1] == 0)
 
 class Test_mapping_node(TestCase):
       def test_mapping(self):
-          darcy_node_elems=np.array([3])
+          comp_node_elems=np.array([3])
           non_empty_rects=np.array([2,3])
           conductivity=np.array([0.4,0.5])
           porosity=np.array([0.3,0.7])
-          mapping=placentagen.mapping_darcy_sampl_gr(darcy_node_elems, non_empty_rects,conductivity,porosity)
+          mapping=placentagen.mapping_mesh_sampl_gr(comp_node_elems, non_empty_rects,conductivity,porosity,False,'test.txt')
           self.assertTrue(np.isclose(mapping[0,0], 1))
           self.assertTrue(np.isclose(mapping[0,1], 0.5)) 
           self.assertTrue(np.isclose(mapping[0,2],0.7))
