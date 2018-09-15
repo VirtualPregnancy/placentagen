@@ -986,7 +986,7 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
         mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
         mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
         #print(mesh_node_elems[nt])
-    print mesh_node_elems
+    
     return mesh_node_elems
 
 
