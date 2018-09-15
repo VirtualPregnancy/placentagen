@@ -283,7 +283,7 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
     
     for nt in range(0, num_terminals):
         coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
-        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_terminal)
+        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],gr[8],coord_terminal)
         terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
         terminal_elems[nt] = nelem  # record what element the terminal is in
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
@@ -449,7 +449,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc,volume, th
             inside = pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius,
                                                         y_radius, z_radius)
             if inside:
-                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_point)
+                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],gr[8],coord_point)
                 total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
                 total_volume = total_volume + vol_per_point
                 vol_distribution_each_br[nelem] = vol_distribution_each_br[nelem] + vol_per_point
@@ -691,8 +691,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
             continue
         elif not node1in or not node2in:
             print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
-            print('The first node ' + str(node1) + ' is ' + srt(node1in) + ' (True means inside).')
-            print('The second node ' + str(node2) + ' is ' + srt(node2in) + ' (True means inside).')
+            print('The first node ' + str(node1) + ' is ' + str(node1in) + ' (True means inside).')
+            print('The second node ' + str(node2) + ' is ' + str(node2in) + ' (True means inside).')
             print('Skipping this element from analysis')
             continue
 
@@ -729,7 +729,7 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems,branch_rad
             coord_point = cyl_points[nt][0:3]
             inside=pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius, y_radius, z_radius)
             if inside:
-                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_point)
+                nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],gr[8],coord_point)
                 total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
                 vol_distribution_each_br[nelem]=vol_distribution_each_br[nelem]+vol_per_point
                 volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
@@ -982,19 +982,19 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
     gr=pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
     for nt in range(0, len(mesh_node_loc)):
         coord_node = mesh_node_loc[nt][1:4]
-        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],coord_node)
+        nelem=pg_utilities.locate_node(gr[0],gr[1],gr[2],gr[3],gr[4],gr[5],gr[6],gr[7],gr[8],coord_node)
         mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
         mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
         #print(mesh_node_elems[nt])
+    
     return mesh_node_elems
 
 
-def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects,conductivity,porosity,export,exportfile):
+def mapping_mesh_sampl_gr(mesh_node_elems, conductivity,porosity,export,exportfile):
     """Map the conductivity and porosity value of mesh node with sampling grid element
 
       Inputs are:
        - darcy_node_elems: array showing where darcy nodes are located inside the sampling grid 
-       - non_empty_rects: array of non empty sampling grid element
        - conductiviy: conductivity of non-empty sampling grid element
        - porosity: porosity of non-empty sampling grid element
 
@@ -1009,13 +1009,8 @@ def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects,conductivity,porosity
     
     for el in range (0,len(mesh_node_elems)):
         mapped_con_por[el,0]=el+1
-        if(np.argwhere(non_empty_rects==mesh_node_elems[el][1])):
-            mapped_con_por[el,1]=conductivity[np.argwhere(non_empty_rects==mesh_node_elems[el][1])][0,0]
-            mapped_con_por[el,2]=porosity[np.where(non_empty_rects==mesh_node_elems[el][1])][0]
-        else: #node sits right on surface, assume empty
-            #print('surface node',mesh_node_elems[el][1])
-            mapped_con_por[el,1]=0.52
-            mapped_con_por[el,2] = 1.0
+        mapped_con_por[el,1]=conductivity[mesh_node_elems[el,1]-1]
+        mapped_con_por[el,2]=porosity[mesh_node_elems[el,1]-1]
         if (export):
             f.write("%s %s %s\n" % (mesh_node_elems[el][0], mapped_con_por[el,1],mapped_con_por[el,2]))
 

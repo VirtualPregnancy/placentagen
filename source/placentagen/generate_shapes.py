@@ -316,7 +316,7 @@ def gen_rectangular_mesh2(nel_x, nel_y, nel_z, xdim, ydim, zdim, element_type):
         surfacenodes = 0
 
     return {'nodes': node, 'elems': elems, 'element_array': element_array,
-            'node_array': node_array, 'surface_nodes': surfacenodes}
+            'node_array': node_array, 'surface_nodes': surfacenodes,'total_elems':len(element_array)}
 
 
 def gen_3d_ellipsoid(nel_x, nel_y, nel_z, volume, thickness, ellipticity, element_type):
@@ -588,7 +588,7 @@ def identify_node_from_coord(nodes, filename):
     return i
 
 
-def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thickness, ellipticity):
+def identify_vessel_node(ellipsoid_coor, surfacenode, stem_xyList, volume,thickness, ellipticity):
     """Generates array of spiral artery nodes and decidual vein nodes. Spiral artery nodes are mapped with stem villi.
       
        Inputs:
@@ -627,21 +627,6 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
 
     surfnode_ex_vessel = np.copy(surfacenode)
     vesselnode_temp = np.vstack({tuple(row) for row in xyList})  #nodes that might be vessels
-
-    # reading in the stem vessel to map the spiral artery location
-    stem_xy = open(stem_file, 'r')
-    stem_coor = stem_xy.readlines()  # readlines
-    startLines = range(0, len(stem_coor))
-
-    for i in range(len(stem_coor)):
-        stem_coor[i] = stem_coor[i].split()
-    stem_xyList = []
-    for i in startLines:
-        node = []
-        node.append(float(stem_coor[i][0]))  # x coor of stem villi
-        node.append((float(stem_coor[i][1])))  # y coor of stem villi
-        stem_xyList.append(node)
-    stem_xy.close()
 
     print('Total stem read = '+ str(len(stem_xyList)))
 
