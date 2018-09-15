@@ -2,8 +2,8 @@
 import numpy as np
 
 
-def rotation_matrix_3d(axis,angle_rot):
-    axis=axis/np.linalg.norm(axis) #normalise just in case
+def rotation_matrix_3d(axis, angle_rot):
+    axis = axis / np.linalg.norm(axis)  # normalise just in case
     R = np.zeros((3, 3))
     R[0][0] = np.cos(angle_rot) + axis[0] ** 2 * (1 - np.cos(angle_rot))
     R[0][1] = axis[0] * axis[1] * (1 - np.cos(angle_rot)) - axis[2] * np.sin(angle_rot)
@@ -16,6 +16,7 @@ def rotation_matrix_3d(axis,angle_rot):
     R[2][2] = np.cos(angle_rot) + axis[2] ** 2 * (1 - np.cos(angle_rot))
 
     return R
+
 
 def calculate_ellipse_radii(volume, thickness, ellipticity):
     pi = np.pi
@@ -49,6 +50,7 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
     return on_ellipsoid
 
+
 def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     zero_tol = 1e-10
     in_ellipsoid = False  # default to false
@@ -61,21 +63,19 @@ def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     return in_ellipsoid
 
 
-
-
 def angle_two_vectors(vector1, vector2):
     vector1_u = vector1 / np.linalg.norm(vector1)
     vector2_u = vector2 / np.linalg.norm(vector2)
 
-    if (np.equal(vector1_u, vector2_u)).all(): #vectors are parallel
+    if (np.equal(vector1_u, vector2_u)).all():  # vectors are parallel
         angle = 0.0
-    elif(np.equal(vector1_u, -1.0*vector2_u)).all(): #vectors are anti-parrallel.
+    elif (np.equal(vector1_u, -1.0 * vector2_u)).all():  # vectors are anti-parrallel.
         angle = np.pi
     else:
         dotprod = np.dot(vector1_u, vector2_u)
         if np.isclose(1.0, dotprod):
-            #can't do arccos of 1
-            angle = np.sqrt(2*np.abs(1-dotprod)) #small angle approximation to cos near theta =1
+            # can't do arccos of 1
+            angle = np.sqrt(2 * np.abs(1 - dotprod))  # small angle approximation to cos near theta =1
         else:
             angle = np.arccos(dotprod)
 
@@ -140,8 +140,8 @@ def check_colinear(x0, x1, x2):
     colinear = False
     vector1 = (x1 - x0) / np.linalg.norm(x1 - x0)
     vector2 = (x1 - x2) / np.linalg.norm(x1 - x2)
-    array_test1 = np.equal(vector1,vector2)
-    array_test2 = np.equal(vector1,-1*vector2)
+    array_test1 = np.equal(vector1, vector2)
+    array_test2 = np.equal(vector1, -1 * vector2)
     if array_test1.all is True:
         colinear = True
     elif array_test2.all is True:
@@ -151,10 +151,10 @@ def check_colinear(x0, x1, x2):
 
 
 def samp_gr_for_node_loc(rectangular_mesh):
-    #calculate parameter of generated rectangular mesh
-    #Input:
+    # calculate parameter of generated rectangular mesh
+    # Input:
     # - rectangular_mesh: generated mesh
-    #Outputs:
+    # Outputs:
     # - startx:starting point in x axis
     # - starty:starting point in y axis 
     # - startz:starting point in z axis
@@ -164,7 +164,7 @@ def samp_gr_for_node_loc(rectangular_mesh):
     # - nelem_x:number of element in x axis
     # - nelem_y:number of element in y axis
     # - nelem_z:number of element in z axis
-    
+
     elems = rectangular_mesh['elems']
     nodes = rectangular_mesh['nodes']
     startx = np.min(nodes[:, 0])
@@ -179,12 +179,13 @@ def samp_gr_for_node_loc(rectangular_mesh):
     zside = nodes[elems[0][8]][2] - nodes[elems[0][1]][2]
     endz = np.max(nodes[:, 2])
     nelem_z = (endz - startz) / zside
-    
-    return startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,nelem_z
-    
-def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_node):
-    #calculate where a give point/node is located in a give rectangular mesh
-    #Inputs:
+
+    return startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, nelem_z
+
+
+def locate_node(startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, nelem_z, coord_node):
+    # calculate where a give point/node is located in a given rectangular mesh
+    # Inputs:
     # - startx:starting point in x axis
     # - starty:starting point in y axis 
     # - startz:starting point in z axis
@@ -195,10 +196,17 @@ def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_nod
     # - nelem_y:number of element in y axis
     # - nelem_z:number of element in z axis
     # - coord_node: the node that needs to be located
-    #Outputs: 
+    # Outputs:
     # - nelem:number of element in rectangular mesh where the node/point is located  
     xelem_num = np.floor((coord_node[0] - startx) / xside)
+    if xelem_num == int(nelem_x):
+        xelem_num = xelem_num - 1
     yelem_num = np.floor((coord_node[1] - starty) / yside)
+    if yelem_num == int(nelem_y):
+        yelem_num = yelem_num - 1
     zelem_num = np.floor((coord_node[2] - startz) / zside)
-    nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))#this is the element where the point/node located
+    if zelem_num == int(nelem_z):
+        zelem_num = zelem_num - 1
+    nelem = int(xelem_num + yelem_num * nelem_x + zelem_num * (
+                nelem_x * nelem_y))  # this is the element where the point/node located
     return nelem
