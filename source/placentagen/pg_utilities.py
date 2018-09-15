@@ -182,7 +182,7 @@ def samp_gr_for_node_loc(rectangular_mesh):
     
     return startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,nelem_z
     
-def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_node):
+def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,nelem_z,coord_node):
     #calculate where a give point/node is located in a give rectangular mesh
     #Inputs:
     # - startx:starting point in x axis
@@ -199,6 +199,10 @@ def locate_node(startx,starty,startz,xside,yside,zside,nelem_x,nelem_y,coord_nod
     # - nelem:number of element in rectangular mesh where the node/point is located  
     xelem_num = np.floor((coord_node[0] - startx) / xside)
     yelem_num = np.floor((coord_node[1] - starty) / yside)
+    if yelem_num==int(nelem_y):
+       yelem_num=yelem_num-1
     zelem_num = np.floor((coord_node[2] - startz) / zside)
+    if zelem_num==int(nelem_z):
+       zelem_num=zelem_num-1
     nelem = int(xelem_num + (yelem_num) * nelem_x + (zelem_num) * (nelem_x * nelem_y))#this is the element where the point/node located
     return nelem
