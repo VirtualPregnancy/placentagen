@@ -1,17 +1,44 @@
 #!/usr/bin/env python
+
+"""This is the grow_tree.py module. This module contains code required to generate morphologically accurate tree
+structures from data. Some of this code is specific to growing to fill well defined shapes. The code is not
+optimised, and there are other tools developed by our group that can generate tree structures into more complex
+shapes more rapidly, using precompiled code-bases. Please contact us for advice on using these tools.
+"""
+
 import numpy as np
 
 from . import pg_utilities
 from . import analyse_tree
 
 
-def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
-                    volume, thickness, ellipticity, datapoints, initial_geom):
-    # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
-    z_radius = radii['z_radius']
-    x_radius = radii['x_radius']
-    y_radius = radii['y_radius']
+def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, datapoints, initial_geom):
+    '''
+    :Function name: **grow_tree_large**
+
+    This function uses the volume filling branching algorithm to grow a tree structure toward an arbitrary set of
+    data points. At this stage the algorithm does not check whether the tree is within the volume at each growth
+    point. However, this functionality is available in other group softwares, please ask a group member to advise if
+    you wish to use these other softwares.
+
+    :inputs:
+        - angle_max: The maximum angle between two branches
+        - angle_min: The miniumum angle between two branches
+        - fraction: The fraction of distance between stem and datapoint centre of mass to grow
+        - min_length: Minimum length of a branch
+        - point_limit: Smallest number of datapoints assigned to a branch
+        - datapoints:  A set of data points distributed over the chorionic surface
+        - initial_geom: Branching geometry to grow from
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+        A list of data point locations associated with terminal branches (useful for post-processing and defining
+        centre of terminal tissue units.
+
+    '''
 
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
@@ -42,6 +69,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     nstem = np.zeros((num_elems_new, 2), dtype=int)  # number of seeds per parent
     map_seed_to_elem = np.zeros(len(datapoints), dtype=int)  # seed to elem - initial array for groupings
     tb_list = np.zeros(2 * len(datapoints), dtype=int)  # number of terminal bronchioles
+    tb_loc = np.zeros((2 * len(datapoints),3))
 
     # Set initial values for local and global nodes and elements
     ne = num_elems_old - 1  # current maximum element number
@@ -151,7 +179,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                         else:
-                            # Need to modify down the line not to branch in the next generation
+                            # Should not branch in the next generation
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                             # numtb = numtb + 1
@@ -159,9 +187,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                 else:  # Not ss so no splitting
                     # Not enough seed points in the set during the split parent branch becomes a terminal
                     tb_list[numtb] = ne_parent
-                    numtb = numtb + 1
                     min_dist = 1.0e10
                     count_data = 0
+                    data_tb = 0
                     for nd in range(0, len(data_current_parent)):
                         if map_seed_to_elem_new[nd] != 0:
                             if map_seed_to_elem_new[nd] == ne + 1:
@@ -171,12 +199,19 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                             dist = dist_two_vectors(data_current_parent[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                             if dist < min_dist:
                                 if map_seed_to_elem_new[nd] == ne_parent:
+                                    print(ne_parent,nd)
+                                    data_tb = data_tb + 1
                                     count_data = count_data + 1
                                     nd_min = nd
                                     min_dist = dist
                     if count_data != 0:  # If there were any data points associated
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
+                        tb_loc[numtb][:] = data_current_parent[nd_min][:]
+                    print(tb_list[numtb],tb_loc[numtb],nd_min,data_tb)
+                    numtb = numtb + 1
+
+
 
             # .......Copy the temporary list of branches to NE_OLD. These become the
             # .......parent elements for the next branching
@@ -199,6 +234,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     elem_upstream.resize(ne + 1, 3, refcheck=False)
     elem_downstream.resize(ne + 1, 3, refcheck=False)
     node_loc.resize(nnod + 1, 4, refcheck=False)
+    tb_list.resize(numtb, refcheck=False)
+    tb_loc.resize(numtb, refcheck=False)
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
@@ -221,6 +258,34 @@ def data_with_parent(current_parent, map_seed_to_elem, datapoints):
 
 def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_limit,
                            volume, thickness, ellipticity, datapoints, initial_geom, sorv):
+    """
+    :Function name: **grow_chorionic_surface**
+
+    Grows a tree constrained to the surface of an semi-ellipsoid and based on data points defined on that surface.
+    Employs the space filling branching algorithm
+
+    :inputs:
+        - angle_max: The maximum angle between two branches
+        - angle_min: The miniumum angle between two branches
+        - fraction: The fraction of distance between stem and datapoint centre of mass to grow
+        - min_length: Minimum length of a branch
+        - point_limit: Smallest number of datapoints assigned to a branch
+        - volume: Volume of ellipsoid
+        - thickness: Thickness of placenta
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - datapoints:  A set of data points distributed over the chorionic surface
+        - initial_geom: Branching geometry to grow from
+        - sorv: Surface or volume
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+
+
+    """
+
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -457,6 +522,22 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
 
 def refine_1D(initial_geom, from_elem,project):
+    '''
+    :Function name: **refine_1d**
+
+    Refines a 1D branching tree once along its major axis. Has the option to project to the surface of an ellipsoid.
+
+    :inputs:
+        - initial_geom: The branching structure to be refined
+        - from_elem: The element from which to start refining
+        - project: A data structure defining whether to project to the surface of an ellipsoid and ellipsoid properties
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    '''
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -534,6 +615,26 @@ def refine_1D(initial_geom, from_elem,project):
 
 
 def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file):
+    '''
+    :Function name: **add_stem_villi**
+
+    This function takes an initial, refined, branching geometry and adds stem villi, that point up into the placental volume at
+    close to 90 degrees from their stem branches. The function also exports the location of stem villi so that these
+    can later be used to generate boundary conditions for uteroplacental flow models.
+
+    :inputs:
+        - initial_geom: An initial branching geometry with node points where stem villi are to be added
+        - from_elem: Definition of the element from which stem villi are to be generated
+        - sv_length: Length of stem villi, in units consistent with your geometry
+        - export_stem: A logical defining whether or not to export the geometry
+        - stem_xy_file: Filename for export
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    '''
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -845,9 +946,30 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
 
 def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, insertion_y, umb_artery_distance,
                             umb_artery_length, datapoints):
-    # Creating a basis for a branching geometry which assumes a simple umbilical cord structure, with two arteries,
+    """
+    :Function name: **umbilical_seed_geometry**
 
-    # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
+    This function defines a very simple model of the umbilical cord insertion. It has a single inlet ('dummy')
+    artery, which branches into two and then branches again on the chorionic surface to allow a seed geometry for
+    growing a placental tree if no imaging data is available.
+
+    :inputs:
+        - volume: The volume of the ellipsoid defining the placenta
+        - thickness: The thickness of the placenta (z-axis thickness)
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - insertion_x: The x-coordinate of the umbilical cord insertion (x=0 is at the centre of the placenta)
+        - insertion_y: The y-coordinate of the umbilical cord insertion (y=0 is at the centre of the placenta)
+        - umb_artery_distance: The distance between the two umbilical arteries
+        - umb_artery_length: The length of the portion of the umbilical artery that is being modelled
+        - datapoints: A set of data points distributed over the chorionic surface
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    """
+
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
