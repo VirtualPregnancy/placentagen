@@ -12,7 +12,8 @@ from . import pg_utilities
 from . import analyse_tree
 
 
-def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, datapoints, initial_geom):
+def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
+                    datapoints, initial_geom):
     '''
     :Function name: **grow_tree_large**
 
@@ -22,12 +23,16 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
     you wish to use these other softwares.
 
     :inputs:
+    :inputs:
         - angle_max: The maximum angle between two branches
         - angle_min: The miniumum angle between two branches
         - fraction: The fraction of distance between stem and datapoint centre of mass to grow
         - min_length: Minimum length of a branch
         - point_limit: Smallest number of datapoints assigned to a branch
-        - datapoints:  A set of data points distributed over the chorionic surface
+        - volume: Volume of ellipsoid
+        - thickness: Thickness of placenta
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - datapoints:  A set of data points distributed within the placenta
         - initial_geom: Branching geometry to grow from
 
     :return:
@@ -39,6 +44,12 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
         centre of terminal tissue units.
 
     '''
+
+    # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
 
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
@@ -85,7 +96,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
     map_seed_to_elem = map_seed_to_elem + parentlist[0]
     map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
 
-    for npar in range(0, len(parentlist)):
+    for npar in range(0,len(parentlist)):
         print('Generating children for parent ' + str(npar) + '(elem #' + str(parentlist[npar]) + ') of a total of ' + str(len(parentlist)))
         current_parent = parentlist[npar]
         num_next_parents = 1
@@ -111,7 +122,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
 
         # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
         # could make this an optional output at a later date
-        # print('         newgens       #brn       total#       #term      #data')
+        #print('         newgens       #brn       total#       #term      #data')
 
         ngen = 0  # for output, look to have each generation of elements recordded
 
@@ -126,6 +137,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
                 com = mesh_com(ne_parent, map_seed_to_elem_new, data_current_parent)
                 np_start = int(elems[ne_parent][2])
                 np_prt_start = int(elems[ne_parent][1])
+                point1 = node_loc[np_start][1:4]
+                point2 = node_loc[np_prt_start][1:4]
+                length_parent  = np.linalg.norm(point1 - point2)
                 # Split the seed points by the plane defined by the parent branch and the com of the
                 # seedpoints attached to it
                 split_data = data_splitby_plane(map_seed_to_elem_new, data_current_parent, com,
@@ -146,9 +160,34 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
                         if length_new < min_length:
                             length_new = min_length
                             branch = False
+                        if(length_new > 2.0*length_parent and ngen > 4):
+                            #print('much bigger than parent',length_new,length_parent)
+                            length_new = length_parent
+                            branch = False
+
                         # calculate location of end node
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                             (com - start_node_loc))
+                        #Check end node is in the ellipsoid
+                        in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
+                                                                       x_radius, y_radius, z_radius)
+
+                        if(not in_ellipsoid):
+                            print("not in ellipsoid")
+                            branch = False #This should be the last branch here.
+                            count = 0
+                            while(not in_ellipsoid and count <=10):
+                                length_new = 0.95*length_new
+                                # calculate location of end node
+                                end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
+                                    (com - start_node_loc))
+                                # Check end node is in the ellipsoid
+                                in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
+                                                                               end_node_loc[2],
+                                                                            x_radius, y_radius, z_radius)
+                                count = count + 1
+                            print(length_new,ne+1,count)
+
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
                                                         start_node_loc, end_node_loc, ne_parent, ne + 1)
@@ -179,17 +218,29 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                         else:
-                            # Should not branch in the next generation
-                            local_parent_temp[num_next_parents] = ne
-                            num_next_parents = num_next_parents + 1
-                            # numtb = numtb + 1
+                            # Should not branch in the next generation but this is not implemented yet
+                            tb_list[numtb] = ne
+                            count_data = 0
+                            min_dist = 1.0e10
+                            for nd in range(0, len(data_current_parent)):
+                                dist = dist_two_vectors(data_current_parent[nd][:],node_loc[int(elems[ne][2])][1:4])
+                                if dist < min_dist:
+                                    if map_seed_to_elem_new[nd] == ne:
+                                        # print(ne_parent,nd)
+                                        count_data = count_data + 1
+                                        nd_min = nd
+                                        min_dist = dist
+                            if count_data != 0:  # If there were any data points associated
+                                map_seed_to_elem_new[nd_min] = 0
+                                remaining_data = remaining_data - 1
+                                tb_loc[numtb][:] = data_current_parent[nd_min][:]
+                            numtb = numtb + 1
 
                 else:  # Not ss so no splitting
                     # Not enough seed points in the set during the split parent branch becomes a terminal
                     tb_list[numtb] = ne_parent
                     min_dist = 1.0e10
                     count_data = 0
-                    data_tb = 0
                     for nd in range(0, len(data_current_parent)):
                         if map_seed_to_elem_new[nd] != 0:
                             if map_seed_to_elem_new[nd] == ne + 1:
@@ -199,8 +250,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
                             dist = dist_two_vectors(data_current_parent[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                             if dist < min_dist:
                                 if map_seed_to_elem_new[nd] == ne_parent:
-                                    print(ne_parent,nd)
-                                    data_tb = data_tb + 1
+                                    #print(ne_parent,nd)
                                     count_data = count_data + 1
                                     nd_min = nd
                                     min_dist = dist
@@ -208,7 +258,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
                         tb_loc[numtb][:] = data_current_parent[nd_min][:]
-                    print(tb_list[numtb],tb_loc[numtb],nd_min,data_tb)
+                    else:
+                        print('no nd assigned',ne)
                     numtb = numtb + 1
 
 
@@ -218,17 +269,17 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
 
             for n in range(0, num_next_parents):
                 local_parent[n] = local_parent_temp[n]
-                nstem[int(local_parent[n])][1] = 0  # initia count of data points
+                nstem[int(local_parent[n])][1] = 0  # initial count of data points
 
             if remaining_data < original_data:  # only need to reallocate data if we have lost some data points
                 original_data = remaining_data
                 # reallocate datapoints
-                map_seed_to_elem_new = data_to_mesh(map_seed_to_elem_new, data_current_parent,
+                map_seed_to_elem_new = reassign_data_to_mesh(map_seed_to_elem_new, data_current_parent,
                                                     local_parent[0:num_next_parents], node_loc,
                                                     elems)
             # Could make this an optional output at a later date
-            # print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-            #      '   ' + str(numtb) + '   ' + str(remaining_data))
+            #print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+             #     '   ' + str(numtb) + '   ' + str(remaining_data))
 
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
@@ -236,6 +287,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, dat
     node_loc.resize(nnod + 1, 4, refcheck=False)
     tb_list.resize(numtb, refcheck=False)
     tb_loc.resize(numtb, refcheck=False)
+
+    print(numtb)
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
@@ -927,19 +980,100 @@ def group_elem_parent_term(ne_parent, elem_downstream):
 
 
 def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
-    # Assigns data(seed) points to the closest ending of branches in the current generation.
+    '''
+    :Function name: **data_to_mesh**
+
+    Assigns data(seed) points to the closest ending of branches in the current generation.
+
+    '''
+    #ld_temp = np.zeros(len(ld), dtype=int)
+
+    ##Ensure every element actually gets a datapoint
+    #for noelem in range(0,len(parentlist)):
+    #    ne = int(parentlist[noelem])
+    #    nnod = int(elems[ne][2])
+    #    min_dist = 1e10
+    #    for nd in range(0, len(datapoints)):
+    #        dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+    #        if dist < min_dist:
+    #            if(ld_temp[nd] == 0):
+    #                nd_min = nd
+    #                min_dist = dist
+    #        ld_temp[nd_min] = ne
+    #        #print('ne not assigned', ne, min_dist)
+    #        #if(ld[nd_min] != ne):
+    #        #    print('ne not assigned its closest datapoint',ne,min_dist)
+    #        #    print(ne not in ld)
+
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
             ne_min = 0
             min_dist = 1e10
             for noelem in range(0, len(parentlist)):
                 ne = int(parentlist[noelem])
-                np = int(elems[ne][2])
-                dist = dist_two_vectors(node_loc[np][1:4], datapoints[nd])
+                nnod = int(elems[ne][2])
+                dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
                 if dist < min_dist:
                     ne_min = ne
                     min_dist = dist
+            #if(ld_temp[nd] == 0):
             ld[nd] = ne_min
+            #if(ld_temp[nd] !=0 ):
+            #    print('for nd might update',nd)
+            #    print(ld[nd],ld_temp[nd])
+            #    #ld[nd] = ld_temp[nd]
+
+
+
+    return ld
+
+def reassign_data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
+    '''
+    :Function name: **data_to_mesh**
+
+    Assigns data(seed) points to the closest ending of branches in the current generation.
+
+    '''
+    #ld_temp = np.zeros(len(ld), dtype=int)
+
+    ##Ensure every element actually gets a datapoint
+    #for noelem in range(0,len(parentlist)):
+    #    ne = int(parentlist[noelem])
+    #    nnod = int(elems[ne][2])
+    #    min_dist = 1e10
+    #    for nd in range(0, len(datapoints)):
+    #        dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+    #        if dist < min_dist:
+    #            if(ld_temp[nd] == 0):
+    #                nd_min = nd
+    #                min_dist = dist
+    #        ld_temp[nd_min] = ne
+    #        #print('ne not assigned', ne, min_dist)
+    #        #if(ld[nd_min] != ne):
+    #        #    print('ne not assigned its closest datapoint',ne,min_dist)
+    #        #    print(ne not in ld)
+
+    for nd in range(0, len(datapoints)):
+        if ld[nd] != 0:
+            if (ld[nd] not in parentlist):
+                #print('needs to be redistributed',nd,ld[nd])
+                ne_min = 0
+                min_dist = 1e10
+                for noelem in range(0, len(parentlist)):
+                    ne = int(parentlist[noelem])
+                    nnod = int(elems[ne][2])
+                    dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+                    if dist < min_dist:
+                        ne_min = ne
+                        min_dist = dist
+            #if(ld_temp[nd] == 0):
+                ld[nd] = ne_min
+            #if(ld_temp[nd] !=0 ):
+            #    print('for nd might update',nd)
+            #    print(ld[nd],ld_temp[nd])
+            #    #ld[nd] = ld_temp[nd]
+
+
 
     return ld
 
