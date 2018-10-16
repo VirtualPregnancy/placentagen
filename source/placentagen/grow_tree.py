@@ -36,12 +36,14 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
         - initial_geom: Branching geometry to grow from
 
     :return:
-        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+        - A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
             - nodes: x,y,z coordinates of node location
             - elems: Elements connecting the nodes
             - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
-        A list of data point locations associated with terminal branches (useful for post-processing and defining
+        - A list of data point locations associated with terminal branches (useful for post-processing and defining
         centre of terminal tissue units.
+            - tb_list: A list of elements in the tree that are associated with each data point
+            - tb_loc: The location of that datapoint
 
     '''
 
@@ -79,8 +81,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     # local arrays
     nstem = np.zeros((num_elems_new, 2), dtype=int)  # number of seeds per parent
     map_seed_to_elem = np.zeros(len(datapoints), dtype=int)  # seed to elem - initial array for groupings
-    tb_list = np.zeros(2 * len(datapoints), dtype=int)  # number of terminal bronchioles
-    tb_loc = np.zeros((2 * len(datapoints),3))
+    tb_loc = np.zeros((2 * len(datapoints),4))
 
     # Set initial values for local and global nodes and elements
     ne = num_elems_old - 1  # current maximum element number
@@ -161,7 +162,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                             length_new = min_length
                             branch = False
                         if(length_new > 2.0*length_parent and ngen > 4):
-                            #print('much bigger than parent',length_new,length_parent)
                             length_new = length_parent
                             branch = False
 
@@ -173,7 +173,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                                                                        x_radius, y_radius, z_radius)
 
                         if(not in_ellipsoid):
-                            print("not in ellipsoid")
                             branch = False #This should be the last branch here.
                             count = 0
                             while(not in_ellipsoid and count <=10):
@@ -186,7 +185,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                                                                                end_node_loc[2],
                                                                             x_radius, y_radius, z_radius)
                                 count = count + 1
-                            print(length_new,ne+1,count)
 
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
@@ -219,7 +217,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                             num_next_parents = num_next_parents + 1
                         else:
                             # Should not branch in the next generation but this is not implemented yet
-                            tb_list[numtb] = ne
+                            tb_loc[numtb][0] = ne
                             count_data = 0
                             min_dist = 1.0e10
                             for nd in range(0, len(data_current_parent)):
@@ -233,12 +231,12 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                             if count_data != 0:  # If there were any data points associated
                                 map_seed_to_elem_new[nd_min] = 0
                                 remaining_data = remaining_data - 1
-                                tb_loc[numtb][:] = data_current_parent[nd_min][:]
+                                tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
                             numtb = numtb + 1
 
                 else:  # Not ss so no splitting
                     # Not enough seed points in the set during the split parent branch becomes a terminal
-                    tb_list[numtb] = ne_parent
+                    tb_loc[numtb][0] = ne_parent
                     min_dist = 1.0e10
                     count_data = 0
                     for nd in range(0, len(data_current_parent)):
@@ -257,9 +255,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                     if count_data != 0:  # If there were any data points associated
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
-                        tb_loc[numtb][:] = data_current_parent[nd_min][:]
+                        tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
                     else:
-                        print('no nd assigned',ne)
+                        print('Warning: No satapoint assigned to element: ' + str(ne))
                     numtb = numtb + 1
 
 
@@ -285,12 +283,12 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     elem_upstream.resize(ne + 1, 3, refcheck=False)
     elem_downstream.resize(ne + 1, 3, refcheck=False)
     node_loc.resize(nnod + 1, 4, refcheck=False)
-    tb_list.resize(numtb, refcheck=False)
-    tb_loc.resize(numtb, refcheck=False)
 
-    print(numtb)
+    tb_loc.resize(numtb, 4,  refcheck=False)
 
-    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+    print('Growing algorithm completed, number of terminal branches: ' +  str(numtb))
+
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream, 'term_loc': tb_loc}
 
 
 def data_with_parent(current_parent, map_seed_to_elem, datapoints):
