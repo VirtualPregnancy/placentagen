@@ -1,12 +1,52 @@
 #!/usr/bin/env python
+
+"""This is the grow_tree.py module. This module contains code required to generate morphologically accurate tree
+structures from data. Some of this code is specific to growing to fill well defined shapes. The code is not
+optimised, and there are other tools developed by our group that can generate tree structures into more complex
+shapes more rapidly, using precompiled code-bases. Please contact us for advice on using these tools.
+"""
+
 import numpy as np
 
 from . import pg_utilities
 from . import analyse_tree
 
 
-def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
-                    volume, thickness, ellipticity, datapoints, initial_geom):
+def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
+                    datapoints, initial_geom):
+    '''
+    :Function name: **grow_tree_large**
+
+    This function uses the volume filling branching algorithm to grow a tree structure toward an arbitrary set of
+    data points. At this stage the algorithm does not check whether the tree is within the volume at each growth
+    point. However, this functionality is available in other group softwares, please ask a group member to advise if
+    you wish to use these other softwares.
+
+    :inputs:
+    :inputs:
+        - angle_max: The maximum angle between two branches
+        - angle_min: The miniumum angle between two branches
+        - fraction: The fraction of distance between stem and datapoint centre of mass to grow
+        - min_length: Minimum length of a branch
+        - point_limit: Smallest number of datapoints assigned to a branch
+        - volume: Volume of ellipsoid
+        - thickness: Thickness of placenta
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - datapoints:  A set of data points distributed within the placenta
+        - initial_geom: Branching geometry to grow from
+
+    :return:
+        - A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+        - A list of data point locations associated with terminal branches (useful for post-processing and defining
+        centre of terminal tissue units.
+            - tb_list: A list of elements in the tree that are associated with each data point
+            - tb_loc: The location of that datapoint
+
+    '''
+
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -41,7 +81,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     # local arrays
     nstem = np.zeros((num_elems_new, 2), dtype=int)  # number of seeds per parent
     map_seed_to_elem = np.zeros(len(datapoints), dtype=int)  # seed to elem - initial array for groupings
-    tb_list = np.zeros(2 * len(datapoints), dtype=int)  # number of terminal bronchioles
+    tb_loc = np.zeros((2 * len(datapoints),4))
 
     # Set initial values for local and global nodes and elements
     ne = num_elems_old - 1  # current maximum element number
@@ -57,7 +97,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
     map_seed_to_elem = map_seed_to_elem + parentlist[0]
     map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
 
-    for npar in range(0, len(parentlist)):
+    for npar in range(0,len(parentlist)):
         print('Generating children for parent ' + str(npar) + '(elem #' + str(parentlist[npar]) + ') of a total of ' + str(len(parentlist)))
         current_parent = parentlist[npar]
         num_next_parents = 1
@@ -83,7 +123,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
 
         # START OF BIFURCATING DISTRIBUTATIVE ALGORITHM
         # could make this an optional output at a later date
-        # print('         newgens       #brn       total#       #term      #data')
+        #print('         newgens       #brn       total#       #term      #data')
 
         ngen = 0  # for output, look to have each generation of elements recordded
 
@@ -98,6 +138,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                 com = mesh_com(ne_parent, map_seed_to_elem_new, data_current_parent)
                 np_start = int(elems[ne_parent][2])
                 np_prt_start = int(elems[ne_parent][1])
+                point1 = node_loc[np_start][1:4]
+                point2 = node_loc[np_prt_start][1:4]
+                length_parent  = np.linalg.norm(point1 - point2)
                 # Split the seed points by the plane defined by the parent branch and the com of the
                 # seedpoints attached to it
                 split_data = data_splitby_plane(map_seed_to_elem_new, data_current_parent, com,
@@ -118,9 +161,31 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                         if length_new < min_length:
                             length_new = min_length
                             branch = False
+                        if(length_new > 2.0*length_parent and ngen > 4):
+                            length_new = length_parent
+                            branch = False
+
                         # calculate location of end node
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                             (com - start_node_loc))
+                        #Check end node is in the ellipsoid
+                        in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
+                                                                       x_radius, y_radius, z_radius)
+
+                        if(not in_ellipsoid):
+                            branch = False #This should be the last branch here.
+                            count = 0
+                            while(not in_ellipsoid and count <=10):
+                                length_new = 0.95*length_new
+                                # calculate location of end node
+                                end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
+                                    (com - start_node_loc))
+                                # Check end node is in the ellipsoid
+                                in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
+                                                                               end_node_loc[2],
+                                                                            x_radius, y_radius, z_radius)
+                                count = count + 1
+
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
                                                         start_node_loc, end_node_loc, ne_parent, ne + 1)
@@ -151,15 +216,27 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                             local_parent_temp[num_next_parents] = ne
                             num_next_parents = num_next_parents + 1
                         else:
-                            # Need to modify down the line not to branch in the next generation
-                            local_parent_temp[num_next_parents] = ne
-                            num_next_parents = num_next_parents + 1
-                            # numtb = numtb + 1
+                            # Should not branch in the next generation but this is not implemented yet
+                            tb_loc[numtb][0] = ne
+                            count_data = 0
+                            min_dist = 1.0e10
+                            for nd in range(0, len(data_current_parent)):
+                                dist = dist_two_vectors(data_current_parent[nd][:],node_loc[int(elems[ne][2])][1:4])
+                                if dist < min_dist:
+                                    if map_seed_to_elem_new[nd] == ne:
+                                        # print(ne_parent,nd)
+                                        count_data = count_data + 1
+                                        nd_min = nd
+                                        min_dist = dist
+                            if count_data != 0:  # If there were any data points associated
+                                map_seed_to_elem_new[nd_min] = 0
+                                remaining_data = remaining_data - 1
+                                tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
+                            numtb = numtb + 1
 
                 else:  # Not ss so no splitting
                     # Not enough seed points in the set during the split parent branch becomes a terminal
-                    tb_list[numtb] = ne_parent
-                    numtb = numtb + 1
+                    tb_loc[numtb][0] = ne_parent
                     min_dist = 1.0e10
                     count_data = 0
                     for nd in range(0, len(data_current_parent)):
@@ -171,36 +248,47 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit,
                             dist = dist_two_vectors(data_current_parent[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                             if dist < min_dist:
                                 if map_seed_to_elem_new[nd] == ne_parent:
+                                    #print(ne_parent,nd)
                                     count_data = count_data + 1
                                     nd_min = nd
                                     min_dist = dist
                     if count_data != 0:  # If there were any data points associated
                         map_seed_to_elem_new[nd_min] = 0
                         remaining_data = remaining_data - 1
+                        tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
+                    else:
+                        print('Warning: No satapoint assigned to element: ' + str(ne))
+                    numtb = numtb + 1
+
+
 
             # .......Copy the temporary list of branches to NE_OLD. These become the
             # .......parent elements for the next branching
 
             for n in range(0, num_next_parents):
                 local_parent[n] = local_parent_temp[n]
-                nstem[int(local_parent[n])][1] = 0  # initia count of data points
+                nstem[int(local_parent[n])][1] = 0  # initial count of data points
 
             if remaining_data < original_data:  # only need to reallocate data if we have lost some data points
                 original_data = remaining_data
                 # reallocate datapoints
-                map_seed_to_elem_new = data_to_mesh(map_seed_to_elem_new, data_current_parent,
+                map_seed_to_elem_new = reassign_data_to_mesh(map_seed_to_elem_new, data_current_parent,
                                                     local_parent[0:num_next_parents], node_loc,
                                                     elems)
             # Could make this an optional output at a later date
-            # print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-            #      '   ' + str(numtb) + '   ' + str(remaining_data))
+            #print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+             #     '   ' + str(numtb) + '   ' + str(remaining_data))
 
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
     elem_downstream.resize(ne + 1, 3, refcheck=False)
     node_loc.resize(nnod + 1, 4, refcheck=False)
 
-    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+    tb_loc.resize(numtb, 4,  refcheck=False)
+
+    print('Growing algorithm completed, number of terminal branches: ' +  str(numtb))
+
+    return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream, 'term_loc': tb_loc}
 
 
 def data_with_parent(current_parent, map_seed_to_elem, datapoints):
@@ -221,6 +309,34 @@ def data_with_parent(current_parent, map_seed_to_elem, datapoints):
 
 def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_limit,
                            volume, thickness, ellipticity, datapoints, initial_geom, sorv):
+    """
+    :Function name: **grow_chorionic_surface**
+
+    Grows a tree constrained to the surface of an semi-ellipsoid and based on data points defined on that surface.
+    Employs the space filling branching algorithm
+
+    :inputs:
+        - angle_max: The maximum angle between two branches
+        - angle_min: The miniumum angle between two branches
+        - fraction: The fraction of distance between stem and datapoint centre of mass to grow
+        - min_length: Minimum length of a branch
+        - point_limit: Smallest number of datapoints assigned to a branch
+        - volume: Volume of ellipsoid
+        - thickness: Thickness of placenta
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - datapoints:  A set of data points distributed over the chorionic surface
+        - initial_geom: Branching geometry to grow from
+        - sorv: Surface or volume
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+
+
+    """
+
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -457,6 +573,22 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
 
 
 def refine_1D(initial_geom, from_elem,project):
+    '''
+    :Function name: **refine_1d**
+
+    Refines a 1D branching tree once along its major axis. Has the option to project to the surface of an ellipsoid.
+
+    :inputs:
+        - initial_geom: The branching structure to be refined
+        - from_elem: The element from which to start refining
+        - project: A data structure defining whether to project to the surface of an ellipsoid and ellipsoid properties
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    '''
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -534,6 +666,26 @@ def refine_1D(initial_geom, from_elem,project):
 
 
 def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file):
+    '''
+    :Function name: **add_stem_villi**
+
+    This function takes an initial, refined, branching geometry and adds stem villi, that point up into the placental volume at
+    close to 90 degrees from their stem branches. The function also exports the location of stem villi so that these
+    can later be used to generate boundary conditions for uteroplacental flow models.
+
+    :inputs:
+        - initial_geom: An initial branching geometry with node points where stem villi are to be added
+        - from_elem: Definition of the element from which stem villi are to be generated
+        - sv_length: Length of stem villi, in units consistent with your geometry
+        - export_stem: A logical defining whether or not to export the geometry
+        - stem_xy_file: Filename for export
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    '''
     # Estimate new number of nodes and elements
     num_elems_old = len(initial_geom['elems'])
     num_nodes_old = len(initial_geom['nodes'])
@@ -826,28 +978,130 @@ def group_elem_parent_term(ne_parent, elem_downstream):
 
 
 def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
-    # Assigns data(seed) points to the closest ending of branches in the current generation.
+    '''
+    :Function name: **data_to_mesh**
+
+    Assigns data(seed) points to the closest ending of branches in the current generation.
+
+    '''
+    #ld_temp = np.zeros(len(ld), dtype=int)
+
+    ##Ensure every element actually gets a datapoint
+    #for noelem in range(0,len(parentlist)):
+    #    ne = int(parentlist[noelem])
+    #    nnod = int(elems[ne][2])
+    #    min_dist = 1e10
+    #    for nd in range(0, len(datapoints)):
+    #        dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+    #        if dist < min_dist:
+    #            if(ld_temp[nd] == 0):
+    #                nd_min = nd
+    #                min_dist = dist
+    #        ld_temp[nd_min] = ne
+    #        #print('ne not assigned', ne, min_dist)
+    #        #if(ld[nd_min] != ne):
+    #        #    print('ne not assigned its closest datapoint',ne,min_dist)
+    #        #    print(ne not in ld)
+
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
             ne_min = 0
             min_dist = 1e10
             for noelem in range(0, len(parentlist)):
                 ne = int(parentlist[noelem])
-                np = int(elems[ne][2])
-                dist = dist_two_vectors(node_loc[np][1:4], datapoints[nd])
+                nnod = int(elems[ne][2])
+                dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
                 if dist < min_dist:
                     ne_min = ne
                     min_dist = dist
+            #if(ld_temp[nd] == 0):
             ld[nd] = ne_min
+            #if(ld_temp[nd] !=0 ):
+            #    print('for nd might update',nd)
+            #    print(ld[nd],ld_temp[nd])
+            #    #ld[nd] = ld_temp[nd]
+
+
+
+    return ld
+
+def reassign_data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
+    '''
+    :Function name: **data_to_mesh**
+
+    Assigns data(seed) points to the closest ending of branches in the current generation.
+
+    '''
+    #ld_temp = np.zeros(len(ld), dtype=int)
+
+    ##Ensure every element actually gets a datapoint
+    #for noelem in range(0,len(parentlist)):
+    #    ne = int(parentlist[noelem])
+    #    nnod = int(elems[ne][2])
+    #    min_dist = 1e10
+    #    for nd in range(0, len(datapoints)):
+    #        dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+    #        if dist < min_dist:
+    #            if(ld_temp[nd] == 0):
+    #                nd_min = nd
+    #                min_dist = dist
+    #        ld_temp[nd_min] = ne
+    #        #print('ne not assigned', ne, min_dist)
+    #        #if(ld[nd_min] != ne):
+    #        #    print('ne not assigned its closest datapoint',ne,min_dist)
+    #        #    print(ne not in ld)
+
+    for nd in range(0, len(datapoints)):
+        if ld[nd] != 0:
+            if (ld[nd] not in parentlist):
+                #print('needs to be redistributed',nd,ld[nd])
+                ne_min = 0
+                min_dist = 1e10
+                for noelem in range(0, len(parentlist)):
+                    ne = int(parentlist[noelem])
+                    nnod = int(elems[ne][2])
+                    dist = dist_two_vectors(node_loc[nnod][1:4], datapoints[nd])
+                    if dist < min_dist:
+                        ne_min = ne
+                        min_dist = dist
+            #if(ld_temp[nd] == 0):
+                ld[nd] = ne_min
+            #if(ld_temp[nd] !=0 ):
+            #    print('for nd might update',nd)
+            #    print(ld[nd],ld_temp[nd])
+            #    #ld[nd] = ld_temp[nd]
+
+
 
     return ld
 
 
 def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, insertion_y, umb_artery_distance,
                             umb_artery_length, datapoints):
-    # Creating a basis for a branching geometry which assumes a simple umbilical cord structure, with two arteries,
+    """
+    :Function name: **umbilical_seed_geometry**
 
-    # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
+    This function defines a very simple model of the umbilical cord insertion. It has a single inlet ('dummy')
+    artery, which branches into two and then branches again on the chorionic surface to allow a seed geometry for
+    growing a placental tree if no imaging data is available.
+
+    :inputs:
+        - volume: The volume of the ellipsoid defining the placenta
+        - thickness: The thickness of the placenta (z-axis thickness)
+        - ellipticity: The ratio of y to x dimensions of the placenta
+        - insertion_x: The x-coordinate of the umbilical cord insertion (x=0 is at the centre of the placenta)
+        - insertion_y: The y-coordinate of the umbilical cord insertion (y=0 is at the centre of the placenta)
+        - umb_artery_distance: The distance between the two umbilical arteries
+        - umb_artery_length: The length of the portion of the umbilical artery that is being modelled
+        - datapoints: A set of data points distributed over the chorionic surface
+
+    :return:
+        A geometric structure consisting of 'nodes', 'elems', 'elem_up', and 'elem_down'
+            - nodes: x,y,z coordinates of node location
+            - elems: Elements connecting the nodes
+            - elem_up and elem_down: The connectivity matrices for elements listing up and downstream elements for each
+    """
+
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']

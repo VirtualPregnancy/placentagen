@@ -15,15 +15,18 @@ from . import pg_utilities
 
 
 def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
-    """ Generates equally spaced data points in an ellipsoid.
+    """
+    :Function name: **equispaced_data_in_ellipsoid**
 
-    Inputs:
-       - n: number of data points which we aim to generate
-       - volume: volume of ellipsoid
-       - thickness: placental thickness (z-dimension)
-       - ellipticity: ratio of y to x axis dimensions
+    Generates equally spaced data points in an ellipsoid.
 
-    Returns:
+    :inputs:
+       - n: Number of data points which we aim to generate
+       - volume: Volume of ellipsoid
+       - thickness: Placental thickness (z-dimension)
+       - ellipticity: Ratio of y to x axis dimensions
+
+    return:
        - Edata: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
 
     A way you might want to use me is:
@@ -34,14 +37,10 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     >>> ellipticity = 1.1
     >>> equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity)
 
-   This will return 100 data points in an ellipse with z-axis thickness 3, volume 10, and with the y-axis dimension 1.1 times the x-axis dimension.
+    This will return 100 data points in an ellipse with z-axis thickness 3, volume 10, and with the y-axis dimension 1.1 times the x-axis dimension.
 
     """
-    # Generates equally spaced data points in an ellipsoid with the following inputs
-    # n=number of data points which we aim to generate
-    # volume=volume of ellipsoid
-    # thickness = placental thickness (z-dimension)
-    # ellipticity = ratio of y to x axis dimensions
+
     data_spacing = (volume / n) ** (1.0 / 3.0)
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -69,32 +68,36 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     data_coords = np.vstack(np.meshgrid(x_coord, y_coord, z_coord)).reshape(3, -1).T
 
     # Store nodes that lie within ellipsoid
-    Edata = np.zeros((nd_x * nd_y * nd_z, 3))
+    datapoints = np.zeros((nd_x * nd_y * nd_z, 3))
     for i in range(len(data_coords)):  # Loop through grid
         coord_check = pg_utilities.check_in_ellipsoid(data_coords[i][0], data_coords[i][1], data_coords[i][2], x_radius,
                                                       y_radius, z_radius)
 
         if coord_check is True:  # Has to be strictly in the ellipsoid
-            Edata[num_data, :] = data_coords[i, :]  # add to data array
+            datapoints[num_data, :] = data_coords[i, :]  # add to data array
             num_data = num_data + 1
-    Edata.resize(num_data, 3)  # resize data array to correct size
+    datapoints.resize(num_data, 3)  # resize data array to correct size
 
-    print('Data points within ellipsoid allocated. Total = ' + str(len(Edata)))
+    print('Data points within ellipsoid allocated. Total = ' + str(len(datapoints)))
 
-    return Edata
+    return datapoints
 
 
 def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
-    """ Generates equally spaced data points on the positive z-surface of an ellipsoid
+    """
 
-    Inputs:
-       - n: number of data points which we aim to generate
-       - volume: volume of ellipsoid
-       - thickness: placental thickness (z-dimension)
-       - ellipticity: ratio of y to x axis dimensions
+    :Function name: **uniform_data_on_ellipsoid**
 
-    Returns:
-       - chorion_data: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
+    Generates equally spaced data points on the positive z-surface of an ellipsoid
+
+    :inputs:
+        - n: number of data points which we aim to generate
+        - volume: volume of ellipsoid
+        - thickness: placental thickness (z-dimension)
+        - ellipticity: ratio of y to x axis dimensions
+
+    :return:
+        - chorion_data: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
 
     A way you might want to use me is:
 
@@ -104,7 +107,8 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     >>> ellipticity = 1.1
     >>> equispaced_data_on_ellipsoid(n, volume, thickness, ellipticity)
 
-   This will return 100 data points on the positive z-surface ellipse with z-axis thickness 3, volume 10, and with the y-axis dimension 1.1 times the x-axis dimension.
+    This will return 100 data points on the positive z-surface ellipse with z-axis thickness 3, volume 10,
+    and with the y-axis dimension 1.1 times the x-axis dimension.
 
     """
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
