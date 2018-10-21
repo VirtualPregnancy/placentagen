@@ -280,7 +280,7 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
 
     for nt in range(0, num_terminals):
         coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
-        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], coord_terminal)
+        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8], coord_terminal)
         terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
         terminal_elems[nt] = nelem  # record what element the terminal is in
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
