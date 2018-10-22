@@ -393,6 +393,9 @@ def import_exnode_tree(filename):
                     if not "index" in line:
                         count_atribute = count_atribute + 1
                         node_array[count_node - 1][count_atribute] = float(str.split(line)[0])
+
+    if(count_atribute < 7):
+        node_array = np.delete(node_array, np.s_[count_atribute+1:7], axis=1)
     total_nodes = count_node
     return {'total_nodes': total_nodes, 'nodes': node_array}
 
