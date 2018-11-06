@@ -14,7 +14,7 @@ from numpy import matlib
 
 
 def calc_terminal_branch(node_loc, elems):
-    """ Generates a list of terminal nodes associated with a branching geometry
+    """ Generates a list of terminal nodes associated with a branching geometry based on element connectivity.
 
     Inputs:
        - node_loc: array of coordinates (locations) of nodes of tree branches
