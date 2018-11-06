@@ -1329,8 +1329,9 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
         prop = 1 - (1 - circle_prop) * abs(2.0 * (zNodeIdx - 1) / float(numberOfZElements * (numberOfNodesXi - 1)) -
                                            1.0)
         sign = np.sign(2.0 * (zNodeIdx - 1) / float(numberOfZElements * (numberOfNodesXi - 1)) - 1.0)
+        #This is the z height associated with this prop
         zPosition = sign * ellipsoidRadius_z * np.sqrt(1 - prop ** 2)
-
+        #This is the radius of the ellipse that lies in the ellipsoid at this z-height
         new_x_radius = ellipsoidRadius_x * np.sqrt(ellipsoidRadius_z ** 2.0 - zPosition ** 2.0) \
                        / (ellipsoidRadius_z)
         new_y_radius = ellipsoidRadius_y * np.sqrt(ellipsoidRadius_z ** 2.0 - zPosition ** 2.0) \
@@ -1340,6 +1341,9 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
 
         squareSize_x = squareSizeRatio * new_x_radius * np.cos(angle_theta)
         squareSize_y = squareSizeRatio * new_y_radius * np.sin(angle_theta)
+
+        #squareSize_x = squareSizeRatio * ellipsoidRadius_x * np.cos(angle_theta)
+        #squareSize_y = squareSizeRatio *  ellipsoidRadius_y * np.sin(angle_theta)
 
         # Handle the arm blocks first
         previousBlock = 4
@@ -1421,17 +1425,18 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
                             xPosition = arm_x - arm_no * (arm_x - sq_x)
                             yPosition = arm_y - arm_no * (arm_y - sq_y)
 
-                        if (zNodeIdx == 1):
+                        if (zNodeIdx == 1):#project to top and bottom surface
                             zPosition = -ellipsoidRadius_z * np.sqrt(
                                 1 - xPosition ** 2 / ellipsoidRadius_x ** 2 - yPosition ** 2 / ellipsoidRadius_y ** 2)
                             num_surface_nodes = num_surface_nodes + 1
                             surface_nodes[num_surface_nodes] = nodeNumber
-                        elif (zNodeIdx == numberOfZElements * (numberOfNodesXi - 1) + 1):
+                        elif (zNodeIdx == numberOfZElements * (numberOfNodesXi - 1) + 1): #project to top and bottom
+                            # surface
                             zPosition = ellipsoidRadius_z * np.sqrt(
                                 1 - xPosition ** 2 / ellipsoidRadius_x ** 2 - yPosition ** 2 / ellipsoidRadius_y ** 2)
                             num_surface_nodes = num_surface_nodes + 1
                             surface_nodes[num_surface_nodes] = nodeNumber
-                        elif(yNodeIdx == 1):
+                        elif(yNodeIdx == 1): #outer ring
                             num_surface_nodes = num_surface_nodes + 1
                             surface_nodes[num_surface_nodes] = nodeNumber
                         nodelist[nodeNumber-1] = nodeNumber
@@ -1473,6 +1478,46 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
                         print('      Node        %d:' % (nodeNumber))
                         print('         Position         = [ %.2f, %.2f, %.2f ]' % (xPosition, yPosition, zPosition))
 
+    #As we project the top and bottom rows to the surface of the ellipsoid, uneven nodal distribution can impact on
+    # mesh quality so we resistribute the nodes immediately underneath the surface to improve quality metrics.
+    second_rows = [2,numberOfZElements * (numberOfNodesXi - 1)]
+    for zNodeIdx in second_rows:
+        # Handle the arm blocks first
+        previousBlock = 4
+        for blockIdx in range(1, 5):
+            # print('Block which ' + str(blockIdx) + ' ' + str(zNodeIdx))
+            for yNodeIdx in range(1, numberOfArmElements * (numberOfNodesXi - 1) + 2):
+                for xNodeIdx in range(1, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                    nodeNumber = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx - 1) * numberOfNodesPerLength
+                    nodeNumber_above = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx -1 - 1) * numberOfNodesPerLength
+                    nodeNumber_below = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx + 1 - 1) * numberOfNodesPerLength
+                    # nodeDomain = decomposition.NodeDomainGet(nodeNumber, 1)
+                    if (nodeNumber > numberOfNodes + 1):
+                        print(nodeNumber)
+                    else:
+                        zPosition_above = node_array[nodeNumber_above - 1][3]
+                        zPosition_below = node_array[nodeNumber_below - 1][3]
+                        zPosition = (zPosition_above + zPosition_below)/2.0
+                        node_array[nodeNumber - 1][3] = zPosition
+        # Now handle square
+        for yNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+            for xNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                nodeNumber = 4 * numberOfNodesPerBlock + (xNodeIdx - 1) + (yNodeIdx - 2) * (
+                            numberOfSquareElements * (numberOfNodesXi - 1) - 1) + \
+                             (zNodeIdx - 1) * numberOfNodesPerLength
+                if (nodeNumber > numberOfNodes + 1):
+                    print(nodeNumber)
+                else:
+                    zPosition_above = node_array[nodeNumber_above - 1][3]
+                    zPosition_below = node_array[nodeNumber_below - 1][3]
+                    zPosition = (zPosition_above + zPosition_below) / 2.0
+                    node_array[nodeNumber - 1][3] = zPosition
 
     surface_nodes = np.unique(surface_nodes)
     nzid = np.nonzero(surface_nodes)
