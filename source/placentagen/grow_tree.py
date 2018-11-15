@@ -13,7 +13,7 @@ from . import analyse_tree
 
 
 def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
-                    datapoints, initial_geom, check_in_ellipsoid):
+                    datapoints, initial_geom):
     '''
     :Function name: **grow_tree_large**
 
@@ -46,7 +46,10 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
             - tb_loc: The location of that datapoint
 
     '''
-
+    if (volume==0) or (thickness==0) or (ellipticity==0):
+        check_in_ellipsoid = 0
+    else:
+        check_in_ellipsoid = 1
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
     if(check_in_ellipsoid):
         radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
@@ -54,10 +57,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
         x_radius = radii['x_radius']
         y_radius = radii['y_radius']
 
-        #Monika
-        print('z_radius',z_radius)
-        print('x_radius', x_radius)
-        print('y_radius', y_radius)
+        print('z radius ' + str(z_radius))
+        print('x_radius ' + str(x_radius))
+        print('y_radius ' + str(y_radius))
 
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
@@ -73,10 +75,10 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     num_nodes_old = len(initial_geom["nodes"])
     num_elems_new = num_elems_old + total_estimated
     num_nodes_new = num_nodes_old + total_estimated
-    print('num_elems_old', num_elems_old)  # Monika
-    print('num_nodes_old', num_nodes_old)  # Monika
-    print('num_elems_new', num_elems_new)  # Monika
-    print('num_nodes_new', num_nodes_new)  # Monika
+    print('Number of existing elements ' + str(num_elems_old))
+    print('Number of existing nodes ' + str(num_nodes_old))
+    print('Expected number of elements after growing ', str(num_elems_new))
+    print('Expected number of nodes after growing ', str(num_nodes_new))
 
     original_data_length = len(datapoints)
     # Pre-allocation of data arrays
