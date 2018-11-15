@@ -13,7 +13,7 @@ from . import analyse_tree
 
 
 def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
-                    datapoints, initial_geom):
+                    datapoints, initial_geom, check_in_ellipsoid):
     '''
     :Function name: **grow_tree_large**
 
@@ -48,10 +48,16 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     '''
 
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
-    z_radius = radii['z_radius']
-    x_radius = radii['x_radius']
-    y_radius = radii['y_radius']
+    if(check_in_ellipsoid):
+        radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+        z_radius = radii['z_radius']
+        x_radius = radii['x_radius']
+        y_radius = radii['y_radius']
+
+        #Monika
+        print('z_radius',z_radius)
+        print('x_radius', x_radius)
+        print('y_radius', y_radius)
 
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
@@ -60,11 +66,18 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
+
+    print('total_estimated', total_estimated) #Monika
     # Define the total number of nodes and elements prior to growing, plus the new number expected
     num_elems_old = len(initial_geom["elems"])
     num_nodes_old = len(initial_geom["nodes"])
     num_elems_new = num_elems_old + total_estimated
     num_nodes_new = num_nodes_old + total_estimated
+    print('num_elems_old', num_elems_old)  # Monika
+    print('num_nodes_old', num_nodes_old)  # Monika
+    print('num_elems_new', num_elems_new)  # Monika
+    print('num_nodes_new', num_nodes_new)  # Monika
+
     original_data_length = len(datapoints)
     # Pre-allocation of data arrays
     # elem_directions = np.zeros((num_elems_new, 3))
@@ -168,23 +181,25 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         # calculate location of end node
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                             (com - start_node_loc))
-                        #Check end node is in the ellipsoid
-                        in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
+
+                        if(check_in_ellipsoid):
+                            #Check end node is in the ellipsoid
+                            in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
                                                                        x_radius, y_radius, z_radius)
 
-                        if(not in_ellipsoid):
-                            branch = False #This should be the last branch here.
-                            count = 0
-                            while(not in_ellipsoid and count <=10):
-                                length_new = 0.95*length_new
-                                # calculate location of end node
-                                end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
-                                    (com - start_node_loc))
-                                # Check end node is in the ellipsoid
-                                in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
-                                                                               end_node_loc[2],
-                                                                            x_radius, y_radius, z_radius)
-                                count = count + 1
+                            if(not in_ellipsoid):
+                                branch = False #This should be the last branch here.
+                                count = 0
+                                while(not in_ellipsoid and count <=10):
+                                    length_new = 0.95*length_new
+                                    # calculate location of end node
+                                    end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
+                                        (com - start_node_loc))
+                                    # Check end node is in the ellipsoid
+                                    in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
+                                                                                   end_node_loc[2],
+                                                                                x_radius, y_radius, z_radius)
+                                    count = count + 1
 
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
@@ -257,7 +272,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         remaining_data = remaining_data - 1
                         tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
                     else:
-                        print('Warning: No satapoint assigned to element: ' + str(ne))
+                        print('Warning: No datapoint assigned to element: ' + str(ne))
                     numtb = numtb + 1
 
 
@@ -940,10 +955,10 @@ def dist_two_vectors(vector1, vector2):
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
-    parentlist = np.zeros(1000, dtype=int)
-    ne_old = np.zeros(1000, dtype=int)
-    ntemp_list = np.zeros(1000, dtype=int)
-    ne_temp = np.zeros(1000, dtype=int)
+    parentlist = np.zeros(2000, dtype=int)
+    ne_old = np.zeros(2000, dtype=int)
+    ntemp_list = np.zeros(2000, dtype=int)
+    ne_temp = np.zeros(2000, dtype=int)
 
     NT_BNS = 1
     ne_old[0] = ne_parent
@@ -1257,3 +1272,7 @@ def mesh_com(ld_val, ld, datapoints):
         com = com / dat
 
     return com
+
+def element_connectivity_1D(node_loc, elems):
+    elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
+    return {'elem_up': elem_connectivity['elem_up'], 'elem_down': elem_connectivity['elem_down']}
