@@ -595,7 +595,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
 
 def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_radius, volume, thickness, ellipticity,
                          start_elem):
-    """ Calculate total volume and diameter of branches in each samp_grid_el 
+    """ Calculate total volume and diameter of branches in each sampling grid element
 
     Inputs are:
     - rectangular_mesh: rectangular sampling grid 
@@ -690,8 +690,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
             continue
         elif not node1in or not node2in:
             print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
-            print('The first node ' + str(node1) + ' is ' + srt(node1in) + ' (True means inside).')
-            print('The second node ' + str(node2) + ' is ' + srt(node2in) + ' (True means inside).')
+            print('The first node ' + str(node1) + ' is ' + str(node1in) + ' (True means inside).')
+            print('The second node ' + str(node2) + ' is ' + str(node2in) + ' (True means inside).')
             print('Skipping this element from analysis')
             continue
 

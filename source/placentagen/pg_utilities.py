@@ -34,7 +34,7 @@ def z_from_xy(x, y, x_radius, y_radius, z_radius):
 
 def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     in_ellipsoid = False  # default to false
-    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if coord_check < 1.0:
         in_ellipsoid = True
 
@@ -44,7 +44,7 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     zero_tol = 1e-10
     on_ellipsoid = False  # default to false
-    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if abs(coord_check - 1.0) < zero_tol:
         on_ellipsoid = True
 
