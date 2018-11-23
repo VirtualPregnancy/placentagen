@@ -744,9 +744,11 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
 
     percent_outside = volume_outside_ellipsoid / np.sum(total_vol_samp_gr) * 100.0
 
+    total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
+    sum_branch_ml = np.sum(vol_each_br)/1000.0
     print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
-    print('Total branch volume analysed ' + str(volume_outside_ellipsoid + np.sum(total_vol_samp_gr)) + ' (' + str(
-        np.sum(vol_each_br)) + ')')
+    print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
+        sum_branch_ml) + ')')
 
     return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
 
