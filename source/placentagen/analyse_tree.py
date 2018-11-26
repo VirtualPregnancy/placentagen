@@ -394,7 +394,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc, volume, t
       >>> term_diameter_in_grid[0]: 0.08003529"""
 
     # Define the resolution of block for analysis
-    num_points_xyz = 8
+    num_points_xyz = 6
     # number of terminals to assess
     num_terminals = terminal_list['total_terminals']
 
@@ -635,8 +635,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     """
 
     # Define the resolution of cylinder for analysis
-    num_points_xy = 8
-    num_points_z = 8
+    num_points_xy = 6
+    num_points_z = 6
     # Define information about sampling grid required to place data points in correct locations
     total_sample_elems = rectangular_mesh['total_elems']
     gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
@@ -746,9 +746,18 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
 
     total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
     sum_branch_ml = np.sum(vol_each_br)/1000.0
+
+    vol2big=0.0
+    for i in range(0,len(total_vol_samp_gr)):
+        if (total_vol_samp_gr[i] > 8.0):
+            vol2big = vol2big + total_vol_samp_gr[i]
+            print(i,total_vol_samp_gr[i])
+
+    print(vol2big/1000.0)
     print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
     print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
         sum_branch_ml) + ')')
+
 
     return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
 
@@ -787,7 +796,7 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
     # and then to three generations of mature intermediate villi each with ~10 terminal conduits
     num_ints = 1
     term_vill_volume = 0.0
-    for i in range(0, 4):
+    for i in range(0, num_int_gens + 1):
         num_ints = num_ints * 2.0
         vol_ints = num_ints * np.pi * len_int * rad_int ** 2.0
         if i > 0:

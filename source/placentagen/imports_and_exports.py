@@ -289,7 +289,7 @@ def export_exelem_3d_linear_list(data, list, groupname, filename):
     f.close()
 
 def export_exfield_3d_linear(data, groupname, fieldname, filename):
-    # Exports element locations to exelem format
+    # Exports element fields to exelem format
     # data = array of data
     # groupname = what you want your data to be called in cmgui
     # filename = file name without extension
@@ -316,7 +316,7 @@ def export_exfield_3d_linear(data, groupname, fieldname, filename):
     f.close()
 
 def export_exfield_3d_linear_list(data, list, groupname, fieldname, filename):
-    # Exports element locations to exelem format
+    # Exports element fields to exelem format when data is defined at a specified list of nodes
     # data = array of data
     # groupname = what you want your data to be called in cmgui
     # filename = file name without extension
