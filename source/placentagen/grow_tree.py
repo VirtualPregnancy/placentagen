@@ -732,7 +732,7 @@ def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file
         for ne in range(0,len(elems)):
             if(strahler[ne] == 1):
                 nnod = elems[ne][2]
-                f.write("%s %s\n" % (node_loc[nnod][1], node_loc[nnod][2]))
+                f.write("%s %s %s\n" % (node_loc[nnod][1], node_loc[nnod][2],ne+1))
         f.close()
 
 

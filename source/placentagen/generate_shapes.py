@@ -637,16 +637,18 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     stem_coor = stem_xy.readlines()  # readlines
     startLines = range(0, len(stem_coor))
 
-    for i in range(len(stem_coor)):
-        stem_coor[i] = stem_coor[i].split()
-    stem_xyList = []
-    for i in startLines:
-        node = []
-        node.append(float(stem_coor[i][0]))  # x coor of stem villi
-        node.append((float(stem_coor[i][1])))  # y coor of stem villi
-        stem_xyList.append(node)
-    stem_xy.close()
-
+    #for i in range(len(stem_coor)):
+    #    stem_coor[i] = stem_coor[i].split()
+    #stem_xyList = []
+    #stem_elemList = []
+    #for i in startLines:
+    #    node = []
+    #    node.append(float(stem_coor[i][0]))  # x coor of stem villi
+    #    node.append((float(stem_coor[i][1])))  # y coor of stem villi
+    #    stem_xyList.append(node)
+    #    stem_elemList.append(stem_coor[i][2]+1)
+    #stem_xy.close()
+    stem_xyList = imports_and_exports.import_stemxy(stem_file)['stem_xy']
     print('Total stem read = '+ str(len(stem_xyList)))
 
     vessel_mapped_stem = stem_xyList  # this is the x,y location where we want to put spiral artery

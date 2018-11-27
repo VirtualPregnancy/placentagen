@@ -367,6 +367,27 @@ def export_exfield_1d_linear(data, groupname, fieldname, filename):
                 data[x], data[x]))
     f.close()
 
+def import_stemxy(stem_file):
+
+    # reading in the stem vessel to map the spiral artery location
+    stem_xy = open(stem_file, 'r')
+    stem_coor = stem_xy.readlines()  # readlines
+    startLines = range(0, len(stem_coor))
+
+    for i in range(len(stem_coor)):
+        stem_coor[i] = stem_coor[i].split()
+    stem_xyList = []
+    stem_elemList = []
+    for i in startLines:
+        node = []
+        node.append(float(stem_coor[i][0]))  # x coor of stem villi
+        node.append((float(stem_coor[i][1])))  # y coor of stem villi
+        stem_xyList.append(node)
+        elem = int(stem_coor[i][2])-1
+        stem_elemList.append(elem)
+    stem_xy.close()
+
+    return {'stem_xy':stem_xyList, 'elem':stem_elemList}
 
 def import_exnode_tree(filename):
     # count nodes for check of correct number for the user, plus use in future arrays

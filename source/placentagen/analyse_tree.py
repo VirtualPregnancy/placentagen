@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 from . import pg_utilities
+from . import imports_and_exports
 import sys
 from numpy import matlib
 
@@ -168,6 +169,47 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
         radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
 
     return radius
+
+
+def define_radius_by_order_stem(node_loc, elems, system, filename_stem, inlet_radius, radius_ratio):
+    """ This function defines radii in a branching tree by 'order' of the vessel
+
+     Inputs are:
+     - node_loc: The nodes in the branching tree
+     - elems: The elements in the branching tree
+     - system: 'strahler','horsfield' or 'generation' to define vessel order
+     - filename_stem: filename that includes list of stem villi location and element number
+     - inlet_radius: the radius of your inlet vessel
+     - radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
+
+     Returns:
+     -radius of each branch
+
+     A way you might want to use me is:
+
+    """
+
+    num_elems = len(elems)
+    radius = np.zeros(num_elems)  # initialise radius array
+
+    stem_elems = imports_and_exports.import_stemxy(filename_stem)['elem']
+    # Evaluate orders in the system
+    orders = evaluate_orders(node_loc, elems)
+    elem_order = orders[system]
+
+    ne = stem_elems[0]
+    n_max_ord = elem_order[ne]
+    radius[ne] = inlet_radius
+
+    for ne in range(0, num_elems):
+        radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
+
+    for stem in range(0,len(stem_elems)):
+        radius[stem_elems[stem]] = inlet_radius
+        #print(elem_order[stem_elems[stem]])
+
+    return radius
+
 
 
 def tree_statistics(node_loc, elems, radius, orders):
@@ -747,13 +789,6 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
     sum_branch_ml = np.sum(vol_each_br)/1000.0
 
-    vol2big=0.0
-    for i in range(0,len(total_vol_samp_gr)):
-        if (total_vol_samp_gr[i] > 8.0):
-            vol2big = vol2big + total_vol_samp_gr[i]
-            print(i,total_vol_samp_gr[i])
-
-    print(vol2big/1000.0)
     print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
     print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
         sum_branch_ml) + ')')
@@ -762,7 +797,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
 
 
-def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute):
+def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute,
+                            smallest_radius):
     """ This function calculates the average volume of a terminal villous based on structural
     characteristics measured in the literature.
 
@@ -773,6 +809,7 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
        - rad_int: Radius of a typical intermediate villous
        - len_convolute: Length of a typical terminal convolute
        - rad_convolute: Radius of a typical terminal convolute
+       - smallest_radius: Minimum radius of a branch in your villoous tree
 
     Returns:
        - term_vill_volume: Typical volume of a terminal villous
@@ -786,7 +823,8 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
     >>> rad_int = 0.03 #mm
     >>> len_convolute = 3.0 #mm
     >>> rad_convolute = 0.025 #mm
-    >>> terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convulute,rad_convolute)
+    >>> smallest radius = 0.03 mm
+    >>> terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convulute,rad_convolute,smallest_radius)
 
     This will take the normal average data from Leiser et al (1990, IBBN:3805554680) and calculate
     average volume of terminal villi to be ~1.77 mm^3
@@ -796,16 +834,28 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
     # and then to three generations of mature intermediate villi each with ~10 terminal conduits
     num_ints = 1
     term_vill_volume = 0.0
-    for i in range(0, num_int_gens + 1):
+    term_vill_diameter = 0.0
+    sum_vol_ints = 0.0
+    sum_vol_conv = 0.0
+    radius_step = (smallest_radius - rad_int)/(num_int_gens)
+    for i in range(0, num_int_gens + 2):
         num_ints = num_ints * 2.0
-        vol_ints = num_ints * np.pi * len_int * rad_int ** 2.0
+        vol_ints = num_ints * np.pi * len_int * (smallest_radius - i*radius_step) ** 2.0
+        diameter_ints = vol_ints * 2 * rad_int
+        sum_vol_ints = sum_vol_ints + vol_ints
         if i > 0:
             vol_convolutes = num_ints * num_convolutes * np.pi * len_convolute * rad_convolute ** 2.0
+            diameter_convolutes = vol_convolutes* 2 * rad_convolute
+            sum_vol_conv = sum_vol_conv + vol_convolutes
         else:
             vol_convolutes = 0.0
+            diameter_convolutes = 0.0
         term_vill_volume = term_vill_volume + vol_ints + vol_convolutes
+        term_vill_diameter = term_vill_diameter + diameter_ints + diameter_convolutes
 
-    return term_vill_volume
+    proportion_terminal = sum_vol_conv/(sum_vol_conv+sum_vol_ints)
+
+    return {'volume': term_vill_volume, 'diameter': term_vill_diameter, 'propterm': proportion_terminal}
 
 
 def tissue_vol_in_samp_gr(term_vol_in_grid, br_vol_in_grid):
@@ -931,7 +981,7 @@ def terminal_villous_diameter(num_int_gens, num_convolutes, len_int, rad_int, le
     """
     num_ints = 1
     term_vill_diameter = 0.0
-    for i in range(0, 4):
+    for i in range(0, num_int_gens+2):
         num_ints = num_ints * 2.0
         diameter_ints = num_ints * (np.pi * len_int * rad_int ** 2.0) * 2 * rad_int
         if i > 0:
