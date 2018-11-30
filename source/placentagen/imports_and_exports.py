@@ -33,6 +33,26 @@ def export_ex_coords(data, groupname, filename, type):
             f.write("          %s\n" % data[x][2])
     f.close()
 
+def export_ex_field(data, groupname, fieldname, filename, type):
+    # Exports coordinates to exnode or exdata format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    # type = exnode or exdata
+    # first entry
+    data_num = len(data)
+    filename = filename + '.' + type
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, coordinate, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write(" %s.  Value index=1, #Derivatives=0\n" %fieldname)
+
+    for x in range(0, data_num):
+        f.write("Node:  "        "%s\n" % (x + 1))
+        f.write("          %s\n" % data[x])
+    f.close()
+
 
 def export_exelem_1d(data, groupname, filename):
     # Exports element locations to exelem format
@@ -734,5 +754,36 @@ def export_exelem_3d_quadratic(data, groupname, filename):
                 int(data[x][6] + 1), int(data[x][7] + 1), int(data[x][8] + 1), int(data[x][9] + 1), int(data[x][10] + 1), int(data[x][11] + 1), int(data[x][12] + 1), int(data[x][13] + 1), int(data[x][14] + 1), int(data[x][15] + 1), int(data[x][16] + 1), int(data[x][17] + 1), int(data[x][18] + 1), int(data[x][19] + 1), int(data[x][20] + 1), int(data[x][21] + 1), int(data[x][22] + 1), int(data[x][23] + 1), int(data[x][24] + 1), int(data[x][25] + 1), int(data[x][26] + 1), int(data[x][27] + 1)))
         f.write("Scale factors:\n")
         f.write("1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00   1.0000000000000000E+00\n")
+
+    f.close()
+
+def export_exfield_3d_quadratic(data, groupname, fieldname, filename):
+    # Exports element fields to exelem format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    data_num = len(data)
+    filename = filename + '.exelem'
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" Shape. Dimension=3 line*line*line\n")
+    f.write(" #Scale factor sets= 0\n")
+    f.write(" #Nodes=           0\n")
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, field, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write("   %s.  l.Lagrange*l.Lagrange*l.Lagrange, no modify, grid based.\n" % fieldname)
+    f.write("   #xi1=1 \n")
+    f.write("   #xi2=1 \n")
+    f.write("   #xi3=1 \n")
+    for x in range(0, data_num):
+        f.write(" Element:            %s 0 0\n" % int(x + 1))
+        f.write("   Values:\n")
+        f.write(
+            "           %s       %s       %s       %s       %s       %s       %s       %s       %s       %s"
+            "       %s       %s       %s       %s       %s       %s       %s       %s       %s       %s"
+            "       %s       %s       %s       %s       %s       %s       %s\n" % (
+                data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x],
+                data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x],
+                data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
 
     f.close()

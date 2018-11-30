@@ -191,22 +191,23 @@ def define_radius_by_order_stem(node_loc, elems, system, filename_stem, inlet_ra
 
     num_elems = len(elems)
     radius = np.zeros(num_elems)  # initialise radius array
-
+    #define stem elems and connectivity
     stem_elems = imports_and_exports.import_stemxy(filename_stem)['elem']
+    elem_cnct = pg_utilities.element_connectivity_1D(node_loc, elems)
     # Evaluate orders in the system
     orders = evaluate_orders(node_loc, elems)
     elem_order = orders[system]
-
-    ne = stem_elems[0]
-    n_max_ord = elem_order[ne]
-    radius[ne] = inlet_radius
-
-    for ne in range(0, num_elems):
-        radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
-
     for stem in range(0,len(stem_elems)):
-        radius[stem_elems[stem]] = inlet_radius
-        #print(elem_order[stem_elems[stem]])
+        #For each stem need to form a list of elems that are children of that element
+        ne = stem_elems[stem]
+        elem_list = pg_utilities.group_elem_parent(ne,elem_cnct['elem_down'])
+        n_max_ord = elem_order[ne]
+        radius[ne] = inlet_radius
+
+        for noelem in range(0, len(elem_list)):
+            ne = elem_list[noelem]
+            radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
+
 
     return radius
 
@@ -436,7 +437,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc, volume, t
       >>> term_diameter_in_grid[0]: 0.08003529"""
 
     # Define the resolution of block for analysis
-    num_points_xyz = 6
+    num_points_xyz = 8
     # number of terminals to assess
     num_terminals = terminal_list['total_terminals']
 
@@ -677,8 +678,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     """
 
     # Define the resolution of cylinder for analysis
-    num_points_xy = 6
-    num_points_z = 6
+    num_points_xy = 8
+    num_points_z = 8
     # Define information about sampling grid required to place data points in correct locations
     total_sample_elems = rectangular_mesh['total_elems']
     gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
@@ -915,13 +916,13 @@ def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol):
     return vol_frac
 
 
-def conductivity_samp_gr(vol_frac, weighted_diameter, non_empties):
+def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
     """Calculate conductivity of sampling grid element where villous branches are located
 
     Inputs are: 
     - vol_frac: tissue volume fraction of sampling grid element
     - weighted_diameter: weighted diameter of sampling grid element
-    - non_empties: volume of sampling grid element where placenta tissue are located
+    - elem_list: list of elements to assess
 
     Return:
     - conductivity: conductivity of sampling grid element where the placental tissue are located
@@ -939,8 +940,8 @@ def conductivity_samp_gr(vol_frac, weighted_diameter, non_empties):
     >>> conductivity: 7.20937313e-06"""
     max_cond = 0.52
     conductivity = np.zeros(len(vol_frac))
-    for i in range(0, len(non_empties)):
-        ne = non_empties[i]
+    for i in range(0, len(elem_list)):
+        ne = elem_list[i]
         if vol_frac[ne] != 0.0:
             conductivity[ne] = weighted_diameter[ne] ** 2 * (1 - vol_frac[ne]) ** 3 / (180.0 * vol_frac[ne] ** 2)
         elif vol_frac[ne] == 0.0:  # see mabelles thesis
@@ -1050,6 +1051,21 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
         mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
         # print(mesh_node_elems[nt])
     return mesh_node_elems
+
+def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, export, exportfile):
+    data_elems = np.zeros(len(datapoints), dtype=int)
+    data_fields = np.zeros((len(datapoints),2))
+    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+    for nt in range(0,len(datapoints)):
+        data_elems[nt] = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
+                                               datapoints[nt][:])
+        data_fields[nt,0]= field1[data_elems[nt]]
+        data_fields[nt,1] = field2[data_elems[nt]]
+
+
+    return data_fields
+
+
 
 
 def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects, conductivity, porosity, export, exportfile):

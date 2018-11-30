@@ -42,6 +42,7 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     """
 
     data_spacing = (volume / n) ** (1.0 / 3.0)
+    print('Generating data ' + str(data_spacing) + ' apart')
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
@@ -59,10 +60,12 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     nd_x = int(nd_x)
     nd_y = int(nd_y)
     nd_z = int(nd_z)
+
     # Set up edge node coordinates
     x_coord = np.linspace(-x_radius - data_spacing / 2.0, x_radius + data_spacing / 2.0, nd_x)
     y_coord = np.linspace(-y_radius - data_spacing / 2.0, y_radius + data_spacing / 2.0, nd_y)
     z_coord = np.linspace(-z_radius - data_spacing / 2.0, z_radius + data_spacing / 2.0, nd_z)
+
 
     # Use these vectors to form a unifromly spaced grid
     data_coords = np.vstack(np.meshgrid(x_coord, y_coord, z_coord)).reshape(3, -1).T
