@@ -1052,15 +1052,16 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
         # print(mesh_node_elems[nt])
     return mesh_node_elems
 
-def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, export, exportfile):
+def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, field3):
     data_elems = np.zeros(len(datapoints), dtype=int)
-    data_fields = np.zeros((len(datapoints),2))
+    data_fields = np.zeros((len(datapoints),3))
     gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
     for nt in range(0,len(datapoints)):
         data_elems[nt] = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
                                                datapoints[nt][:])
         data_fields[nt,0]= field1[data_elems[nt]]
         data_fields[nt,1] = field2[data_elems[nt]]
+        data_fields[nt, 2] = field3[data_elems[nt]]
 
 
     return data_fields

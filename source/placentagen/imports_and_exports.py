@@ -779,9 +779,7 @@ def export_exfield_3d_quadratic(data, groupname, fieldname, filename):
         f.write(" Element:            %s 0 0\n" % int(x + 1))
         f.write("   Values:\n")
         f.write(
-            "           %s       %s       %s       %s       %s       %s       %s       %s       %s       %s"
-            "       %s       %s       %s       %s       %s       %s       %s       %s       %s       %s"
-            "       %s       %s       %s       %s       %s       %s       %s\n" % (
+            "      %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s    %s\n" % (
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x],
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x], data[x],
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
