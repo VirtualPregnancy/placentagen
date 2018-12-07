@@ -3,6 +3,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 
 from . import pg_utilities
+from . import imports_and_exports
 
 """
 .. module:: generate_shapes
@@ -595,7 +596,7 @@ def identify_node_from_coord(nodes, filename):
     return i
 
 
-def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thickness, ellipticity):
+def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, sa_radius, dv_radius, volume,thickness, ellipticity):
     """Generates array of spiral artery nodes and decidual vein nodes. Spiral artery nodes are mapped with stem villi.
       
        Inputs:
@@ -609,8 +610,6 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
          - vesselnode: array of both spiral and decidual nodes
          - surfnode_ex_vessel: array of surface node excluding vessel nodes
     """
-    sa_radius = 3.7/2.0
-    dv_radius = sa_radius
 
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -620,7 +619,7 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     xyList = np.zeros((len(surfacenode), 4))
     count = 0
     for i in range(0, len(surfacenode)):  # taking only x and y coordinates
-        if ellipsoid_coor[surfacenode[i] - 1, 3] > 0:  # take if upper surface nodes as this is where vessele reside
+        if ellipsoid_coor[surfacenode[i] - 1, 3] < 0:  # take if upper surface nodes as this is where vessele reside
             # location from upper surface nodes only
             xyList[count, 0] = ellipsoid_coor[surfacenode[i] - 1, 0] #node number
             xyList[count, 1] = ellipsoid_coor[surfacenode[i] - 1, 1] #x-coordinate
@@ -638,19 +637,6 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     # reading in the stem vessel to map the spiral artery location
     stem_xy = open(stem_file, 'r')
     stem_coor = stem_xy.readlines()  # readlines
-    startLines = range(0, len(stem_coor))
-
-    #for i in range(len(stem_coor)):
-    #    stem_coor[i] = stem_coor[i].split()
-    #stem_xyList = []
-    #stem_elemList = []
-    #for i in startLines:
-    #    node = []
-    #    node.append(float(stem_coor[i][0]))  # x coor of stem villi
-    #    node.append((float(stem_coor[i][1])))  # y coor of stem villi
-    #    stem_xyList.append(node)
-    #    stem_elemList.append(stem_coor[i][2]+1)
-    #stem_xy.close()
     stem_xyList = imports_and_exports.import_stemxy(stem_file)['stem_xy']
     print('Total stem read = '+ str(len(stem_xyList)))
 
@@ -718,7 +704,8 @@ def identify_vessel_node(ellipsoid_coor, surfacenode, stem_file, volume,thicknes
     decidual_array = np.resize(decidual_array, dv_nodes)
     #print('dec',decidual_array)
 
-    return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel}
+    return {'spiral_array': spiral_array, 'decidual_array': decidual_array, 'surfnode_ex_vessel': surfnode_ex_vessel,
+            'num_sa': len(stem_xyList)}
 
 
 def identify_vessel_node_test_mesh(ellipsoid_coor, surfacenode,volume, thickness, ellipticity):
