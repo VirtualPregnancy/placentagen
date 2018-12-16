@@ -732,7 +732,7 @@ def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file
         for ne in range(0,len(elems)):
             if(strahler[ne] == 1):
                 nnod = elems[ne][2]
-                f.write("%s %s\n" % (node_loc[nnod][1], node_loc[nnod][2]))
+                f.write("%s %s %s\n" % (node_loc[nnod][1], node_loc[nnod][2],ne+1))
         f.close()
 
 
@@ -947,7 +947,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     ntemp_list = np.zeros(1000, dtype=int)
     ne_temp = np.zeros(1000, dtype=int)
 
-    NT_BNS = 1
+    NT_BNS = 1 #Initialising to arbritary ne value
     ne_old[0] = ne_parent
     ne_count = 0
     ntemp_list[ne_count] = 0
@@ -977,6 +977,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     print('Grouped by parent,' + str(ne_parent) + ' No in parent list,' + str(num_in_list))
 
     return parentlist
+
 
 
 def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
