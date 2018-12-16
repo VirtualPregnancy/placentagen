@@ -882,7 +882,7 @@ def tissue_vol_in_samp_gr(term_vol_in_grid, br_vol_in_grid):
     return tissue_vol
 
 
-def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol):
+def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol,max_allowed,min_allowed):
     """Calculate volume fraction of sampling grid mesh where the villous branches are located
 
        Inputs are: 
@@ -910,10 +910,45 @@ def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol):
     for i in range(0, len(non_empties)):
         ne = non_empties[i]
         vol_frac[ne] = tissue_vol[ne] / volumes[ne]
-        if vol_frac[ne] > 1.0:
-            vol_frac[ne] = 1.0
+        if vol_frac[ne] > max_allowed:
+            vol_frac[ne] = max_allowed
+        elif vol_frac[ne] <min_allowed:
+            vol_frac[ne] = min_allowed
 
     return vol_frac
+    
+def smooth_on_sg(rectangular_mesh,non_empties,field):
+    
+    node_field = np.zeros((rectangular_mesh['total_nodes'],2))
+    
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        for j in range(1,9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            node_field[nnod][0] = node_field[nnod][0] + field[ne]
+            node_field[nnod][1] = node_field[nnod][1] + 1.0
+    
+    for i in range(0,rectangular_mesh['total_nodes']):
+        if(node_field[i][1] != 0.0 ):
+            node_field[i][0]  = node_field[i][0]/node_field[i][1]
+    
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        elem_field = 0.0
+        for j in range(1,9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            elem_field = elem_field + node_field[nnod][0]
+        elem_field = elem_field/8.0
+        field[ne] = elem_field
+            
+        
+            
+            
+            
+            
+    
+    
+    return field
 
 
 def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
