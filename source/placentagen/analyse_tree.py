@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 from . import pg_utilities
+from . import imports_and_exports
 import sys
 from numpy import matlib
 
@@ -168,6 +169,48 @@ def define_radius_by_order(node_loc, elems, system, inlet_elem, inlet_radius, ra
         radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
 
     return radius
+
+
+def define_radius_by_order_stem(node_loc, elems, system, filename_stem, inlet_radius, radius_ratio):
+    """ This function defines radii in a branching tree by 'order' of the vessel
+
+     Inputs are:
+     - node_loc: The nodes in the branching tree
+     - elems: The elements in the branching tree
+     - system: 'strahler','horsfield' or 'generation' to define vessel order
+     - filename_stem: filename that includes list of stem villi location and element number
+     - inlet_radius: the radius of your inlet vessel
+     - radius ratio: Strahler or Horsfield type ratio, defines the slope of log(order) vs log(radius)
+
+     Returns:
+     -radius of each branch
+
+     A way you might want to use me is:
+
+    """
+
+    num_elems = len(elems)
+    radius = np.zeros(num_elems)  # initialise radius array
+    #define stem elems and connectivity
+    stem_elems = imports_and_exports.import_stemxy(filename_stem)['elem']
+    elem_cnct = pg_utilities.element_connectivity_1D(node_loc, elems)
+    # Evaluate orders in the system
+    orders = evaluate_orders(node_loc, elems)
+    elem_order = orders[system]
+    for stem in range(0,len(stem_elems)):
+        #For each stem need to form a list of elems that are children of that element
+        ne = stem_elems[stem]
+        elem_list = pg_utilities.group_elem_parent(ne,elem_cnct['elem_down'])
+        n_max_ord = elem_order[ne]
+        radius[ne] = inlet_radius
+
+        for noelem in range(0, len(elem_list)):
+            ne = elem_list[noelem]
+            radius[ne] = 10. ** (np.log10(radius_ratio) * (elem_order[ne] - n_max_ord) + np.log10(inlet_radius))
+
+
+    return radius
+
 
 
 def tree_statistics(node_loc, elems, radius, orders):
@@ -595,7 +638,7 @@ def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num
 
 def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_radius, volume, thickness, ellipticity,
                          start_elem):
-    """ Calculate total volume and diameter of branches in each samp_grid_el 
+    """ Calculate total volume and diameter of branches in each sampling grid element
 
     Inputs are:
     - rectangular_mesh: rectangular sampling grid 
@@ -690,8 +733,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
             continue
         elif not node1in or not node2in:
             print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
-            print('The first node ' + str(node1) + ' is ' + srt(node1in) + ' (True means inside).')
-            print('The second node ' + str(node2) + ' is ' + srt(node2in) + ' (True means inside).')
+            print('The first node ' + str(node1) + ' is ' + str(node1in) + ' (True means inside).')
+            print('The second node ' + str(node2) + ' is ' + str(node2in) + ' (True means inside).')
             print('Skipping this element from analysis')
             continue
 
@@ -744,14 +787,19 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
 
     percent_outside = volume_outside_ellipsoid / np.sum(total_vol_samp_gr) * 100.0
 
+    total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
+    sum_branch_ml = np.sum(vol_each_br)/1000.0
+
     print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
-    print('Total branch volume analysed ' + str(volume_outside_ellipsoid + np.sum(total_vol_samp_gr)) + ' (' + str(
-        np.sum(vol_each_br)) + ')')
+    print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
+        sum_branch_ml) + ')')
+
 
     return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
 
 
-def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute):
+def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute,
+                            smallest_radius):
     """ This function calculates the average volume of a terminal villous based on structural
     characteristics measured in the literature.
 
@@ -762,6 +810,7 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
        - rad_int: Radius of a typical intermediate villous
        - len_convolute: Length of a typical terminal convolute
        - rad_convolute: Radius of a typical terminal convolute
+       - smallest_radius: Minimum radius of a branch in your villoous tree
 
     Returns:
        - term_vill_volume: Typical volume of a terminal villous
@@ -775,7 +824,8 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
     >>> rad_int = 0.03 #mm
     >>> len_convolute = 3.0 #mm
     >>> rad_convolute = 0.025 #mm
-    >>> terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convulute,rad_convolute)
+    >>> smallest radius = 0.03 mm
+    >>> terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convulute,rad_convolute,smallest_radius)
 
     This will take the normal average data from Leiser et al (1990, IBBN:3805554680) and calculate
     average volume of terminal villi to be ~1.77 mm^3
@@ -785,16 +835,28 @@ def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_
     # and then to three generations of mature intermediate villi each with ~10 terminal conduits
     num_ints = 1
     term_vill_volume = 0.0
-    for i in range(0, 4):
+    term_vill_diameter = 0.0
+    sum_vol_ints = 0.0
+    sum_vol_conv = 0.0
+    radius_step = (smallest_radius - rad_int)/(num_int_gens)
+    for i in range(0, num_int_gens + 2):
         num_ints = num_ints * 2.0
-        vol_ints = num_ints * np.pi * len_int * rad_int ** 2.0
+        vol_ints = num_ints * np.pi * len_int * (smallest_radius - i*radius_step) ** 2.0
+        diameter_ints = vol_ints * 2 * rad_int
+        sum_vol_ints = sum_vol_ints + vol_ints
         if i > 0:
             vol_convolutes = num_ints * num_convolutes * np.pi * len_convolute * rad_convolute ** 2.0
+            diameter_convolutes = vol_convolutes* 2 * rad_convolute
+            sum_vol_conv = sum_vol_conv + vol_convolutes
         else:
             vol_convolutes = 0.0
+            diameter_convolutes = 0.0
         term_vill_volume = term_vill_volume + vol_ints + vol_convolutes
+        term_vill_diameter = term_vill_diameter + diameter_ints + diameter_convolutes
 
-    return term_vill_volume
+    proportion_terminal = sum_vol_conv/(sum_vol_conv+sum_vol_ints)
+
+    return {'volume': term_vill_volume, 'diameter': term_vill_diameter, 'propterm': proportion_terminal}
 
 
 def tissue_vol_in_samp_gr(term_vol_in_grid, br_vol_in_grid):
@@ -820,7 +882,7 @@ def tissue_vol_in_samp_gr(term_vol_in_grid, br_vol_in_grid):
     return tissue_vol
 
 
-def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol):
+def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol,max_allowed,min_allowed):
     """Calculate volume fraction of sampling grid mesh where the villous branches are located
 
        Inputs are: 
@@ -848,19 +910,54 @@ def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol):
     for i in range(0, len(non_empties)):
         ne = non_empties[i]
         vol_frac[ne] = tissue_vol[ne] / volumes[ne]
-        if vol_frac[ne] > 1.0:
-            vol_frac[ne] = 1.0
+        if vol_frac[ne] > max_allowed:
+            vol_frac[ne] = max_allowed
+        elif vol_frac[ne] <min_allowed:
+            vol_frac[ne] = min_allowed
 
     return vol_frac
+    
+def smooth_on_sg(rectangular_mesh,non_empties,field):
+    
+    node_field = np.zeros((rectangular_mesh['total_nodes'],2))
+    
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        for j in range(1,9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            node_field[nnod][0] = node_field[nnod][0] + field[ne]
+            node_field[nnod][1] = node_field[nnod][1] + 1.0
+    
+    for i in range(0,rectangular_mesh['total_nodes']):
+        if(node_field[i][1] != 0.0 ):
+            node_field[i][0]  = node_field[i][0]/node_field[i][1]
+    
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        elem_field = 0.0
+        for j in range(1,9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            elem_field = elem_field + node_field[nnod][0]
+        elem_field = elem_field/8.0
+        field[ne] = elem_field
+            
+        
+            
+            
+            
+            
+    
+    
+    return field
 
 
-def conductivity_samp_gr(vol_frac, weighted_diameter, non_empties):
+def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
     """Calculate conductivity of sampling grid element where villous branches are located
 
     Inputs are: 
     - vol_frac: tissue volume fraction of sampling grid element
     - weighted_diameter: weighted diameter of sampling grid element
-    - non_empties: volume of sampling grid element where placenta tissue are located
+    - elem_list: list of elements to assess
 
     Return:
     - conductivity: conductivity of sampling grid element where the placental tissue are located
@@ -878,8 +975,8 @@ def conductivity_samp_gr(vol_frac, weighted_diameter, non_empties):
     >>> conductivity: 7.20937313e-06"""
     max_cond = 0.52
     conductivity = np.zeros(len(vol_frac))
-    for i in range(0, len(non_empties)):
-        ne = non_empties[i]
+    for i in range(0, len(elem_list)):
+        ne = elem_list[i]
         if vol_frac[ne] != 0.0:
             conductivity[ne] = weighted_diameter[ne] ** 2 * (1 - vol_frac[ne]) ** 3 / (180.0 * vol_frac[ne] ** 2)
         elif vol_frac[ne] == 0.0:  # see mabelles thesis
@@ -920,7 +1017,7 @@ def terminal_villous_diameter(num_int_gens, num_convolutes, len_int, rad_int, le
     """
     num_ints = 1
     term_vill_diameter = 0.0
-    for i in range(0, 4):
+    for i in range(0, num_int_gens+2):
         num_ints = num_ints * 2.0
         diameter_ints = num_ints * (np.pi * len_int * rad_int ** 2.0) * 2 * rad_int
         if i > 0:
@@ -989,6 +1086,22 @@ def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
         mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
         # print(mesh_node_elems[nt])
     return mesh_node_elems
+
+def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, field3):
+    data_elems = np.zeros(len(datapoints), dtype=int)
+    data_fields = np.zeros((len(datapoints),3))
+    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+    for nt in range(0,len(datapoints)):
+        data_elems[nt] = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
+                                               datapoints[nt][:])
+        data_fields[nt,0]= field1[data_elems[nt]]
+        data_fields[nt,1] = field2[data_elems[nt]]
+        data_fields[nt, 2] = field3[data_elems[nt]]
+
+
+    return data_fields
+
+
 
 
 def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects, conductivity, porosity, export, exportfile):

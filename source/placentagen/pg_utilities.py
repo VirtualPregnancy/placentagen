@@ -34,7 +34,7 @@ def z_from_xy(x, y, x_radius, y_radius, z_radius):
 
 def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     in_ellipsoid = False  # default to false
-    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if coord_check < 1.0:
         in_ellipsoid = True
 
@@ -44,7 +44,7 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
     zero_tol = 1e-10
     on_ellipsoid = False  # default to false
-    coord_check = (x / x_radius) ** 2 + (y / y_radius) ** 2 + (z / z_radius) ** 2
+    coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if abs(coord_check - 1.0) < zero_tol:
         on_ellipsoid = True
 
@@ -107,6 +107,33 @@ def element_connectivity_1D(node_loc, elems):
                 elem_downstream[ne][elem_downstream[ne][0]] = ne2
 
     return {'elem_up': elem_upstream, 'elem_down': elem_downstream}
+
+def group_elem_parent(ne_parent, elem_downstream):
+
+    ne_old = np.zeros(5000, dtype=int)
+    ntemp_list = np.zeros(5000, dtype=int)
+    ne_temp = np.zeros(5000, dtype=int)
+
+    NT_BNS = 1 #Initialising to arbritary non-zero value, number of branches downstream of current
+    ne_old[1] = ne_parent #first element
+    ne_count = 0 #How many elements
+    ntemp_list[ne_count] = ne_parent
+    while NT_BNS != 0:
+        num_nodes = NT_BNS
+        NT_BNS = 0
+        for m in range(1, num_nodes + 1):
+            ne0 = int(ne_old[m])
+            for n in range(0, int(elem_downstream[ne0][0])):
+                NT_BNS = NT_BNS + 1
+                ne_temp[NT_BNS] = elem_downstream[ne0][n + 1]
+        for n in range(1, NT_BNS + 1):
+            ne_old[n] = ne_temp[n]
+            ne_count = ne_count + 1
+            ntemp_list[ne_count] = ne_temp[n]
+
+    ntemp_list.resize(ne_count+1)
+
+    return ntemp_list
 
 
 def plane_from_3_pts(x0, x1, x2, normalise):

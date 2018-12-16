@@ -184,28 +184,28 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                             (com - start_node_loc))
 
-                        if(check_in_ellipsoid):
-                            #Check end node is in the ellipsoid
-                            in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
-                                                                       x_radius, y_radius, z_radius)
-
-                            if(not in_ellipsoid):
-                                branch = False #This should be the last branch here.
-                                count = 0
-                                while(not in_ellipsoid and count <=10):
-                                    length_new = 0.95*length_new
-                                    # calculate location of end node
-                                    end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
-                                        (com - start_node_loc))
-                                    # Check end node is in the ellipsoid
-                                    in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
-                                                                                   end_node_loc[2],
-                                                                                x_radius, y_radius, z_radius)
-                                    count = count + 1
-
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
                                                         start_node_loc, end_node_loc, ne_parent, ne + 1)
+
+                        #Check end node is in the ellipsoid
+                        in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
+                                                                       x_radius, y_radius, z_radius)
+
+                        if(not in_ellipsoid):
+                            branch = False #This should be the last branch here.
+                            count = 0
+                            while(not in_ellipsoid and count <=50):
+                                length_new = 0.95*length_new
+                                # calculate location of end node
+                                end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
+                                    (com - start_node_loc))
+                                # Check end node is in the ellipsoid
+                                in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1],
+                                                                               end_node_loc[2],
+                                                                            x_radius, y_radius, z_radius)
+                                count = count + 1
+
 
                         # Create new elements and nodes
                         elems[ne + 1][0] = ne + 1  # creating new element
@@ -747,7 +747,7 @@ def add_stem_villi(initial_geom, from_elem, sv_length, export_stem, stem_xy_file
         for ne in range(0,len(elems)):
             if(strahler[ne] == 1):
                 nnod = elems[ne][2]
-                f.write("%s %s\n" % (node_loc[nnod][1], node_loc[nnod][2]))
+                f.write("%s %s %s\n" % (node_loc[nnod][1], node_loc[nnod][2],ne+1))
         f.close()
 
 
@@ -962,7 +962,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     ntemp_list = np.zeros(2000, dtype=int)
     ne_temp = np.zeros(2000, dtype=int)
 
-    NT_BNS = 1
+    NT_BNS = 1 #Initialising to arbritary ne value
     ne_old[0] = ne_parent
     ne_count = 0
     ntemp_list[ne_count] = 0
@@ -992,6 +992,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
     print('Grouped by parent,' + str(ne_parent) + ' No in parent list,' + str(num_in_list))
 
     return parentlist
+
 
 
 def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
