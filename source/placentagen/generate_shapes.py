@@ -1511,6 +1511,7 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
                     zPosition = (zPosition_above + zPosition_below) / 2.0
                     node_array[nodeNumber - 1][3] = zPosition
 
+
     surface_nodes = np.unique(surface_nodes)
     nzid = np.nonzero(surface_nodes)
     surface_nodes = surface_nodes[nzid]
