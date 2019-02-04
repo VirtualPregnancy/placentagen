@@ -4,6 +4,8 @@ from . import pg_utilities
 from . import imports_and_exports
 import sys
 from numpy import matlib
+import matplotlib.pyplot as plt
+from statistics import mean
 
 """
 .. module:: analyse_tree
