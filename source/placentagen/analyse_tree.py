@@ -26,39 +26,40 @@ def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
     orders = evaluate_orders(geom['nodes'], geom['elems'])
 
     # Find Results
-    branchGeom = arrange_by_branches(geom, elem_cnct['elem_up'], orders[ordering_system])
+    branchGeom = arrange_by_branches(geom, elem_cnct['elem_up'], orders[ordering_system],orders['generation'])
     [geom, branchGeom] = find_branch_angles(geom, orders, elem_cnct, branchGeom, voxelSize, conversionFactor)
     major_minor_results=major_minor(geom, elem_cnct['elem_down']) #major/minor child stuff
 
-
-    # Output Skeleton Info
-    print('Output Data')
-    # table
+    # tabulate data
     generation_table = generation_summary_statistics(geom, orders, major_minor_results)
     strahler_table = summary_statistics(branchGeom, geom, orders, major_minor_results)
 
     return geom
 
-def arrange_by_branches(geom, elem_up, order):
-    #####
-    # Function: finds properties of according to each Branch of the tree, where a branch is a set of elements with the
-    #          same Strahler order
-    # Inputs: geom - contains elems, and various element properties (length, radius etc.)
-    #         order - contains strahler order and generation of each element
-    #         elem_up - contains index of upstream elements for each element
-    # Outputs: branchGeom: contains the properties arrange in arrays according to each branch:
-    #           radius / length / euclidean length / strahler order: all M x 1 arrays where M is number of branches
-    #          branches: an N x 1 array where N is the number of elements, contains branch number of each element
-    ######
+def arrange_by_branches(geom, elem_up, order,generation):
+    """ Finds properties of according to each Branch of the tree, where a branch is a set of elements with the
+              same order. Ordering system can be any defined in 'evaluate_ordering'
+     Inputs:
+        geom: contains elems, and various element properties (length, radius etc.)
+        elem_up - contains index of upstream elements for each element
+        order:  contains order of each element
+        generation: contains generation of each element
+     Outputs:
+        branchGeom: contains the properties arrange in arrays according to each branch:
+               radius / length / euclidean length / strahler order: all M x 1 arrays where M is number of branches
+        branches: an N x 1 array where N is the number of elements, contains branch number of each element
+    """
 
-    # find branches
+    # find branches, which are branches with the same 'generation' as one another
     Ne = len(order)
-    branches = np.zeros(Ne)
-    branchNum = 1
+    branches = np.zeros(Ne,dtype=int)
+    branchNum = 0
 
     for i in range(0, Ne):
-        if order[i] != order[elem_up[i, 1]]:  # belongs to new branch
+        if generation[i] != generation[elem_up[i, 1]]:  # does not belong with upstream branch
             branchNum = branchNum + 1
+        else:
+            branchNum = branches[elem_up[i, 1]]
         branches[i] = branchNum
 
     Nb = int(max(branches))
@@ -75,11 +76,12 @@ def arrange_by_branches(geom, elem_up, order):
     branchOrder = -1. * np.ones(Nb)
 
     for i in range(0, Nb):
-        branchElements = np.where(branches == i+1) #find elements belonging to branch number
+        branchElements = np.where(branches == i) #find elements belonging to branch number
         branchElements = branchElements[0]
 
         for j in range(0, len(branchElements)): #go through all elements in branch
             ne = branchElements[j]
+            print('branch',i,'element',ne,generation[ne],order[ne],lengths[ne])
 
             branchOrder[i] = order[ne]
             branchLen[i] = branchLen[i] + lengths[ne]
@@ -90,7 +92,8 @@ def arrange_by_branches(geom, elem_up, order):
         startNode=nodes[int(elems[branchElements[0],1]),:]
         endNode=nodes[int(elems[branchElements[len(branchElements)-1],2]),:]
 
-        branchEucLen[i]=np.sqrt(np.sum(np.square(startNode-endNode)))
+
+        branchEucLen[i]=np.sqrt(np.sum(np.square(startNode[1:4]-endNode[1:4])))
 
     return {'radii': branchRad, 'length': branchLen, 'euclidean length': branchEucLen, 'order': branchOrder,
             'branches': branches}
@@ -277,11 +280,12 @@ def calc_terminal_branch(node_loc, elems):
 
 
 def evaluate_orders(node_loc, elems):
-    # calculates generations, Horsfield orders, Strahler orders for a given tree
-    # Works for diverging trees only
-    # Inputs are:
-    # node_loc = array with location of nodes
-    # elems = array with location of elements
+    """Calculates generations, Horsfield orders, Strahler orders for a given tree
+       Works for diverging trees only, but accounts for more than three elements joining at a node
+       Inputs:
+          node_loc = array with location of nodes
+          elems = array with location of elements
+    """
     num_elems = len(elems)
     # Calculate connectivity of elements
     elem_connect = pg_utilities.element_connectivity_1D(node_loc, elems)
@@ -296,7 +300,7 @@ def evaluate_orders(node_loc, elems):
     maxgen = 1  # Maximum possible generation
     for ne in range(0, num_elems):
         ne0 = elem_upstream[ne][1]
-        if ne0 != 0:
+        if elem_upstream[ne][0] != 0:
             # Calculate parent generation
             n_generation = generation[ne0]
             if elem_downstream[ne0][0] == 1:
