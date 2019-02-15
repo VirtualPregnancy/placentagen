@@ -18,7 +18,7 @@ def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
         geom:  A geometry structure consisting of element list, node location and radii/lengths
         ordering_system: the ordering system to be used in analysis (e.g. 'strahler', 'horsfield'
 
-    Returns: A table of branhing properties (one per generation, one per order)
+    Returns: A table of branching properties (one per generation, one per order) and overall summary statistics
 
     """
 
@@ -31,8 +31,8 @@ def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
     major_minor_results=major_minor(geom, elem_cnct['elem_down']) #major/minor child stuff
 
     # tabulate data
-    generation_table = generation_summary_statistics(geom, orders, major_minor_results)
-    strahler_table = summary_statistics(branchGeom, geom, orders, major_minor_results)
+    generation_summary_statistics(geom, orders, major_minor_results)
+    summary_statistics(branchGeom, geom, orders, major_minor_results)
 
     return geom
 
@@ -51,18 +51,18 @@ def arrange_by_branches(geom, elem_up, order,generation):
     """
 
     # find branches, which are branches with the same 'generation' as one another
-    Ne = len(order)
-    branches = np.zeros(Ne,dtype=int)
+    num_elems = len(order)
+    branches = np.zeros(num_elems,dtype=int)
     branchNum = 0
 
-    for i in range(0, Ne):
+    for i in range(0, num_elems):
         if generation[i] != generation[elem_up[i, 1]]:  # does not belong with upstream branch
             branchNum = branchNum + 1
         else:
             branchNum = branches[elem_up[i, 1]]
         branches[i] = branchNum
 
-    Nb = int(max(branches))
+    num_branches = int(max(branches))
 
     # sort results into branch groups
     lengths = geom['length']
@@ -70,19 +70,17 @@ def arrange_by_branches(geom, elem_up, order,generation):
     nodes= geom['nodes']
     elems = geom['elems']
 
-    branchRad = np.zeros(Nb)
-    branchLen = np.zeros(Nb)
-    branchEucLen = np.zeros(Nb)
-    branchOrder = -1. * np.ones(Nb)
+    branchRad = np.zeros(num_branches)
+    branchLen = np.zeros(num_branches)
+    branchEucLen = np.zeros(num_branches)
+    branchOrder = -1. * np.ones(num_branches)
 
-    for i in range(0, Nb):
+    for i in range(0, num_branches):
         branchElements = np.where(branches == i) #find elements belonging to branch number
         branchElements = branchElements[0]
 
         for j in range(0, len(branchElements)): #go through all elements in branch
             ne = branchElements[j]
-            print('branch',i,'element',ne,generation[ne],order[ne],lengths[ne])
-
             branchOrder[i] = order[ne]
             branchLen[i] = branchLen[i] + lengths[ne]
             branchRad[i] = branchRad[i] + radii[ne]
@@ -91,7 +89,6 @@ def arrange_by_branches(geom, elem_up, order,generation):
 
         startNode=nodes[int(elems[branchElements[0],1]),:]
         endNode=nodes[int(elems[branchElements[len(branchElements)-1],2]),:]
-
 
         branchEucLen[i]=np.sqrt(np.sum(np.square(startNode[1:4]-endNode[1:4])))
 
@@ -587,13 +584,7 @@ def generation_summary_statistics(geom, orders, major_minor_results):
                 values_by_gen[n_gen, 32] = np.mean(D_Major_Minor_list)
                 values_by_gen[n_gen, 33] = np.std(D_Major_Minor_list)
 
-    # print table
-    header = ['Gen', 'NumBranches', 'Length(mm)', 'std', 'Diameter(mm)', 'std', 'Euclidean Length(mm)', 'std',
-              'Len/Diam', 'std', 'Tortuosity', 'std', 'Angles', 'std','Minor Angle','std','Major Angle','std', 'LLparent', 'std', 'LminLparent', 'std', 'LmajLparent', 'std', 'LminLmaj', 'std', 'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
-    print('\n')
-    print('Statistics By Generation: ')
-    print('..................')
-    print(tabulate(values_by_gen, headers=header))
+
 
     # statistics independent of order
     values_overall = np.zeros([1, 34])
@@ -675,12 +666,80 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     values_overall[0, 32] = np.mean(D_Major_Minor_list)
     values_overall[0, 33] = np.std(D_Major_Minor_list)
 
-    # print table
-    header = ['Gen', 'NumBranches', 'Length(mm)', 'std', 'Diameter(mm)', 'std', 'Euclidean Length(mm)', 'std',
-              'Len/Diam', 'std', 'Tortuosity', 'std', 'Angles', 'std','Minor Angle','std','Major Angle','std', 'LLparent', 'std', 'LminLparent', 'std', 'LmajLparent', 'std', 'LminLmaj', 'std', 'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
-
-    print(tabulate(values_overall, headers=header))
+    # 'LLparent', 'std', 'LminLparent', 'std', 'LmajLparent', 'std', 'LminLmaj', 'std', 'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
     print('\n')
+    print('Statistics By Generation: ')
+    print('..................')
+    print(
+        '   Gen   |   Num   |    L    |  L(std) |    D    |  D(std) |   LEuc  |LEuc(std)|   L_D   | L_D(std)|   Tort  |Tort(std)|   Ang   | Ang(std)|   Amin  |Amin(std)|   Amaj  |Amaj(std)|')
+    for n_gen in range(0, num_gens):
+        print (
+                    ' %7i | %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |' % (
+            values_by_gen[n_gen, 0], values_by_gen[n_gen, 1],
+            values_by_gen[n_gen, 2], values_by_gen[n_gen, 3],
+            values_by_gen[n_gen, 4], values_by_gen[n_gen, 5],
+            values_by_gen[n_gen, 6], values_by_gen[n_gen, 7],
+            values_by_gen[n_gen, 8], values_by_gen[n_gen, 9],
+            values_by_gen[n_gen, 10], values_by_gen[n_gen, 11],
+            values_by_gen[n_gen, 12], values_by_gen[n_gen, 13],
+            values_by_gen[n_gen, 14], values_by_gen[n_gen, 15],
+            values_by_gen[n_gen, 16], values_by_gen[n_gen, 17]))
+
+    print('------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    print (' OVERALL | %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |' % (
+        values_overall[0, 1], values_overall[0, 2], values_overall[0, 3],
+        values_overall[0, 4], values_overall[0, 5],
+        values_overall[0, 6], values_overall[0, 7],
+        values_overall[0, 8], values_overall[0, 9],
+        values_overall[0, 10], values_overall[0, 11],
+        values_overall[0, 12], values_overall[0, 13],
+        values_overall[0, 14], values_overall[0, 15],
+        values_overall[0, 16], values_overall[0, 17]))
+
+    print('..................')
+
+    #   'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
+    print('\n')
+    print('Statistics By Generation: ')
+    print('..................')
+    print(
+        '   Gen   |   L_Lp  |L_Lp(std)| Lmin_Lp |   std   | Lmaj_Lp |   std   |Lmin_Lmaj|   std   |   D_Dp  |   std   | Dmin_Dp |   std   | Dmaj_Dp |   std   |Dmin_Dmaj|   std   |')
+    for n_gen in range(0, num_gens):
+        print (
+                ' %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |' % (
+            values_by_gen[n_gen, 0], values_by_gen[n_gen, 18],
+            values_by_gen[n_gen, 19], values_by_gen[n_gen, 20],
+            values_by_gen[n_gen, 21], values_by_gen[n_gen, 22],
+            values_by_gen[n_gen, 23], values_by_gen[n_gen, 24],
+            values_by_gen[n_gen, 25], values_by_gen[n_gen, 26],
+            values_by_gen[n_gen, 27], values_by_gen[n_gen, 28],
+            values_by_gen[n_gen, 29], values_by_gen[n_gen, 30],
+            values_by_gen[n_gen, 31], values_by_gen[n_gen, 32],
+            values_by_gen[n_gen, 33]))
+
+    print(
+        '--------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    print (
+                ' OVERALL | %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |' % (
+            values_overall[0, 18], values_overall[0, 19], values_overall[0, 20],
+            values_overall[0, 21], values_overall[0, 22],
+            values_overall[0, 23], values_overall[0, 24],
+            values_overall[0, 25], values_overall[0, 26],
+            values_overall[0, 27], values_overall[0, 28],
+            values_overall[0, 29], values_overall[0, 30],
+            values_overall[0, 31], values_overall[0, 32],
+            values_overall[0, 33]))
+
+    print('-------------')
+    print('     |||||   ')
+    print('   \ (   )   ')
+    print('    ---|---  ')
+    print('       |   \ ')
+    print('       |     ')
+    print('      / \    ')
+    print('     /   \   ')
+    print('-------------')
+
 
     return np.concatenate((values_by_gen, values_overall),0)
 
@@ -1226,6 +1285,7 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results):
     print('Num Segments = ' + str(len(strahler)))
     print('Total length = ' + str(np.sum(branchGeom['length'])) + ' mm')
     print('Num generations = ' + str(max(generation)))
+    print('Num Strahler Orders = ' + str(max(strahler)))
     terminalGen = generation[(strahler == 1)]
     print('Average Terminal generation (std) = ' + str(np.mean(terminalGen)) + ' (' + str(np.std(terminalGen)) + ')')
     print('Segment Tortuosity = ' + str(np.mean(length / euclid_length)) + ' (' + str(
@@ -1253,6 +1313,9 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results):
     Diameter_strahler = values_by_order[:, 4]
     Length_strahler = values_by_order[:, 2]
     Orders_strahler = values_by_order[:, 0]
+
+    print('Branching/length/diameter ratios: ')
+    print('..................................')
 
     [Rb, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Num_Branches)
     print('Rb = ' + str(Rb) + ' Rsq = ' + str(r2))
