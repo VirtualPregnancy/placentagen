@@ -32,7 +32,7 @@ def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
 
     # tabulate data
     generation_summary_statistics(geom, orders, major_minor_results)
-    summary_statistics(branchGeom, geom, orders, major_minor_results)
+    summary_statistics(branchGeom, geom, orders, major_minor_results,'strahler')
 
     return geom
 
@@ -1094,7 +1094,7 @@ def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, n
 
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
 
-def summary_statistics(branchGeom, geom, orders, major_minor_results):
+def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_system):
 
     # branch inputs
     branchDiam = 2 * branchGeom['radii']
@@ -1170,12 +1170,30 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results):
         values_by_order[n_ord, 19] = np.sum(np.square(diam_list)*np.pi/4 ) # Total CSA
 
     # print table
-    header = ['Order', 'NumBranches', 'Length(mm)', 'std', 'Diameter(mm)', 'std', 'Euclidean Length(mm)', 'std',
-              'Len/Diam', 'std', 'Tortuosity', 'std', 'Angles', 'std', 'LenRatio', 'std', 'DiamRatio', 'std','Bifurcation Ratio','TotalCSA']
+    header = ['LenRatio', 'std', 'DiamRatio', 'std','Bifurcation Ratio','TotalCSA']
     print('\n')
     print('Statistics By Order: ')
+    print(ordering_system)
     print('..................')
-    print(tabulate(values_by_order, headers=header))
+
+    print(
+        '   Order |   num   |    L    |  L(std) |    D    |  D(std) |   LEuc  |LEuc(std)|   L_D   | L_D(std)|   Tort  |Tort(std)|   Ang   | Ang(std)|    Rl   | Rl(std) |    Rd   | Rd(std)|   Rb    |   CSA   ')
+    for n_ord in range(0, num_orders):
+        print(' %7i | %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |%7.4f | %7.4f | %7.4f |'%(values_by_order[n_ord,0],
+            values_by_order[n_ord, 1],values_by_order[n_ord,2],
+            values_by_order[n_ord, 3],values_by_order[n_ord,4],
+            values_by_order[n_ord, 5], values_by_order[n_ord,6],
+            values_by_order[n_ord, 7], values_by_order[n_ord, 8],
+            values_by_order[n_ord, 9], values_by_order[n_ord, 10],
+            values_by_order[n_ord, 11], values_by_order[n_ord, 12],
+            values_by_order[n_ord, 13], values_by_order[n_ord, 14],
+            values_by_order[n_ord, 15], values_by_order[n_ord, 16],
+            values_by_order[n_ord, 17],values_by_order[n_ord, 18],
+            values_by_order[n_ord, 19]))
+
+    print('-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    #        ' %7i | %7.4f | %7.4f
+    #        print(tabulate(values_by_order, headers=header))
 
     # statistics independent of order
     values_overall = np.zeros([1, 20])
@@ -1228,12 +1246,26 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results):
 
 
 
-    # print table
-    header = ['     ', '           ', '          ', '   ', '            ', '   ', '                     ', '   ',
-              '        ', '   ', '           ', '   ', '      ', '   ', '        ', '   ', '         ', '   ','                 ']
+    print (
+                ' OVERALL | %7i | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f | %7.4f |' % (
+            values_overall[0, 1], values_overall[0, 2], values_overall[0, 3],
+            values_overall[0, 4], values_overall[0, 5],
+            values_overall[0, 6], values_overall[0, 7],
+            values_overall[0, 8], values_overall[0, 9],
+            values_overall[0, 10], values_overall[0, 11],
+            values_overall[0, 12], values_overall[0, 13],
+            values_overall[0, 14], values_overall[0, 15],
+            values_overall[0, 16],values_overall[0, 17],values_overall[0, 18]))
 
-    print(tabulate(values_overall, headers=header))
-    print('\n')
+    print('-------------')
+    print('     |||||   ')
+    print('     (   ) / ')
+    print('    ---|---  ')
+    print('   /   |     ')
+    print('       |     ')
+    print('      / \    ')
+    print('     /   \   ')
+    print('-------------')
 
     # unpack inputs
     strahler = orders['strahler']
@@ -1323,6 +1355,16 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results):
     print('Rd = ' + str(Rd) + ' Rsq = ' + str(r2))
     [Rl, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Length_strahler)
     print('Rl = ' + str(Rl) + ' Rsq = ' + str(r2))
+
+    print('-------------')
+    print('     |||||   ')
+    print('   \ (   ) / ')
+    print('    ---|---  ')
+    print('       |     ')
+    print('       |     ')
+    print('      / \    ')
+    print('     /   \   ')
+    print('-------------')
 
     return np.concatenate((values_by_order, values_overall),0)
 
