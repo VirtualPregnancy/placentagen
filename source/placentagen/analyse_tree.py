@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import numpy as np
-from tabulate import tabulate
 from . import pg_utilities
 from . import imports_and_exports
 
@@ -14,11 +13,11 @@ from . import imports_and_exports
 
 def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
     """ Does a branching analysis on the tree defined by 'geom'
-    Inputs:
-        geom:  A geometry structure consisting of element list, node location and radii/lengths
-        ordering_system: the ordering system to be used in analysis (e.g. 'strahler', 'horsfield'
+     Inputs:
+       -  geom:  A geometry structure consisting of element list, node location and radii/lengths
+       -  ordering_system: the ordering system to be used in analysis (e.g. 'strahler', 'horsfield'
 
-    Returns: A table of branching properties (one per generation, one per order) and overall summary statistics
+    Returns: Prints to screen a  table of branching properties (one per generation, one per order) and overall summary statistics
 
     """
 
@@ -40,10 +39,10 @@ def arrange_by_branches(geom, elem_up, order,generation):
     """ Finds properties of according to each Branch of the tree, where a branch is a set of elements with the
               same order. Ordering system can be any defined in 'evaluate_ordering'
      Inputs:
-        geom: contains elems, and various element properties (length, radius etc.)
-        elem_up - contains index of upstream elements for each element
-        order:  contains order of each element
-        generation: contains generation of each element
+        - geom: contains elems, and various element properties (length, radius etc.)
+        - elem_up - contains index of upstream elements for each element
+        - order:  contains order of each element
+        - generation: contains generation of each element
      Outputs:
         branchGeom: contains the properties arrange in arrays according to each branch:
                radius / length / euclidean length / strahler order: all M x 1 arrays where M is number of branches
@@ -62,7 +61,8 @@ def arrange_by_branches(geom, elem_up, order,generation):
             branchNum = branches[elem_up[i, 1]]
         branches[i] = branchNum
 
-    num_branches = int(max(branches))
+    num_branches = int(max(branches)) +1 #including inlet
+    print(num_branches)
 
     # sort results into branch groups
     lengths = geom['length']

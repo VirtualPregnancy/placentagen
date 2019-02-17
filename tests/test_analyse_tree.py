@@ -8,7 +8,57 @@ import os
 TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exnode')
 TESTDATA_FILENAME1 = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exelem')
 
-class Test_Terminal_Br(TestCase):
+class test_arrange_by_br(TestCase):
+
+    def arrange_by_branch_no_doubles(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 0, 1], [0, 1, 2], [0, 1, 3]], dtype=int)
+        geom['radii'] = [0.1, 0.1, 0.1]
+        geom['length'] = [0.5, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+        elem_up = np.zeros((3, 3), dtype=int)
+        elem_up[0, 0] = 0
+        elem_up[0, 1] = 0
+        elem_up[1, 0] = 1
+        elem_up[1, 1] = 0
+        elem_up[2, 0] = 1
+        elem_up[2, 1] = 0
+
+        order = [2, 1, 1]
+        generation = [1, 2, 2]
+
+        arranged = pg.arrange_by_branches(geom, elem_up, order, generation)
+        self.assertTrue(len(arranged['branches']) == 3)
+
+    def arrange_by_branch_doubles(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [0., 0., 0., -0.75, 2., 0., 0.],[1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 0, 1], [0,1,2],[0, 2, 3], [0, 3, 4]], dtype=int)
+        geom['radii'] = [0.1,0.1, 0.1, 0.1]
+        geom['length'] = [0.25,0.25, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+        elem_up = np.zeros((3, 3), dtype=int)
+        elem_up[0, 0] = 0
+        elem_up[0, 1] = 0
+        elem_up[1, 0] = 1
+        elem_up[1, 1] = 0
+        elem_up[2, 0] = 1
+        elem_up[2, 1] = 1
+        elem_up[3, 0] = 1
+        elem_up[3, 1] = 1
+
+        order = [2, 2, 1, 1]
+        generation = [1, 1, 2, 2]
+
+        arranged = pg.arrange_by_branches(geom, elem_up, order, generation)
+        self.assertTrue(len(arranged['branches']) == 4)
+
+class test_terminal_br(TestCase):
         
     def test_terminal_br(self):
         eldata   = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
@@ -27,7 +77,6 @@ class test_pl_vol_in_grid(TestCase):
     def test_pl_vol_margin(self):
         thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  # mm
         ellipticity = 1.00  # no units
-        spacing = 1.0  # mm
         volume=1
         rectangular_mesh = {}
         rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
@@ -182,18 +231,18 @@ class Test_terminals_in_sampling_grid_general(TestCase):
         term_grid = placentagen.terminals_in_sampling_grid(rectangular_mesh, placenta_list, term_br, noddata['nodes'])
         self.assertTrue(np.sum(term_grid['terminal_elems']) == 0)  # all must be zero as could not locate any terminal br
 
-class Test_terminals_villous_volume(TestCase):
-        
-    def test_terminals_vill_vol(self):
-
-        num_int_gens = 3
-        num_convolutes = 10
-        len_int = 1.5 #mm
-        rad_int = 0.03 #mm
-        len_convolute = 3.0 #mm
-        rad_convolute = 0.025 #mm
-        term_vill_vol=placentagen.terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
-        self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
+#class Test_terminals_villous_volume(TestCase):
+#
+#    def test_terminals_vill_vol(self):#
+#
+#        num_int_gens = 3
+#        num_convolutes = 10
+#        len_int = 1.5 #mm
+#        rad_int = 0.03 #mm
+#        len_convolute = 3.0 #mm
+#        rad_convolute = 0.025 #mm
+#        term_vill_vol=placentagen.terminal_villous_volume(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
+#        self.assertTrue(np.isclose(term_vill_vol,1.77657064561))
 
 class Test_tissue_volume_gr(TestCase):
         
@@ -201,18 +250,18 @@ class Test_tissue_volume_gr(TestCase):
         tissue_vol=placentagen.tissue_vol_in_samp_gr(0.444, 0.008)   
         self.assertTrue(np.isclose(tissue_vol,0.452))
 
-class Test_terminals_villous_diameter(TestCase):
-        
-    def test_terminals_vill_diameter(self):
-
-        num_int_gens = 3
-        num_convolutes = 10
-        len_int = 1.5 #mm
-        rad_int = 0.03 #mm
-        len_convolute = 3.0 #mm
-        rad_convolute = 0.025 #mm
-        term_vill_diameter=placentagen.terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
-        self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
+#class Test_terminals_villous_diameter(TestCase):
+#
+#    def test_terminals_vill_diameter(self):
+#
+#        num_int_gens = 3
+ #       num_convolutes = 10
+#        len_int = 1.5 #mm
+##        rad_int = 0.03 #mm
+ #       len_convolute = 3.0 #mm
+ #       rad_convolute = 0.025 #mm
+ #       term_vill_diameter=placentagen.terminal_villous_diameter(num_int_gens,num_convolutes,len_int,rad_int,len_convolute,rad_convolute)
+ #       self.assertTrue(np.isclose(term_vill_diameter,0.090100877305))
 
 class Test_conductivity_samp_gr(TestCase):
         
@@ -224,15 +273,15 @@ class Test_conductivity_samp_gr(TestCase):
         conductivity=placentagen.conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
         self.assertTrue(np.isclose(conductivity, 7.20937313e-06))
 
-class Test_vol_frac_samp_gr(TestCase):
-        
-    def test_volume_fraction(self):
-        tissue_vol=[0.453]
-        placental_volume={}
-        placental_volume['non_empty_rects']=[0]
-        placental_volume['pl_vol_in_grid']=[0.625]
-        vol_frac=placentagen.vol_frac_in_samp_gr(tissue_vol,placental_volume)
-        self.assertTrue(np.isclose(vol_frac, 0.7248))
+#class Test_vol_frac_samp_gr(TestCase):
+ #
+ #   def test_volume_fraction(self):
+ #       tissue_vol=[0.453]
+ #       placental_volume={}
+ #       placental_volume['non_empty_rects']=[0]
+ #      placental_volume['pl_vol_in_grid']=[0.625]
+ #       vol_frac=placentagen.vol_frac_in_samp_gr(tissue_vol,placental_volume)
+ #       self.assertTrue(np.isclose(vol_frac, 0.7248))
 
 class Test_term_vol_grid(TestCase):
         
