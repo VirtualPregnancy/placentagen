@@ -30,7 +30,7 @@ class test_arrange_by_br(TestCase):
         order = [2, 1, 1]
         generation = [1, 2, 2]
 
-        arranged = pg.arrange_by_branches(geom, elem_up, order, generation)
+        arranged = placentagen.arrange_by_branches(geom, elem_up, order, generation)
         self.assertTrue(len(arranged['branches']) == 3)
 
     def arrange_by_branch_doubles(self):
@@ -55,8 +55,51 @@ class test_arrange_by_br(TestCase):
         order = [2, 2, 1, 1]
         generation = [1, 1, 2, 2]
 
-        arranged = pg.arrange_by_branches(geom, elem_up, order, generation)
+        arranged = placentagen.arrange_by_branches(geom, elem_up, order, generation)
         self.assertTrue(len(arranged['branches']) == 4)
+
+class test_arrange_strahler_order(TestCase):
+
+    def test_simple_arrange_strahler_order(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 0, 1], [0, 1, 2], [0, 1, 3]], dtype=int)
+        geom['radii'] = [0.1, 0.1, 0.1]
+        geom['length'] = [0.5, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+
+        arranged = placentagen.arrange_by_strahler_order(geom, 1, [0, 0, 0])
+        self.assertTrue((arranged['elems'][0] == np.array([0,0,1])).all)
+
+    def test_peturbed_arrange_strahler_order(self):
+        geom = {}
+        geom['nodes'] = np.array(
+             [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['radii'] = [0.1, 0.1, 0.1]
+        geom['length'] = [0.5, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+
+        arranged = placentagen.arrange_by_strahler_order(geom, 1, [0, 0, 0])
+        print(np.array([0, 0, 1]))
+        self.assertTrue((arranged['elems'][0] == np.array([0, 0, 1])).all)
+
+    def test_definlet_arrange_strahler_order(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+            [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['radii'] = [0.1, 0.1, 0.1]
+        geom['length'] = [0.5, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+
+        arranged = placentagen.arrange_by_strahler_order(geom, 0, [0., 0., -1.0])
+        self.assertTrue((arranged['elems'][0] == np.array([0, 0, 1])).all)
+
 
 class test_terminal_br(TestCase):
         

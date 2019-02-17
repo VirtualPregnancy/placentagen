@@ -120,7 +120,7 @@ def arrange_by_strahler_order(geom, find_inlet_loc, inlet_loc):
     nodes = geom['nodes']
     elem_properties = np.column_stack([geom['radii'], geom['length'], geom['euclidean length'], geom['elems']])
     elems = np.copy(geom['elems'])  # as elems is altered in this function
-    elems = elems[:, 1:3]  # get rid of first column which means nothing
+    elems = elems[:, 1:3]  # get rid of first column which contains element numbef
     radii = geom['radii']
 
     Ne = len(elems)
@@ -904,16 +904,16 @@ def find_branch_angles(geom, orders, elem_connect, branchGeom, voxelSize, conver
 
 
 def find_parent_node(find_inlet_loc, inlet_loc, nodes, radii, elems, elem_properties):
-    ######
-    # Function: find parent node in array either from given coordinates or by finding the fattest terminal branch
-    # Inputs: nodes - an M x 3 list of node coordinates
-    #        radii - N x 1 array with radius of each element
-    #         elems - an Nx2(!!!) array with node indices for start and end of node
-    #         elem_properties - an N x K array, with each row containing various element properties (radii etc.)
-    #         inlet_loc - the coordinates of the parent node for the entire tree (if known)
-    #         find_inlet_loc - a boolean variable specifying whether to use inlet location provided (0) or to find the inlet location automatically (1)
-    # Outputs: elems and elem_properties updates so that inlet element is the first element in the list
-    ######
+    """Finds the parent node in array either from given coordinates or by finding the terminal branch with the largest radius
+       Inputs:
+         - nodes: an list of node coordinates in with structure [node num, coord1,coord2,coord3,...]
+         - radii: N x 1 array with radius of each element
+         - elems: an Nx2(!!!) array with node indices for start and end of node
+         - elem_properties:an N x K array, with each row containing various element properties (radii etc.)
+         - inlet_loc : the coordinates of the parent node for the entire tree (if known)
+         = find_inlet_loc - a boolean variable specifying whether to use inlet location provided (0) or to find the inlet location automatically (1)
+       Returns: elems and elem_properties updates so that inlet element is the first element in the list
+    """
     # will define inlet as terminal element of largest radius
     if find_inlet_loc == 1:
         maxRad = -1
@@ -935,11 +935,11 @@ def find_parent_node(find_inlet_loc, inlet_loc, nodes, radii, elems, elem_proper
                     maxRad = radius
                     maxRadInd = i
 
-        inlet_loc = np.squeeze(nodes[maxRadInd, :])
+        inlet_loc = np.squeeze(nodes[maxRadInd, 1:4])
         Nn_root = maxRadInd
     # find root node and element from coordinates provided
     else:
-        Nn_root = is_member(inlet_loc, nodes)
+        Nn_root = pg_utilities.is_member(inlet_loc, nodes[:,1:4])
         if (Nn_root == -1):
             print("Warning, root node not located")
 
