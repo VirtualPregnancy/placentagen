@@ -108,13 +108,6 @@ def arrange_by_strahler_order(geom, find_inlet_loc, inlet_loc):
     Returns:
        - geom: contains elems and properties, reordered according to strahler order so that no element can be higher in the element list than a higher order branch
 
-    A way you might want to use me is:
-
-    >>>
-
-    This will return:
-
-    >>>
     """
     # set up arrays
     nodes = geom['nodes']

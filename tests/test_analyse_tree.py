@@ -15,7 +15,7 @@ class test_arrange_by_br(TestCase):
         geom['nodes'] = np.array(
             [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
              [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 0, 1], [0, 1, 2], [0, 1, 3]], dtype=int)
+        geom['elems'] = np.array([[0, 0, 1], [1, 1, 2], [2, 1, 3]], dtype=int)
         geom['radii'] = [0.1, 0.1, 0.1]
         geom['length'] = [0.5, 0.5, 0.5]
         geom['euclidean length'] = geom['length']
@@ -38,7 +38,7 @@ class test_arrange_by_br(TestCase):
         geom['nodes'] = np.array(
             [[0., 0., 0., -1., 2., 0., 0.], [0., 0., 0., -0.75, 2., 0., 0.],[1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
              [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 0, 1], [0,1,2],[0, 2, 3], [0, 3, 4]], dtype=int)
+        geom['elems'] = np.array([[0, 0, 1], [1,1,2],[0, 2, 3], [2, 3, 4]], dtype=int)
         geom['radii'] = [0.1,0.1, 0.1, 0.1]
         geom['length'] = [0.25,0.25, 0.5, 0.5]
         geom['euclidean length'] = geom['length']
@@ -65,7 +65,7 @@ class test_arrange_strahler_order(TestCase):
         geom['nodes'] = np.array(
             [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
              [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 0, 1], [0, 1, 2], [0, 1, 3]], dtype=int)
+        geom['elems'] = np.array([[0, 0, 1], [1, 1, 2], [2, 1, 3]], dtype=int)
         geom['radii'] = [0.1, 0.1, 0.1]
         geom['length'] = [0.5, 0.5, 0.5]
         geom['euclidean length'] = geom['length']
@@ -78,7 +78,7 @@ class test_arrange_strahler_order(TestCase):
         geom['nodes'] = np.array(
              [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
              [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['elems'] = np.array([[0, 1, 2], [1, 0, 1], [2, 1, 3]], dtype=int)
         geom['radii'] = [0.1, 0.1, 0.1]
         geom['length'] = [0.5, 0.5, 0.5]
         geom['euclidean length'] = geom['length']
@@ -92,13 +92,25 @@ class test_arrange_strahler_order(TestCase):
         geom['nodes'] = np.array(
             [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
             [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['elems'] = np.array([[0, 1, 2], [1, 0, 1], [2, 1, 3]], dtype=int)
         geom['radii'] = [0.1, 0.1, 0.1]
         geom['length'] = [0.5, 0.5, 0.5]
         geom['euclidean length'] = geom['length']
 
         arranged = placentagen.arrange_by_strahler_order(geom, 0, [0., 0., -1.0])
         self.assertTrue((arranged['elems'][0] == np.array([0, 0, 1])).all)
+
+class test_evaluate_orders(TestCase):
+
+    def test_evaluate_orders(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 0, 1], [1, 1, 2], [2, 1, 3]], dtype=int)
+        orders = placentagen.evaluate_orders(geom['nodes'],  geom['elems'])
+
+        self.assertTrue(orders['strahler'][0] == 2 and orders['generation'][0] == 1 )
 
 
 class test_terminal_br(TestCase):
