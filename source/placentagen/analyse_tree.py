@@ -448,6 +448,186 @@ def define_elem_lengths(node_loc, elems):
 
     return lengths
 
+def find_branch_angles(geom, orders, elem_connect, branchGeom, voxelSize, conversionFactor):
+    ######
+    # Function: find branch angles + L/LParent & D/Dparent
+    #          scale all results into mm and degrees
+    # Inputs: geom - contains elems, and various element properties (length, radius etc.)
+    #         orders - contains strahler order and generation of each element
+    #         elem_connect - contains upstream and downstream elements for each element
+    #         branchGeom - contains branch properties (length, radius, etc.)
+    #         voxelSize - for conversion to mm (must be isotropic)
+    #         conversionFactor - to scale radii correction, printed in log of ImageJ during MySkeletonizationProcess
+    # Outputs: geom and branchGeom are altered so all there arrays are in correct units (except nodes, and radii_unscaled, which remain in voxels) ##################
+    #          seg_angles - angle (radians) at each element junction in the tree assigned to each element according to how it branches from its parent
+    #          diam_ratio - ratio of length/diameter of each branch, accounting for multi-segment branches
+    #          length_ratio - ratio of parent / child lengths, accounting for multi-segment branches
+    #          diam_ratio / length_ratio / branch_angles are the same but for whole branches
+    ######
+
+    # unpackage inputs
+    nodes = geom['nodes']
+    elems = geom['elems']
+    elems = elems[:, 1:3]  # get rid of useless first column
+    radii = geom['radii']
+    lengths = geom['length']
+
+    branches = branchGeom['branches']
+    branchRad = branchGeom['radii']
+    branchLen = branchGeom['length']
+
+    strahler = orders['strahler']
+    generations = orders['generation']
+
+    elem_up = elem_connect['elem_up']
+
+    # new arrays
+    num_elems = len(elems)
+    num_branches = len(branchRad)
+
+    branch_angles = -1. * np.ones(num_branches) # results by branch (Strahler)
+    diam_ratio_branch = -1. * np.ones(num_branches)
+    length_ratio_branch = -1. * np.ones(num_branches)
+
+    diam_ratio = -1. * np.ones(num_elems)  # results by generation
+    length_ratio = -1. * np.ones(num_elems)
+    seg_angles = -1. * np.ones(num_elems)
+
+    # find results for each element (ignoring parent element)
+    for ne in range(1, num_elems):
+
+        neUp = elem_up[ne, 1] # find parent
+
+        if (generations[neUp] < generations[ne]): # there is branching but not necessarily a new strahler branch
+
+            # parent node
+            endNode = int(elems[neUp, 0])
+            startNode = int(elems[neUp, 1])
+            v_parent = nodes[endNode, :] - nodes[startNode, :]
+            v_parent = v_parent / np.linalg.norm(v_parent)
+
+            d_parent = 2 * radii[neUp]
+            L_parent = lengths[neUp]
+
+            # daughter
+            endNode = int(elems[ne, 1])
+            startNode = int(elems[ne, 0])
+            v_daughter = nodes[startNode, :] - nodes[endNode, :]
+            v_daughter = v_daughter / np.linalg.norm(v_daughter)
+
+            d_daughter = 2 * radii[ne]
+            L_daughter = lengths[ne]
+
+            # calculate angle
+            dotProd = np.dot(v_parent, v_daughter)
+            if abs(dotProd <= 1):
+                angle=np.arccos(dotProd)
+                seg_angles[ne] = angle
+            else:
+                angle=-1
+                print('Angle Error, element: ' + str(ne))
+
+            if d_parent != 0:
+                diam_ratio[ne] = d_daughter/ d_parent
+            if L_parent != 0:
+                length_ratio[ne] = L_daughter / L_parent
+
+            if (strahler[neUp] > strahler[ne]): #then this also is a new strahler branch
+
+                # assign results
+                branchNum = int(branches[ne])-1
+                parentBranch = int(branches[neUp])-1
+
+                branch_angles[branchNum] = angle
+
+                if branchRad[parentBranch] != 0:
+                    diam_ratio_branch[branchNum] = branchRad[branchNum] / branchRad[parentBranch]
+                if branchLen[parentBranch] != 0:
+                    length_ratio_branch[branchNum] = branchLen[branchNum] / branchLen[parentBranch]
+
+    # scale results into mm and degrees & package them up
+    geom['radii'] = geom['radii'] / conversionFactor * voxelSize
+    geom['length'] = geom['length'] * voxelSize
+    geom['nodes'] = geom['nodes'] * voxelSize
+    geom['euclidean length'] = geom['euclidean length'] * voxelSize
+    geom['branch angles'] = seg_angles * 180 / np.pi
+    geom['diam_ratio'] = diam_ratio
+    geom['length_ratio'] = length_ratio
+
+    branchGeom['radii']= branchGeom['radii']/ conversionFactor
+    branchGeom['radii'] = branchGeom['radii'] * voxelSize
+    branchGeom['branch_angles'] = branch_angles * 180 / np.pi
+    branchGeom['length'] = branchGeom['length'] * voxelSize
+    branchGeom['euclidean length'] = branchGeom['euclidean length'] * voxelSize
+
+    branchGeom['length ratio'] = length_ratio_branch
+    branchGeom['diam ratio'] = diam_ratio_branch
+
+    return (geom, branchGeom)
+
+
+def find_parent_node(find_inlet_loc, inlet_loc, nodes, radii, elems, elem_properties):
+    """Finds the parent node in array either from given coordinates or by finding the terminal branch with the largest radius
+       Inputs:
+         - nodes: an list of node coordinates in with structure [node num, coord1,coord2,coord3,...]
+         - radii: N x 1 array with radius of each element
+         - elems: an Nx2(!!!) array with node indices for start and end of node
+         - elem_properties:an N x K array, with each row containing various element properties (radii etc.)
+         - inlet_loc : the coordinates of the parent node for the entire tree (if known)
+         = find_inlet_loc - a boolean variable specifying whether to use inlet location provided (0) or to find the inlet location automatically (1)
+       Returns: elems and elem_properties updates so that inlet element is the first element in the list
+    """
+    # will define inlet as terminal element of largest radius
+    if find_inlet_loc == 1:
+        maxRad = -1
+        # go through each node
+        for i in range(0, len(nodes) + 1):
+
+            # find number of occurrences of the node
+            places = np.where(elems == i)
+            ind1 = places[0]
+            ind2 = places[1]
+
+            if (len(ind1) == 1):  # if occurs once, then element is terminal (avoids root element)
+
+                ind1 = ind1[0]
+                ind2 = ind2[0]
+                radius = radii[ind1]
+
+                if radius > maxRad:
+                    maxRad = radius
+                    maxRadInd = i
+
+        inlet_loc = np.squeeze(nodes[maxRadInd, 1:4])
+        Nn_root = maxRadInd
+    # find root node and element from coordinates provided
+    else:
+        Nn_root = pg_utilities.is_member(inlet_loc, nodes[:,1:4])
+        if (Nn_root == -1):
+            print("Warning, root node not located")
+
+    print('Inlet Coordinates:' + str(inlet_loc))
+
+    # find root element
+    Ne_place = np.where(elems == Nn_root)
+    Ne_root = Ne_place[0]  # only need first index
+    if len(Ne_root) > 1:
+        print("Warning, root node is associated with multiple elements")
+    if len(Ne_root) == 0:
+        print("Warning, no root element located")
+    Ne_root = Ne_root[0]
+
+    # make root element the first element
+    elems = pg_utilities.row_swap_2d(elems, 0, Ne_root)
+    elem_properties = pg_utilities.row_swap_2d(elem_properties, 0, Ne_root)
+
+    # get element pointing right way
+    if (np.squeeze(Ne_place[1]) != 0):
+        elems[0, :] = pg_utilities.row_swap_1d(np.squeeze(elems[0, :]), 1, 0)
+        elem_properties[0, 4:6] = pg_utilities.row_swap_1d(np.squeeze(elem_properties[0, 4:6]), 1, 0)
+
+    return (elems, elem_properties)
+
 
 def generation_summary_statistics(geom, orders, major_minor_results):
     """Calculates statistics on branching tree and display as table, sorting my generations in the tree
@@ -774,185 +954,6 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
         terminal_elems[nt] = nelem  # record what element the terminal is in
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
 
-def find_branch_angles(geom, orders, elem_connect, branchGeom, voxelSize, conversionFactor):
-    ######
-    # Function: find branch angles + L/LParent & D/Dparent
-    #          scale all results into mm and degrees
-    # Inputs: geom - contains elems, and various element properties (length, radius etc.)
-    #         orders - contains strahler order and generation of each element
-    #         elem_connect - contains upstream and downstream elements for each element
-    #         branchGeom - contains branch properties (length, radius, etc.)
-    #         voxelSize - for conversion to mm (must be isotropic)
-    #         conversionFactor - to scale radii correction, printed in log of ImageJ during MySkeletonizationProcess
-    # Outputs: geom and branchGeom are altered so all there arrays are in correct units (except nodes, and radii_unscaled, which remain in voxels) ##################
-    #          seg_angles - angle (radians) at each element junction in the tree assigned to each element according to how it branches from its parent
-    #          diam_ratio - ratio of length/diameter of each branch, accounting for multi-segment branches
-    #          length_ratio - ratio of parent / child lengths, accounting for multi-segment branches
-    #          diam_ratio / length_ratio / branch_angles are the same but for whole branches
-    ######
-
-    # unpackage inputs
-    nodes = geom['nodes']
-    elems = geom['elems']
-    elems = elems[:, 1:3]  # get rid of useless first column
-    radii = geom['radii']
-    lengths = geom['length']
-
-    branches = branchGeom['branches']
-    branchRad = branchGeom['radii']
-    branchLen = branchGeom['length']
-
-    strahler = orders['strahler']
-    generations = orders['generation']
-
-    elem_up = elem_connect['elem_up']
-
-    # new arrays
-    num_elems = len(elems)
-    num_branches = len(branchRad)
-
-    branch_angles = -1. * np.ones(num_branches) # results by branch (Strahler)
-    diam_ratio_branch = -1. * np.ones(num_branches)
-    length_ratio_branch = -1. * np.ones(num_branches)
-
-    diam_ratio = -1. * np.ones(num_elems)  # results by generation
-    length_ratio = -1. * np.ones(num_elems)
-    seg_angles = -1. * np.ones(num_elems)
-
-    # find results for each element (ignoring parent element)
-    for ne in range(1, num_elems):
-
-        neUp = elem_up[ne, 1] # find parent
-
-        if (generations[neUp] < generations[ne]): # there is branching but not necessarily a new strahler branch
-
-            # parent node
-            endNode = int(elems[neUp, 0])
-            startNode = int(elems[neUp, 1])
-            v_parent = nodes[endNode, :] - nodes[startNode, :]
-            v_parent = v_parent / np.linalg.norm(v_parent)
-
-            d_parent = 2 * radii[neUp]
-            L_parent = lengths[neUp]
-
-            # daughter
-            endNode = int(elems[ne, 1])
-            startNode = int(elems[ne, 0])
-            v_daughter = nodes[startNode, :] - nodes[endNode, :]
-            v_daughter = v_daughter / np.linalg.norm(v_daughter)
-
-            d_daughter = 2 * radii[ne]
-            L_daughter = lengths[ne]
-
-            # calculate angle
-            dotProd = np.dot(v_parent, v_daughter)
-            if abs(dotProd <= 1):
-                angle=np.arccos(dotProd)
-                seg_angles[ne] = angle
-            else:
-                angle=-1
-                print('Angle Error, element: ' + str(ne))
-
-            if d_parent != 0:
-                diam_ratio[ne] = d_daughter/ d_parent
-            if L_parent != 0:
-                length_ratio[ne] = L_daughter / L_parent
-
-            if (strahler[neUp] > strahler[ne]): #then this also is a new strahler branch
-
-                # assign results
-                branchNum = int(branches[ne])-1
-                parentBranch = int(branches[neUp])-1
-
-                branch_angles[branchNum] = angle
-
-                if branchRad[parentBranch] != 0:
-                    diam_ratio_branch[branchNum] = branchRad[branchNum] / branchRad[parentBranch]
-                if branchLen[parentBranch] != 0:
-                    length_ratio_branch[branchNum] = branchLen[branchNum] / branchLen[parentBranch]
-
-    # scale results into mm and degrees & package them up
-    geom['radii'] = geom['radii'] / conversionFactor * voxelSize
-    geom['length'] = geom['length'] * voxelSize
-    geom['nodes'] = geom['nodes'] * voxelSize
-    geom['euclidean length'] = geom['euclidean length'] * voxelSize
-    geom['branch angles'] = seg_angles * 180 / np.pi
-    geom['diam_ratio'] = diam_ratio
-    geom['length_ratio'] = length_ratio
-
-    branchGeom['radii']= branchGeom['radii']/ conversionFactor
-    branchGeom['radii'] = branchGeom['radii'] * voxelSize
-    branchGeom['branch_angles'] = branch_angles * 180 / np.pi
-    branchGeom['length'] = branchGeom['length'] * voxelSize
-    branchGeom['euclidean length'] = branchGeom['euclidean length'] * voxelSize
-
-    branchGeom['length ratio'] = length_ratio_branch
-    branchGeom['diam ratio'] = diam_ratio_branch
-
-    return (geom, branchGeom)
-
-
-def find_parent_node(find_inlet_loc, inlet_loc, nodes, radii, elems, elem_properties):
-    """Finds the parent node in array either from given coordinates or by finding the terminal branch with the largest radius
-       Inputs:
-         - nodes: an list of node coordinates in with structure [node num, coord1,coord2,coord3,...]
-         - radii: N x 1 array with radius of each element
-         - elems: an Nx2(!!!) array with node indices for start and end of node
-         - elem_properties:an N x K array, with each row containing various element properties (radii etc.)
-         - inlet_loc : the coordinates of the parent node for the entire tree (if known)
-         = find_inlet_loc - a boolean variable specifying whether to use inlet location provided (0) or to find the inlet location automatically (1)
-       Returns: elems and elem_properties updates so that inlet element is the first element in the list
-    """
-    # will define inlet as terminal element of largest radius
-    if find_inlet_loc == 1:
-        maxRad = -1
-        # go through each node
-        for i in range(0, len(nodes) + 1):
-
-            # find number of occurrences of the node
-            places = np.where(elems == i)
-            ind1 = places[0]
-            ind2 = places[1]
-
-            if (len(ind1) == 1):  # if occurs once, then element is terminal (avoids root element)
-
-                ind1 = ind1[0]
-                ind2 = ind2[0]
-                radius = radii[ind1]
-
-                if radius > maxRad:
-                    maxRad = radius
-                    maxRadInd = i
-
-        inlet_loc = np.squeeze(nodes[maxRadInd, 1:4])
-        Nn_root = maxRadInd
-    # find root node and element from coordinates provided
-    else:
-        Nn_root = pg_utilities.is_member(inlet_loc, nodes[:,1:4])
-        if (Nn_root == -1):
-            print("Warning, root node not located")
-
-    print('Inlet Coordinates:' + str(inlet_loc))
-
-    # find root element
-    Ne_place = np.where(elems == Nn_root)
-    Ne_root = Ne_place[0]  # only need first index
-    if len(Ne_root) > 1:
-        print("Warning, root node is associated with multiple elements")
-    if len(Ne_root) == 0:
-        print("Warning, no root element located")
-    Ne_root = Ne_root[0]
-
-    # make root element the first element
-    elems = pg_utilities.row_swap_2d(elems, 0, Ne_root)
-    elem_properties = pg_utilities.row_swap_2d(elem_properties, 0, Ne_root)
-
-    # get element pointing right way
-    if (np.squeeze(Ne_place[1]) != 0):
-        elems[0, :] = pg_utilities.row_swap_1d(np.squeeze(elems[0, :]), 1, 0)
-        elem_properties[0, 4:6] = pg_utilities.row_swap_1d(np.squeeze(elem_properties[0, 4:6]), 1, 0)
-
-    return (elems, elem_properties)
 
 def major_minor(geom, elem_down):
     """
