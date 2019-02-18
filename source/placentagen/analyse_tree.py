@@ -449,21 +449,21 @@ def define_elem_lengths(node_loc, elems):
     return lengths
 
 def find_branch_angles(geom, orders, elem_connect, branchGeom, voxelSize, conversionFactor):
-    ######
-    # Function: find branch angles + L/LParent & D/Dparent
-    #          scale all results into mm and degrees
-    # Inputs: geom - contains elems, and various element properties (length, radius etc.)
-    #         orders - contains strahler order and generation of each element
-    #         elem_connect - contains upstream and downstream elements for each element
-    #         branchGeom - contains branch properties (length, radius, etc.)
-    #         voxelSize - for conversion to mm (must be isotropic)
-    #         conversionFactor - to scale radii correction, printed in log of ImageJ during MySkeletonizationProcess
-    # Outputs: geom and branchGeom are altered so all there arrays are in correct units (except nodes, and radii_unscaled, which remain in voxels) ##################
-    #          seg_angles - angle (radians) at each element junction in the tree assigned to each element according to how it branches from its parent
-    #          diam_ratio - ratio of length/diameter of each branch, accounting for multi-segment branches
-    #          length_ratio - ratio of parent / child lengths, accounting for multi-segment branches
-    #          diam_ratio / length_ratio / branch_angles are the same but for whole branches
-    ######
+    """Finds branch angles + L/LParent & D/Dparent and scale all results into desired units and degrees
+       Inputs:
+        - geom: contains elems, and various element properties (length, radius etc.)
+        - orders: contains strahler order and generation of each element
+        -  elem_connect: contains upstream and downstream elements for each element
+        - branchGeom: contains branch properties (length, radius, etc.)
+        - voxelSize: for conversion to mm (must be isotropic)
+        - conversionFactor: to scale radii correction, printed in log of ImageJ during MySkeletonizationProcess
+       Outputs:
+        - geom and branchGeom are altered so all there arrays are in correct units (except nodes, and radii_unscaled, which remain in voxels) ##################
+        - seg_angles: angle (radians) at each element junction in the tree assigned to each element according to how it branches from its parent
+        - diam_ratio:  ratio of length/diameter of each branch, accounting for multi-segment branches
+        - length_ratio:  ratio of parent / child lengths, accounting for multi-segment branches
+        - diam_ratio: length_ratio / branch_angles are the same but for whole branches
+    """
 
     # unpackage inputs
     nodes = geom['nodes']
@@ -912,188 +912,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
 
     return np.concatenate((values_by_gen, values_overall),0)
 
-
-def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
-    """ Counts the number of terminals in a sampling grid element, will only work with
-    rectangular mesh created as in generate_shapes.gen_rectangular_mesh
-
-    Inputs are:
-     - Rectangular mesh: the rectangular sampling grid
-     - terminal_list: a list of terminal branch
-     - node_loc: array of coordinates (locations) of nodes of tree branches
-
-    Return:
-     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
-     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
-
-    A way you might want to use me is:
-
-    >>> terminal_list={}
-    >>> terminal_list['terminal_nodes']=[3]
-    >>> terminal_list['total_terminals']=1
-    >>> rectangular_mesh = {}
-    >>> rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
-    >>> rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
-    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])   
-    >>> terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc)
-
-    This will return:
-
-    >>> terminals_in_grid: 1
-    >>> terminal_elems: 0
-    """
-    num_terminals = terminal_list['total_terminals']
-    terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
-    terminal_elems = np.zeros(num_terminals, dtype=int)
-    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
-
-    for nt in range(0, num_terminals):
-        coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
-        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8], coord_terminal)
-        terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
-        terminal_elems[nt] = nelem  # record what element the terminal is in
-    return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
-
-
-def major_minor(geom, elem_down):
-    """
-     Find the Major/Minor ratios of length, diameter and branch angle
-       Inputs:
-       - geom: contains elements, and their radii, angles and lengths
-       - elem_down: contains the index of the downstream elements at each element
-       Outputs:
-       - major and minor angle info for each element
-    """
-
-    # extract data
-    radii=geom['radii']
-    angles=geom['branch angles']
-    length=geom['length']
-
-    # create arrays
-    Ne=len(elem_down)
-
-    Minor_angle=-1*np.ones(Ne)
-    Major_angle = -1*np.ones(Ne)
-
-    D_Major_Minor = -1 * np.ones(Ne)
-    D_min_parent = -1 * np.ones(Ne)
-    D_maj_parent = -1 * np.ones(Ne)
-
-    L_Major_Minor = -1 * np.ones(Ne)
-    L_min_parent = -1 * np.ones(Ne)
-    L_maj_parent = -1 * np.ones(Ne)
-
-    for i in range(0, Ne):
-        numDown=elem_down[i, 0]
-
-        if numDown>1: # then this element has multiple children, find minor / major child
-            print('should be true for elem 0',i,numDown)
-            d_min=100000
-            d_max=0
-            for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
-                child=np.int(elem_down[i, j])
-                d_child=radii[child]
-
-                if d_child>=d_max:
-                    d_max=d_child
-                    daughter_max=child
-                if d_child<d_min:
-                    d_min = d_child
-                    daughter_min = child
-
-            if daughter_max!=daughter_min: # ensure two distinct daughters
-
-                Minor_angle[i]=angles[daughter_min]
-                Major_angle[i]=angles[daughter_max]
-
-                if radii[daughter_min]!=0: # avoid divide by zero errors
-                    D_Major_Minor[i]=radii[daughter_max]/radii[daughter_min]
-                if radii[i] != 0:
-                    D_min_parent[i]=radii[daughter_min]/radii[i]
-                    D_maj_parent[i]=radii[daughter_max]/radii[i]
-
-                if length[daughter_min] != 0:
-                    L_Major_Minor[i] = length[daughter_max] / length[daughter_min]
-                if length[i] != 0:
-                    L_min_parent[i] = length[daughter_min] / length[i]
-                    L_maj_parent[i] = length[daughter_max] / length[i]
-            else: #two daughters ar the same size
-                D_Major_Minor[i] = 1.0
-                D_min_parent[i] = radii[daughter_max]/radii[i]
-                D_maj_parent[i] = D_min_parent[i]
-                L_Major_Minor[i] = 1.0
-                L_maj_parent[i] = length[daughter_max] / length[i]
-                L_min_parent[i] = L_maj_parent[i]
-
-    return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
-
-
-
-def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc):
-    """ Counts the number of terminals in a sampling grid element for general mesh
-
-    Inputs are:
-     - Rectangular mesh: the rectangular sampling grid
-     - placenta_list: array of sampling grid element that are located inside the ellipsoid
-     - terminal_list: a list of terminal branch
-     - node_loc: array of coordinates (locations) of nodes of tree branches
-
-    Return:
-     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
-     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
-    
-    A way you might want to use me is:
-
-    >>> terminal_list = {}
-    >>> terminal_list['terminal_nodes'] = [3]
-    >>> terminal_list['total_terminals'] = 1
-    >>> placenta_list = [7]
-    >>> rectangular_mesh = {}
-    >>> rectangular_mesh['elems'] = np.zeros((8, 9), dtype=int)
-    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.],
-                                     [0., 1., 1.], [1., 1., 1.]]
-    >>> rectangular_mesh['elems'][7] = [0, 0, 1, 2, 3, 4, 5, 6, 7]
-    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])  
-    >>> terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc)
-
-    This will return:
-
-    >>> terminals_in_grid[7]: 1
-    >>> terminal_elems[0]: 7
-    """
-    num_sample_elems = len(placenta_list)
-    num_terminals = terminal_list['total_terminals']
-    terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
-    terminal_mapped = np.zeros(num_terminals, dtype=int)
-    terminal_elems = np.zeros(num_terminals, dtype=int)
-
-    for ne_i in range(0, num_sample_elems):
-        # First node has min x,y,z and last node has max x,y,z
-        ne = placenta_list[ne_i]
-        if placenta_list[ne_i] > 0:  # There is some placenta in this element (assuming none in el 0)
-            first_node = rectangular_mesh['elems'][ne][1]
-            last_node = rectangular_mesh['elems'][ne][8]
-            min_coords = rectangular_mesh['nodes'][first_node][0:3]
-            max_coords = rectangular_mesh['nodes'][last_node][0:3]
-            for nt in range(0, num_terminals):
-                if terminal_mapped[nt] == 0:
-                    in_element = False
-                    coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
-                    if coord_terminal[0] >= min_coords[0]:
-                        if coord_terminal[0] < max_coords[0]:
-                            if coord_terminal[1] >= min_coords[1]:
-                                if coord_terminal[1] < max_coords[1]:
-                                    if coord_terminal[2] >= min_coords[2]:
-                                        if coord_terminal[2] < max_coords[2]:
-                                            in_element = True
-                    if in_element:
-                        terminals_in_grid[ne] = terminals_in_grid[ne] + 1
-                        terminal_mapped[nt] = 1
-                        terminal_elems[nt] = ne
-
-    return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
-
 def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_system):
 
     # branch inputs
@@ -1367,6 +1185,189 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
     print('-------------')
 
     return np.concatenate((values_by_order, values_overall),0)
+
+
+def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
+    """ Counts the number of terminals in a sampling grid element, will only work with
+    rectangular mesh created as in generate_shapes.gen_rectangular_mesh
+
+    Inputs are:
+     - Rectangular mesh: the rectangular sampling grid
+     - terminal_list: a list of terminal branch
+     - node_loc: array of coordinates (locations) of nodes of tree branches
+
+    Return:
+     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
+
+    A way you might want to use me is:
+
+    >>> terminal_list={}
+    >>> terminal_list['terminal_nodes']=[3]
+    >>> terminal_list['total_terminals']=1
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] =np.array( [[ 0.,  0.,  0.],[ 1.,  0. , 0.],[ 0.,  1. , 0.],[ 1. , 1. , 0.],[ 0.,  0. , 1.],[ 1.,  0. , 1.],[ 0. , 1. , 1.],[ 1. , 1. , 1.]])
+    >>> rectangular_mesh['elems']=[[0, 0, 1, 2, 3, 4, 5, 6, 7]]
+    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])   
+    >>> terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc)
+
+    This will return:
+
+    >>> terminals_in_grid: 1
+    >>> terminal_elems: 0
+    """
+    num_terminals = terminal_list['total_terminals']
+    terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
+    terminal_elems = np.zeros(num_terminals, dtype=int)
+    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+
+    for nt in range(0, num_terminals):
+        coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
+        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8], coord_terminal)
+        terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
+        terminal_elems[nt] = nelem  # record what element the terminal is in
+    return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
+
+
+def major_minor(geom, elem_down):
+    """
+     Find the Major/Minor ratios of length, diameter and branch angle
+       Inputs:
+       - geom: contains elements, and their radii, angles and lengths
+       - elem_down: contains the index of the downstream elements at each element
+       Outputs:
+       - major and minor angle info for each element
+    """
+
+    # extract data
+    radii=geom['radii']
+    angles=geom['branch angles']
+    length=geom['length']
+
+    # create arrays
+    Ne=len(elem_down)
+
+    Minor_angle=-1*np.ones(Ne)
+    Major_angle = -1*np.ones(Ne)
+
+    D_Major_Minor = -1 * np.ones(Ne)
+    D_min_parent = -1 * np.ones(Ne)
+    D_maj_parent = -1 * np.ones(Ne)
+
+    L_Major_Minor = -1 * np.ones(Ne)
+    L_min_parent = -1 * np.ones(Ne)
+    L_maj_parent = -1 * np.ones(Ne)
+
+    for i in range(0, Ne):
+        numDown=elem_down[i, 0]
+
+        if numDown>1: # then this element has multiple children, find minor / major child
+            print('should be true for elem 0',i,numDown)
+            d_min=100000
+            d_max=0
+            for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
+                child=np.int(elem_down[i, j])
+                d_child=radii[child]
+
+                if d_child>=d_max:
+                    d_max=d_child
+                    daughter_max=child
+                if d_child<d_min:
+                    d_min = d_child
+                    daughter_min = child
+
+            if daughter_max!=daughter_min: # ensure two distinct daughters
+
+                Minor_angle[i]=angles[daughter_min]
+                Major_angle[i]=angles[daughter_max]
+
+                if radii[daughter_min]!=0: # avoid divide by zero errors
+                    D_Major_Minor[i]=radii[daughter_max]/radii[daughter_min]
+                if radii[i] != 0:
+                    D_min_parent[i]=radii[daughter_min]/radii[i]
+                    D_maj_parent[i]=radii[daughter_max]/radii[i]
+
+                if length[daughter_min] != 0:
+                    L_Major_Minor[i] = length[daughter_max] / length[daughter_min]
+                if length[i] != 0:
+                    L_min_parent[i] = length[daughter_min] / length[i]
+                    L_maj_parent[i] = length[daughter_max] / length[i]
+            else: #two daughters ar the same size
+                D_Major_Minor[i] = 1.0
+                D_min_parent[i] = radii[daughter_max]/radii[i]
+                D_maj_parent[i] = D_min_parent[i]
+                L_Major_Minor[i] = 1.0
+                L_maj_parent[i] = length[daughter_max] / length[i]
+                L_min_parent[i] = L_maj_parent[i]
+
+    return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
+
+
+
+def terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc):
+    """ Counts the number of terminals in a sampling grid element for general mesh
+
+    Inputs are:
+     - Rectangular mesh: the rectangular sampling grid
+     - placenta_list: array of sampling grid element that are located inside the ellipsoid
+     - terminal_list: a list of terminal branch
+     - node_loc: array of coordinates (locations) of nodes of tree branches
+
+    Return:
+     - terminals_in_grid: array showing how many terminal branches are in each sampling grid element
+     - terminal_elems: array showing the number of sampling grid element where terminal branches are located
+    
+    A way you might want to use me is:
+
+    >>> terminal_list = {}
+    >>> terminal_list['terminal_nodes'] = [3]
+    >>> terminal_list['total_terminals'] = 1
+    >>> placenta_list = [7]
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['elems'] = np.zeros((8, 9), dtype=int)
+    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [1., 1., 0.], [0., 0., 1.], [1., 0., 1.],
+                                     [0., 1., 1.], [1., 1., 1.]]
+    >>> rectangular_mesh['elems'][7] = [0, 0, 1, 2, 3, 4, 5, 6, 7]
+    >>> node_loc =np.array([[ 0.,0.,0.,-1.,2.,0.,0.], [1.,0.,0.,-0.5,2.,0.,0.],[2.,0.,-0.5,0.,1.31578947,0.,0.],[3.,0.,0.5,0.,0.,0.,0.]])  
+    >>> terminals_in_sampling_grid(rectangular_mesh, placenta_list, terminal_list, node_loc)
+
+    This will return:
+
+    >>> terminals_in_grid[7]: 1
+    >>> terminal_elems[0]: 7
+    """
+    num_sample_elems = len(placenta_list)
+    num_terminals = terminal_list['total_terminals']
+    terminals_in_grid = np.zeros(len(rectangular_mesh['elems']), dtype=int)
+    terminal_mapped = np.zeros(num_terminals, dtype=int)
+    terminal_elems = np.zeros(num_terminals, dtype=int)
+
+    for ne_i in range(0, num_sample_elems):
+        # First node has min x,y,z and last node has max x,y,z
+        ne = placenta_list[ne_i]
+        if placenta_list[ne_i] > 0:  # There is some placenta in this element (assuming none in el 0)
+            first_node = rectangular_mesh['elems'][ne][1]
+            last_node = rectangular_mesh['elems'][ne][8]
+            min_coords = rectangular_mesh['nodes'][first_node][0:3]
+            max_coords = rectangular_mesh['nodes'][last_node][0:3]
+            for nt in range(0, num_terminals):
+                if terminal_mapped[nt] == 0:
+                    in_element = False
+                    coord_terminal = node_loc[terminal_list['terminal_nodes'][nt]][1:4]
+                    if coord_terminal[0] >= min_coords[0]:
+                        if coord_terminal[0] < max_coords[0]:
+                            if coord_terminal[1] >= min_coords[1]:
+                                if coord_terminal[1] < max_coords[1]:
+                                    if coord_terminal[2] >= min_coords[2]:
+                                        if coord_terminal[2] < max_coords[2]:
+                                            in_element = True
+                    if in_element:
+                        terminals_in_grid[ne] = terminals_in_grid[ne] + 1
+                        terminal_mapped[nt] = 1
+                        terminal_elems[nt] = ne
+
+    return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
+
 
 
 def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc, volume, thickness, ellipticity, term_total_vol,

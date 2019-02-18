@@ -145,6 +145,50 @@ class test_summary_statistics(TestCase):
             [-1., 3., 0.5, 0., 0.08333333, 0.02357023, 0.5, 0., 6.66666667, 2.3570226, 1., 0., 0.33333333, 0.16996732,
              0.4, 0., 0.5, 0., 0.56666667])).all)
 
+    def test_summary_statistics(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.3, -0.8, 2., 0., 0.],
+             [1., 0., 0.5, -0.6, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['radii'] = np.array([0.1, 0.1, 0.05])
+        geom['length'] = np.array([0.5, 0.3, 0.2])
+        geom['euclidean length'] = geom['length']
+        geom['branch angles'] = np.array([0.1, 0.5, 0.4])
+        geom['diam_ratio'] = np.array([0.1, 0.3, 0.4])
+        geom['length_ratio'] = np.array([0.1, 1.0, 0.6])
+        elem_down = np.zeros((3, 3), dtype=int)
+        elem_down[0, 0] = 2
+        elem_down[0, 1] = 1
+        elem_down[0, 2] = 2
+        elem_down[1, 0] = 0
+        elem_down[2, 0] = 0
+        elem_up = np.zeros((3, 3), dtype=int)
+        elem_up[0, 0] = 0
+        elem_up[0, 1] = 0
+        elem_up[1, 0] = 1
+        elem_up[1, 1] = 0
+        elem_up[2, 0] = 1
+        elem_up[2, 1] = 0
+
+        elem_cnct = {}
+        elem_cnct['elem_up'] = elem_up
+        elem_cnct['elem_down'] = elem_down
+
+        orders = {}
+        orders['strahler'] = np.array([2, 1, 1], dtype=int)
+        orders['generation'] = np.array([1, 2, 2], dtype=int)
+
+        major_minor_results = placentagen.major_minor(geom, elem_down)
+        branchGeom = placentagen.arrange_by_branches(geom, elem_up, orders['strahler'], orders['generation'])
+        [geom, branchGeom] = placentagen.find_branch_angles(geom, orders, elem_cnct, branchGeom, 1.0, 1.0)
+        arranged = placentagen.summary_statistics(branchGeom, geom, orders, major_minor_results, 'strahler')
+        self.assertTrue((np.isclose(np.array(arranged[2][0:19]),np.array([-1.00000000e+00,3.00000000e+00,3.33333333e-01,
+                        1.24721913e-01,1.66666667e-01,4.71404521e-02,4.78055340e-01,3.82503840e-02,2.00000000e+00,
+                        4.08248290e-01,7.23581191e-01,3.32678936e-01,1.16062508e+02,7.62755935e+00,2.00000000e+00,
+                        5.00000000e-01,2.00000000e+00,0.00000000e+00,2.00000000e+00]))).all)
+
+
 class test_terminal_br(TestCase):
         
     def test_terminal_br(self):
