@@ -450,15 +450,14 @@ def define_elem_lengths(node_loc, elems):
     return lengths
 
 
-###
-# Function: find statistics on branching tree and display as table, sorting my generations in the tree
-# Inputs: geom - contains various element properties (length, radius etc.) by element
-#         orders - contains strahler order and generation of each element
-# Outputs: table of information according to generation prints to screen
-######
-
 def generation_summary_statistics(geom, orders, major_minor_results):
-
+    """Calculates statistics on branching tree and display as table, sorting my generations in the tree
+     Inputs:
+       - geom: contains various element properties (length, radius etc.) by element
+       - orders: contains strahler order and generation of each element
+     Outputs: table of information according to generation prints to screen
+    """
+    print(' in the file')
     # unpack inputs
     generation = orders['generation']
 
@@ -485,12 +484,17 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     num_gens= int(max(generation))
     values_by_gen = np.zeros([num_gens, 34])
 
+    print(' about to do stats')
+
     for n_gen in range(0, num_gens):
 
         element_list = (generation == n_gen + 1)
 
         diam_list = np.extract(element_list, diam)
         len_list = np.extract(element_list, length)
+        print(element_list,generation, n_gen)
+        print(diam_list)
+        print(len_list)
 
         # account for zero diameters
         diam_bool = diam_list > 0
@@ -498,7 +502,8 @@ def generation_summary_statistics(geom, orders, major_minor_results):
         list = np.logical_and(diam_bool, len_bool)
         diam_list = diam_list[list]
         len_list = len_list[list]
-
+        print(diam_list)
+        print(len_list)
         # assign stats for each order
         values_by_gen[n_gen, 0] = n_gen + 1  # order
         values_by_gen[n_gen, 1] = len(np.extract(element_list, element_list))  # number of branches
@@ -520,7 +525,7 @@ def generation_summary_statistics(geom, orders, major_minor_results):
         values_by_gen[n_gen, 11] = np.std(
             np.extract(element_list, length) / np.extract(element_list, euclid_length))  # tortuosity
 
-
+        print(' done regardless')
         if n_gen > 0:
 
 
@@ -577,6 +582,7 @@ def generation_summary_statistics(geom, orders, major_minor_results):
                 values_by_gen[n_gen, 32] = np.mean(D_Major_Minor_list)
                 values_by_gen[n_gen, 33] = np.std(D_Major_Minor_list)
 
+    print('through the first loops')
 
 
     # statistics independent of order
@@ -592,7 +598,10 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     angle_list = np.extract(element_list, angles)
     angle_list = angle_list[angle_list > 0]
 
+    print(element_list,diam_list,len_list,angle_list)
+
     Minor_angle_list = np.extract(element_list, Minor_angle)
+    print(Minor_angle_list)
     Minor_angle_list = Minor_angle_list[Minor_angle_list > 0]
     Major_angle_list = np.extract(element_list, Major_angle)
     Major_angle_list = Major_angle_list[Major_angle_list > 0]
@@ -658,6 +667,8 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     values_overall[0, 31] = np.std(D_maj_parent_list)
     values_overall[0, 32] = np.mean(D_Major_Minor_list)
     values_overall[0, 33] = np.std(D_Major_Minor_list)
+
+    print('about to tabulate per gen statistics')
 
     # 'LLparent', 'std', 'LminLparent', 'std', 'LmajLparent', 'std', 'LminLmaj', 'std', 'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
     print('\n')
@@ -959,12 +970,14 @@ def find_parent_node(find_inlet_loc, inlet_loc, nodes, radii, elems, elem_proper
     return (elems, elem_properties)
 
 def major_minor(geom, elem_down):
-    #######################
-    # Function: Find the Major/Minor ratios of length, diameter and branch angle
-    # Inputs:  geom - contains elements, and their radii, angles and lengths
-    #          elem_down - contains the index of the downstream elements at each element
-    # Outputs: grad - the diameter scaling coefficient
-    #######################
+    """
+     Find the Major/Minor ratios of length, diameter and branch angle
+       Inputs:
+       - geom: contains elements, and their radii, angles and lengths
+       - elem_down: contains the index of the downstream elements at each element
+       Outputs:
+       - major and minor angle info for each element
+    """
 
     # extract data
     radii=geom['radii']
@@ -989,14 +1002,14 @@ def major_minor(geom, elem_down):
         numDown=elem_down[i, 0]
 
         if numDown>1: # then this element has multiple children, find minor / major child
-
+            print('should be true for elem 0',i,numDown)
             d_min=100000
             d_max=0
             for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
                 child=np.int(elem_down[i, j])
                 d_child=radii[child]
 
-                if d_child>d_max:
+                if d_child>=d_max:
                     d_max=d_child
                     daughter_max=child
                 if d_child<d_min:
@@ -1019,6 +1032,15 @@ def major_minor(geom, elem_down):
                 if length[i] != 0:
                     L_min_parent[i] = length[daughter_min] / length[i]
                     L_maj_parent[i] = length[daughter_max] / length[i]
+            else: #two daughters ar the same size
+                D_Major_Minor[i] = 1.0
+                D_min_parent[i] = radii[daughter_max]/radii[i]
+                D_maj_parent[i] = D_min_parent[i]
+                L_Major_Minor[i] = 1.0
+                L_maj_parent[i] = length[daughter_max] / length[i]
+                L_min_parent[i] = L_maj_parent[i]
+
+    print(Minor_angle,Major_angle)
     return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
 
 

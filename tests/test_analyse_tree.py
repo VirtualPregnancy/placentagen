@@ -7,6 +7,7 @@ import placentagen
 import os
 TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exnode')
 TESTDATA_FILENAME1 = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exelem')
+TESTDDATA_FILENAME2 = os.path.join(os.path.dirname(__file__), 'Testdata/stem_xy.txt')
 
 class test_arrange_by_br(TestCase):
 
@@ -112,6 +113,37 @@ class test_evaluate_orders(TestCase):
 
         self.assertTrue(orders['strahler'][0] == 2 and orders['generation'][0] == 1 )
 
+class test_summary_statistics(TestCase):
+
+    def test_generation_summary_statistics(self):
+        geom = {}
+        geom['nodes'] = np.array(
+            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.3, -0.5, 2., 0., 0.],
+             [1., 0., 0.5, -0.5, 2., 0., 0.]])
+        geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
+        geom['radii'] = [0.1, 0.1, 0.05]
+        geom['length'] = [0.5, 0.5, 0.5]
+        geom['euclidean length'] = geom['length']
+        geom['branch angles'] = [0.1, 0.5, 0.4]
+        geom['diam_ratio'] = [0.1, 0.3, 0.4]
+        geom['length_ratio'] = [0.1, 1.0, 0.6]
+        elem_down = np.zeros((3, 3), dtype=int)
+        elem_down[0, 0] = 2
+        elem_down[0, 1] = 1
+        elem_down[0, 2] = 2
+        elem_down[1, 0] = 0
+        elem_down[2, 0] = 0
+
+        orders = {}
+        orders['strahler'] = np.array([2, 1, 1], dtype=int)
+        orders['generation'] = np.array([1, 2, 2], dtype=int)
+
+        major_minor_results = placentagen.major_minor(geom, elem_down)
+
+        arranged = placentagen.generation_summary_statistics(geom, orders, major_minor_results)
+        self.assertTrue(np.isclose(np.array(arranged[2][0:19]), np.array(
+            [-1., 3., 0.5, 0., 0.08333333, 0.02357023, 0.5, 0., 6.66666667, 2.3570226, 1., 0., 0.33333333, 0.16996732,
+             0.4, 0., 0.5, 0., 0.56666667])).all)
 
 class test_terminal_br(TestCase):
         
@@ -385,7 +417,7 @@ class Test_weighted_diameter(TestCase):
         wt_D=placentagen.weighted_diameter_in_samp_gr(term_diameter_in_grid,br_diameter_in_grid,tissue_vol)
         self.assertTrue(np.isclose(wt_D,0.17988357))
 
-class Test_radius_br(TestCase):
+class test_radius_br(TestCase):
         
     def test_radius_by_order(self):
         noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
@@ -396,6 +428,18 @@ class Test_radius_br(TestCase):
         radius_ratio=1.53
         radius=placentagen.define_radius_by_order(noddata['nodes'], eldata['elems'], system, inlet_elem, inlet_radius, radius_ratio)
         self.assertTrue(np.isclose(radius[1],0.0653594771242))
+
+    def test_radius_by_order_stem(self):
+        noddata = placentagen.import_exnode_tree(TESTDATA_FILENAME)
+        eldata = placentagen.import_exelem_tree(TESTDATA_FILENAME1)
+        system='strahler'
+        inlet_elem=0
+        inlet_radius=0.1
+        radius_ratio=1.53
+        radius=placentagen.define_radius_by_order_stem(noddata['nodes'], eldata['elems'], system, TESTDDATA_FILENAME2, inlet_radius, radius_ratio)
+        print(radius)
+        self.assertTrue(np.isclose(radius[1],0.1))
+
 
 class Test_porosity(TestCase):
       def test_porosity(self):
