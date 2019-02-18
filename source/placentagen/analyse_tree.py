@@ -62,7 +62,6 @@ def arrange_by_branches(geom, elem_up, order,generation):
         branches[i] = branchNum
 
     num_branches = int(max(branches)) +1 #including inlet
-    print(num_branches)
 
     # sort results into branch groups
     lengths = geom['length']
@@ -457,7 +456,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
        - orders: contains strahler order and generation of each element
      Outputs: table of information according to generation prints to screen
     """
-    print(' in the file')
     # unpack inputs
     generation = orders['generation']
 
@@ -484,7 +482,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     num_gens= int(max(generation))
     values_by_gen = np.zeros([num_gens, 34])
 
-    print(' about to do stats')
 
     for n_gen in range(0, num_gens):
 
@@ -492,9 +489,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
 
         diam_list = np.extract(element_list, diam)
         len_list = np.extract(element_list, length)
-        print(element_list,generation, n_gen)
-        print(diam_list)
-        print(len_list)
 
         # account for zero diameters
         diam_bool = diam_list > 0
@@ -502,8 +496,7 @@ def generation_summary_statistics(geom, orders, major_minor_results):
         list = np.logical_and(diam_bool, len_bool)
         diam_list = diam_list[list]
         len_list = len_list[list]
-        print(diam_list)
-        print(len_list)
+
         # assign stats for each order
         values_by_gen[n_gen, 0] = n_gen + 1  # order
         values_by_gen[n_gen, 1] = len(np.extract(element_list, element_list))  # number of branches
@@ -525,7 +518,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
         values_by_gen[n_gen, 11] = np.std(
             np.extract(element_list, length) / np.extract(element_list, euclid_length))  # tortuosity
 
-        print(' done regardless')
         if n_gen > 0:
 
 
@@ -582,8 +574,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
                 values_by_gen[n_gen, 32] = np.mean(D_Major_Minor_list)
                 values_by_gen[n_gen, 33] = np.std(D_Major_Minor_list)
 
-    print('through the first loops')
-
 
     # statistics independent of order
     values_overall = np.zeros([1, 34])
@@ -598,10 +588,7 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     angle_list = np.extract(element_list, angles)
     angle_list = angle_list[angle_list > 0]
 
-    print(element_list,diam_list,len_list,angle_list)
-
     Minor_angle_list = np.extract(element_list, Minor_angle)
-    print(Minor_angle_list)
     Minor_angle_list = Minor_angle_list[Minor_angle_list > 0]
     Major_angle_list = np.extract(element_list, Major_angle)
     Major_angle_list = Major_angle_list[Major_angle_list > 0]
@@ -667,8 +654,6 @@ def generation_summary_statistics(geom, orders, major_minor_results):
     values_overall[0, 31] = np.std(D_maj_parent_list)
     values_overall[0, 32] = np.mean(D_Major_Minor_list)
     values_overall[0, 33] = np.std(D_Major_Minor_list)
-
-    print('about to tabulate per gen statistics')
 
     # 'LLparent', 'std', 'LminLparent', 'std', 'LmajLparent', 'std', 'LminLmaj', 'std', 'DDparent', 'std','DminDparent', 'std','DmajDparent', 'std','DminDmaj', 'std']
     print('\n')
@@ -1040,7 +1025,6 @@ def major_minor(geom, elem_down):
                 L_maj_parent[i] = length[daughter_max] / length[i]
                 L_min_parent[i] = L_maj_parent[i]
 
-    print(Minor_angle,Major_angle)
     return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
 
 
