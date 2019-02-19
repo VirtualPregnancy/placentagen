@@ -428,6 +428,8 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
         sum_branch_ml) + ')')
 
+    return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
+
 
 def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
     """Calculate conductivity of sampling grid element where villous branches are located
