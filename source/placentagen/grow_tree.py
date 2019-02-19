@@ -46,12 +46,20 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
             - tb_loc: The location of that datapoint
 
     '''
-
+    if (volume==0) or (thickness==0) or (ellipticity==0):
+        check_in_ellipsoid = 0
+    else:
+        check_in_ellipsoid = 1
     # Calulate axis dimensions of ellipsoid with given volume, thickness and ellipticity
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
-    z_radius = radii['z_radius']
-    x_radius = radii['x_radius']
-    y_radius = radii['y_radius']
+    if(check_in_ellipsoid):
+        radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+        z_radius = radii['z_radius']
+        x_radius = radii['x_radius']
+        y_radius = radii['y_radius']
+
+        print('z radius ' + str(z_radius))
+        print('x_radius ' + str(x_radius))
+        print('y_radius ' + str(y_radius))
 
     # We can estimate the number of elements in the generated model based on the number of data (seed points) to
     #  pre-allocate data arrays.
@@ -60,11 +68,18 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
+
+    print('total_estimated', total_estimated) #Monika
     # Define the total number of nodes and elements prior to growing, plus the new number expected
     num_elems_old = len(initial_geom["elems"])
     num_nodes_old = len(initial_geom["nodes"])
     num_elems_new = num_elems_old + total_estimated
     num_nodes_new = num_nodes_old + total_estimated
+    print('Number of existing elements ' + str(num_elems_old))
+    print('Number of existing nodes ' + str(num_nodes_old))
+    print('Expected number of elements after growing ', str(num_elems_new))
+    print('Expected number of nodes after growing ', str(num_nodes_new))
+
     original_data_length = len(datapoints)
     # Pre-allocation of data arrays
     # elem_directions = np.zeros((num_elems_new, 3))
@@ -259,7 +274,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         remaining_data = remaining_data - 1
                         tb_loc[numtb][1:4] = data_current_parent[nd_min][:]
                     else:
-                        print('Warning: No satapoint assigned to element: ' + str(ne))
+                        print('Warning: No datapoint assigned to element: ' + str(ne))
                     numtb = numtb + 1
 
 
@@ -942,10 +957,10 @@ def dist_two_vectors(vector1, vector2):
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
-    parentlist = np.zeros(1000, dtype=int)
-    ne_old = np.zeros(1000, dtype=int)
-    ntemp_list = np.zeros(1000, dtype=int)
-    ne_temp = np.zeros(1000, dtype=int)
+    parentlist = np.zeros(2000, dtype=int)
+    ne_old = np.zeros(2000, dtype=int)
+    ntemp_list = np.zeros(2000, dtype=int)
+    ne_temp = np.zeros(2000, dtype=int)
 
     NT_BNS = 1 #Initialising to arbritary ne value
     ne_old[0] = ne_parent
@@ -1260,3 +1275,7 @@ def mesh_com(ld_val, ld, datapoints):
         com = com / dat
 
     return com
+
+def element_connectivity_1D(node_loc, elems):
+    elem_connectivity = pg_utilities.element_connectivity_1D(node_loc, elems)
+    return {'elem_up': elem_connectivity['elem_up'], 'elem_down': elem_connectivity['elem_down']}
