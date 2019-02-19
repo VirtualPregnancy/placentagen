@@ -428,43 +428,6 @@ def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_ra
     print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
         sum_branch_ml) + ')')
 
-######
-# Function: Finds Strahler ratio of variable. Author: Rachel Smith
-#     Inputs: Orders- an array containing the orders of the vascular tree
-#             Factor - an array containing a value for each order of the tree e.g. number of branches at each order
-#     Outputs: Strahler ratio e.g. Rb, Rd for that factor and the R^2 value of the linear fit used to produce it
-######
-
-def find_strahler_ratio(Orders, Factor):
-
-    x = Orders
-    yData = np.log(Factor)
-    plt.plot(x, yData, 'k--', linewidth=1.5, label='Data')
-
-    # fit line to data
-    xFit = np.unique(Orders)
-    yFit = np.poly1d(np.polyfit(x, yData, 1))(np.unique(x))
-    plt.plot(np.unique(x), yFit, label='linear fit')
-
-    # Scaling Coefficient is gradient of the fit
-    grad = (yFit[len(yFit) - 1] - yFit[0]) / (xFit[len(xFit) - 1] - xFit[0])
-    grad=np.abs(grad)
-    grad=np.exp(grad)
-
-    # R^2 value
-    yMean = [mean(yData) for y in yData]
-    r2 = 1 - (sum((yFit - yData) * (yFit - yData)) / sum((yMean - yData) * (yMean - yData)))
-
-    heading = ('Strahler Ratio = ' + str(grad) + ' r2=' + str(r2))
-    plt.title(heading)
-    plt.legend()
-    plt.show()
-
-    return grad, r2
-
-
-    return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
-
 
 def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
     """Calculate conductivity of sampling grid element where villous branches are located
