@@ -153,7 +153,7 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
 
         attempts = attempts + 1
     chorion_data.resize(generated_seed, 3)  # resize data array to correct size
-    print('Data points on ellipsoid allocated. Total = ' + str(len(chorion_data)))
+    print('Data points on ellipsoid allocated. Total = ' + str(len(chorion_data)) )
 
     return chorion_data
 
