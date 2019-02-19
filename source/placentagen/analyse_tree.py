@@ -267,6 +267,338 @@ def calc_terminal_branch(node_loc, elems):
 
     return {'terminal_elems': terminal_branches, 'terminal_nodes': terminal_nodes, 'total_terminals': num_term}
 
+def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_radius, volume, thickness, ellipticity,
+                         start_elem):
+    """ Calculate total volume and diameter of branches in each sampling grid element
+
+    Inputs are:
+    - rectangular_mesh: rectangular sampling grid
+    - branch_nodes: array of coordinates (locations) of nodes of tree branches
+    - branch_elems: array of element showing element connectivity
+    - branch_radius: array of branch radius
+    - volume: volume of placenta
+    - thickness: thickness of placenta
+    - ellipticity: ellipticity of placenta
+    - start_elem: number of element to start calculating tissue volume
+
+    Return:
+    - br_vol_in_grid: array of total tissue volume in each sampling grid element
+    - br_diameter_in_grid: array of total diameter*volume in each sampling grid element
+
+    A way you might want to use me is:
+
+    >>> thickness =  2.1  #mm
+    >>> ellipticity = 1.00  #no unit
+    >>> volume=5    #mm3
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] = np.array([[-0.5, -0.5, -1.5],[ 0.5, -0.5,-1.5],[-0.5,  0.5 ,-1.5],[ 0.5 , 0.5, -1.5],[-0.5 ,-0.5, -0.5],[ 0.5 ,-0.5 ,-0.5],[-0.5 , 0.5 ,-0.5],[ 0.5 , 0.5 ,-0.5],[-0.5, -0.5 , 0.5],[ 0.5, -0.5 , 0.5],[-0.5  ,0.5 , 0.5],[ 0.5 , 0.5  ,0.5]])
+    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7],[1,4,5,6,7,8,9,10,11]]
+    >>> rectangular_mesh['total_elems'] = 2
+    >>> branch_elems={}
+    >>> branch_elems['elems']=[[0 ,0, 1]]
+    >>> branch_nodes={}
+    >>> branch_nodes['nodes']=np.array([[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]])
+    >>> branch_radius=[0.1]
+    >>> start_elem=0
+    >>> cal_br_vol_samp_grid(rectangular_mesh,  branch_nodes['nodes'], branch_elems['elems'],branch_radius, volume, thickness,ellipticity, start_elem)
+
+    This will return:
+
+    >>> br_vol_in_grid[0]: 0.01396263
+    >>> br_diameter_in_grid[0]: 0.00279253
+    """
+
+    # Define the resolution of cylinder for analysis
+    num_points_xy = 8
+    num_points_z = 8
+    # Define information about sampling grid required to place data points in correct locations
+    total_sample_elems = rectangular_mesh['total_elems']
+    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+    # Define the placental ellipsoid
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
+    unit_cyl_points = np.zeros((num_points_xy * num_points_xy * num_points_z, 3))
+    # Define a cylinder of points of radius 1 and length 1
+    x = np.linspace(-1, 1, num_points_xy)
+    y = np.linspace(-1, 1, num_points_xy)
+    num_accepted = 0
+    for k in range(0, num_points_z + 1):
+        for i in range(0, num_points_xy):
+            for j in range(0, num_points_xy):
+                if (x[i] ** 2 + y[j] ** 2) <= 1:
+                    new_z = 1 / np.double(num_points_z) * k
+                    unit_cyl_points[num_accepted][0] = x[i]
+                    unit_cyl_points[num_accepted][1] = y[j]
+                    unit_cyl_points[num_accepted][2] = new_z
+                    num_accepted = num_accepted + 1
+    unit_cyl_points.resize(num_accepted, 3, refcheck=False)
+    cyl_points = np.copy(unit_cyl_points)
+    cylindervector = np.array([0.0, 0.0, 1.0])
+
+    ###Define and initialise arrays to be populated
+
+    # The volume of each branch
+    vol_each_br = np.zeros(len(branch_elems))
+    # Array for total volume of sampling grid in each element
+    total_vol_samp_gr = np.zeros(total_sample_elems)
+    # Array for diameter variable of sampling grid in each element (this variable is to be used for weighted diameter calculation)
+    total_diameter_samp_gr = np.zeros(total_sample_elems)
+    # initialise counters
+    branch_count = 0
+    volume_outside_ellipsoid = 0.0
+    volume_inside_ellipsoid = 0.0
+
+    for ne in range(start_elem, len(branch_elems)):  # len(branch_elems)):  # looping for all branchs in tree
+
+        node1 = branch_nodes[branch_elems[ne][1]][1:4]  # coor of start node of a branch element
+        node2 = branch_nodes[branch_elems[ne][2]][1:4]  # coor of end node of a branch element
+        node1in = pg_utilities.check_in_on_ellipsoid(node1[0], node1[1], node1[2], x_radius, y_radius, z_radius)
+        node2in = pg_utilities.check_in_on_ellipsoid(node2[0], node2[1], node2[2], x_radius, y_radius, z_radius)
+
+        if not node1in and not node2in:
+            print('Warning, element ' + str(ne) + 'is not in ellipsoid, if this is not expected check your geometry')
+            print('Skipping this element from analysis')
+            continue
+        elif not node1in or not node2in:
+            print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
+            print('The first node ' + str(node1) + ' is ' + str(node1in) + ' (True means inside).')
+            print('The second node ' + str(node2) + ' is ' + str(node2in) + ' (True means inside).')
+            print('Skipping this element from analysis')
+            continue
+
+        branch_vector = node2 - node1
+        r = branch_radius[ne]
+        length = np.linalg.norm(branch_vector)
+        vol_each_br[ne] = np.pi * length * r ** 2.0
+        vol_per_point = vol_each_br[ne] / (np.double(num_accepted))
+
+        cyl_points[:, 0:2] = unit_cyl_points[:, 0:2] * r
+        cyl_points[:, 2] = unit_cyl_points[:, 2] * length
+
+        desiredvector = branch_vector / np.linalg.norm(branch_vector)
+
+        rotation_axis = np.cross(desiredvector, cylindervector)
+
+        if np.linalg.norm(rotation_axis) == 0:  # aligned
+            if node2[2] - node1[2] < 0:
+                cyl_points[:, 2] = -1.0 * cyl_points[:, 2]
+        else:
+            angle = pg_utilities.angle_two_vectors(cylindervector, desiredvector)
+            rotation_mat = pg_utilities.rotation_matrix_3d(rotation_axis, angle)
+            cyl_points = np.array(np.matrix(cyl_points) * np.matrix(rotation_mat))
+
+        cyl_points[:, 0] = cyl_points[:, 0] + node1[0]
+        cyl_points[:, 1] = cyl_points[:, 1] + node1[1]
+        cyl_points[:, 2] = cyl_points[:, 2] + node1[2]
+
+        # Array for vol distribution of inidvidual branch (not total)
+        vol_distribution_each_br = np.zeros(total_sample_elems, dtype=float)
+
+        for nt in range(0, num_accepted):
+
+            coord_point = cyl_points[nt][0:3]
+            inside = pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius,
+                                                        y_radius, z_radius)
+            if inside:
+                nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
+                                                 coord_point)
+                total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
+                vol_distribution_each_br[nelem] = vol_distribution_each_br[nelem] + vol_per_point
+                volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
+            else:
+                # Data points lie outside the ellipsoid - this is OK in some cases, so the code shouldn't exit. However,
+                # users should be able to check how much is outside of ellipsoid if they believe their branching geometry
+                # is set up NOT to go outside the ellipsoid at all.
+                volume_outside_ellipsoid = volume_outside_ellipsoid + vol_per_point
+
+        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br * 2.0 * r  # this variable is calculated as summation of diameter * vol of branch in grid (to be used for weight_diam)
+
+    percent_outside = volume_outside_ellipsoid / np.sum(total_vol_samp_gr) * 100.0
+
+    total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
+    sum_branch_ml = np.sum(vol_each_br)/1000.0
+
+    print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
+    print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
+        sum_branch_ml) + ')')
+
+
+    return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
+
+
+def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
+    """Calculate conductivity of sampling grid element where villous branches are located
+
+    Inputs are:
+    - vol_frac: tissue volume fraction of sampling grid element
+    - weighted_diameter: weighted diameter of sampling grid element
+    - elem_list: list of elements to assess
+
+    Return:
+    - conductivity: conductivity of sampling grid element where the placental tissue are located
+    will be in the same units as the weighted diameter (typically mm)
+
+    A way you might want to use me:
+
+    >>> vol_frac= [0.72401065]
+    >>> weighted_diameter=[0.17988357]
+    >>> non_empties=[0]
+    >>> conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
+
+    This will return:
+
+    >>> conductivity: 7.20937313e-06"""
+    max_cond = 0.52
+    conductivity = np.zeros(len(vol_frac))
+    for i in range(0, len(elem_list)):
+        ne = elem_list[i]
+        if vol_frac[ne] != 0.0:
+            conductivity[ne] = weighted_diameter[ne] ** 2 * (1 - vol_frac[ne]) ** 3 / (180.0 * vol_frac[ne] ** 2)
+        elif vol_frac[ne] == 0.0:  # see mabelles thesis
+            conductivity[ne] = max_cond
+        if conductivity[ne] > max_cond:
+            conductivity[ne] = max_cond
+
+    return conductivity
+
+
+def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
+    """ Calculates the placental volume associated with each element in a samplling grid
+
+    Inputs are:
+    - rectangular_mesh: the rectangular sampling grid
+    - volume: placental volume
+    - thickness: placental thickness
+    - ellipiticity: placental ellipticity
+    - num_test_points: resolution of integration quadrature
+
+    Return:
+    - pl_vol_in_grid: array of placental volume in each sampling grid element
+    - non_empty_rects: array of sampling grid elements that are occupied by placental tissue
+
+    A way you might want to use me is:
+
+    >>> thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  #mm
+    >>> ellipticity = 1.00  #no unit
+    >>> spacing = 1.0 #no unit
+    >>> volume=1 #mm3
+    >>> rectangular_mesh = {}
+    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
+    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
+    >>> rectangular_mesh['total_nodes'] =8
+    >>> rectangular_mesh['total_elems'] = 1
+    >>> num_test_points=25
+    >>> ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points)
+
+    This will return:
+
+    >>> pl_vol_in_grid: 0.12485807941
+    >>> non_empty_rects: 0
+    """
+    total_elems = rectangular_mesh['total_elems']
+    elems = rectangular_mesh['elems']
+    nodes = rectangular_mesh['nodes']
+
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    z_radius = radii['z_radius']
+    x_radius = radii['x_radius']
+    y_radius = radii['y_radius']
+
+    # Initialise the array that defines the volume of placenta in each grid element
+    pl_vol_in_grid = np.zeros(total_elems)
+    non_empty_loc = np.zeros(total_elems, dtype=int)
+    non_empty_count = 0
+
+    for ne in range(0, len(elems)):  # looping through elements
+        count_in_range = 0
+        nod_in_range = np.zeros(8, dtype=int)
+        # define range of x, y , and z in the element
+        startx = nodes[elems[ne][1]][0]
+        endx = nodes[elems[ne][8]][0]
+        starty = nodes[elems[ne][1]][1]
+        endy = nodes[elems[ne][8]][1]
+        startz = nodes[elems[ne][1]][2]
+        endz = nodes[elems[ne][8]][2]
+        for nod in range(1, 9):
+            check_in_range = pg_utilities.check_in_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
+                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
+            check_on_range = pg_utilities.check_on_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
+                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
+            if check_in_range or check_on_range:
+                count_in_range = count_in_range + 1
+                nod_in_range[nod - 1] = 1
+        if count_in_range == 8:  # if all 8 nodes are inside the ellipsoid
+            non_empty_loc[non_empty_count] = ne
+            non_empty_count = non_empty_count + 1
+            pl_vol_in_grid[ne] = (endx - startx) * (endy - starty) * (
+                    endz - startz)  # the placental vol in that samp_grid_el is same as vol of samp_grid_el
+        elif count_in_range == 0:  # if all 8 nodes are outside the ellpsiod
+            # since this samp_grid_el is completely outside, the placental vol is zero
+            pl_vol_in_grid[ne] = 0
+        else:  # if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
+            # Use trapezoidal quadrature to caculate the volume under the surface of the ellipsoid in each element
+            non_empty_loc[non_empty_count] = ne
+            non_empty_count = non_empty_count + 1
+            # need to map to positive quadrant
+            repeat = False
+            if (startz < 0 and endz <= 0):
+                # need to project to positive z axis
+                startz = abs(nodes[elems[ne][8]][2])
+                endz = abs(nodes[elems[ne][1]][2])
+            elif (startz < 0 and endz > 0):
+                # Need to split into components above and below the axis and sum the two
+                startz = 0
+                endz = abs(nodes[elems[ne][1]][2])
+                startz_2 = 0
+                endz_2 = nodes[elems[ne][8]][2]
+                repeat = True
+            xVector = np.linspace(startx, endx, num_test_points)
+            yVector = np.linspace(starty, endy, num_test_points)
+            xv, yv = np.meshgrid(xVector, yVector)
+            zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
+            for i in range(num_test_points):
+                for j in range(num_test_points):
+                    if zv[i, j] <= startz ** 2:
+                        zv[i, j] = startz ** 2
+                    zv[i, j] = np.sqrt(zv[i, j])
+                    if zv[i, j] > endz:
+                        zv[i, j] = endz
+                    elif zv[i, j] < startz:
+                        zv[i, j] = startz
+            intermediate = np.zeros(num_test_points)
+            for i in range(0, num_test_points):
+                intermediate[i] = np.trapz(zv[:, i], xVector)
+            Value1 = np.trapz(intermediate, yVector)
+            pl_vol_in_grid[ne] = (Value1 - startz * (endx - startx) * (endy - starty))
+            if repeat:
+                xVector = np.linspace(startx, endx, num_test_points)
+                yVector = np.linspace(starty, endy, num_test_points)
+                xv, yv = np.meshgrid(xVector, yVector)
+                zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
+                for i in range(num_test_points):
+                    for j in range(num_test_points):
+                        if zv[i, j] <= startz_2 ** 2:
+                            zv[i, j] = startz_2 ** 2
+                        zv[i, j] = np.sqrt(zv[i, j])
+                        if zv[i, j] > endz_2:
+                            zv[i, j] = endz_2
+                        elif zv[i, j] < startz_2:
+                            zv[i, j] = startz_2
+                intermediate = np.zeros(num_test_points)
+                for i in range(0, num_test_points):
+                    intermediate[i] = np.trapz(zv[:, i], xVector)
+                Value1 = np.trapz(intermediate, yVector)
+                pl_vol_in_grid[ne] = pl_vol_in_grid[ne] + (Value1 - startz_2 * (endx - startx) * (
+                        endy - starty))
+
+    print('Number of Non-empty cells: ' + str(non_empty_count))
+    print('Total number of cells: ' + str(total_elems))
+    non_empty_loc = np.resize(non_empty_loc, non_empty_count)
+
+    return {'pl_vol_in_grid': pl_vol_in_grid, 'non_empty_rects': non_empty_loc}
 
 def evaluate_orders(node_loc, elems):
     """Calculates generations, Horsfield orders, Strahler orders for a given tree
@@ -912,6 +1244,186 @@ def generation_summary_statistics(geom, orders, major_minor_results):
 
     return np.concatenate((values_by_gen, values_overall),0)
 
+def major_minor(geom, elem_down):
+    """
+     Find the Major/Minor ratios of length, diameter and branch angle
+       Inputs:
+       - geom: contains elements, and their radii, angles and lengths
+       - elem_down: contains the index of the downstream elements at each element
+       Outputs:
+       - major and minor angle info for each element
+    """
+
+    # extract data
+    radii=geom['radii']
+    angles=geom['branch angles']
+    length=geom['length']
+
+    # create arrays
+    Ne=len(elem_down)
+
+    Minor_angle=-1*np.ones(Ne)
+    Major_angle = -1*np.ones(Ne)
+
+    D_Major_Minor = -1 * np.ones(Ne)
+    D_min_parent = -1 * np.ones(Ne)
+    D_maj_parent = -1 * np.ones(Ne)
+
+    L_Major_Minor = -1 * np.ones(Ne)
+    L_min_parent = -1 * np.ones(Ne)
+    L_maj_parent = -1 * np.ones(Ne)
+
+    for i in range(0, Ne):
+        numDown=elem_down[i, 0]
+
+        if numDown>1: # then this element has multiple children, find minor / major child
+            print('should be true for elem 0',i,numDown)
+            d_min=100000
+            d_max=0
+            for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
+                child=np.int(elem_down[i, j])
+                d_child=radii[child]
+
+                if d_child>=d_max:
+                    d_max=d_child
+                    daughter_max=child
+                if d_child<d_min:
+                    d_min = d_child
+                    daughter_min = child
+
+            if daughter_max!=daughter_min: # ensure two distinct daughters
+
+                Minor_angle[i]=angles[daughter_min]
+                Major_angle[i]=angles[daughter_max]
+
+                if radii[daughter_min]!=0: # avoid divide by zero errors
+                    D_Major_Minor[i]=radii[daughter_max]/radii[daughter_min]
+                if radii[i] != 0:
+                    D_min_parent[i]=radii[daughter_min]/radii[i]
+                    D_maj_parent[i]=radii[daughter_max]/radii[i]
+
+                if length[daughter_min] != 0:
+                    L_Major_Minor[i] = length[daughter_max] / length[daughter_min]
+                if length[i] != 0:
+                    L_min_parent[i] = length[daughter_min] / length[i]
+                    L_maj_parent[i] = length[daughter_max] / length[i]
+
+    return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
+
+
+#Unused function, no documentation
+#def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, field3):
+#    data_elems = np.zeros(len(datapoints), dtype=int)
+#    data_fields = np.zeros((len(datapoints),3))
+#    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+#    for nt in range(0,len(datapoints)):
+#        data_elems[nt] = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
+#                                               datapoints[nt][:])
+#        data_fields[nt,0]= field1[data_elems[nt]]
+#        data_fields[nt,1] = field2[data_elems[nt]]
+#        data_fields[nt, 2] = field3[data_elems[nt]]
+#
+#
+#    return data_fields
+
+
+
+
+def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects, conductivity, porosity, export, exportfile):
+    """Map the conductivity and porosity value of mesh node with sampling grid element
+
+      Inputs are:
+       - mesg_node_elems: array showing where darcy nodes are located inside the sampling grid
+       - non_empty_rects: array of non empty sampling grid element
+       - conductiviy: conductivity of non-empty sampling grid element
+       - porosity: porosity of non-empty sampling grid element
+
+     Return:
+       - mapped_con_por: mapped value of conductivity and porosity of each darcy mesh node"""
+
+    mapped_con_por = np.zeros((len(mesh_node_elems), 3)).astype(object)
+    mapped_con_por[:, 0] = mapped_con_por[:, 0].astype(int)
+
+    if (export):
+        f = open(exportfile, 'w')
+
+    for el in range(0, len(mesh_node_elems)):
+        mapped_con_por[el, 0] = el + 1
+        print(non_empty_rects, mesh_node_elems)
+        if (np.argwhere(non_empty_rects == mesh_node_elems[el,1])):
+            mapped_con_por[el, 1] = conductivity[np.argwhere(non_empty_rects == mesh_node_elems[el][1])][0, 0]
+            mapped_con_por[el, 2] = porosity[np.where(non_empty_rects == mesh_node_elems[el][1])][0]
+        else:  # node sits right on surface, assume empty
+            # print('surface node',mesh_node_elems[el][1])
+            mapped_con_por[el, 1] = 0.52
+            mapped_con_por[el, 2] = 1.0
+        if (export):
+            f.write("%s %s %s\n" % (mesh_node_elems[el][0], mapped_con_por[el, 1], mapped_con_por[el, 2]))
+
+    if (export):
+        f.close()
+
+    return mapped_con_por
+
+##Unused function, no documentation
+#def map_mesh_terminals(mesh_nodes, terminal_nodes, branch_nodes, export, exportfile):
+#    node_info = np.zeros((len(mesh_nodes), 2), dtype=int)
+#    for nnod in terminal_nodes:
+#        min_distance = 10000
+#        for i in range(0, len(mesh_nodes)):
+#            distance = np.sqrt((mesh_nodes[i][1] - branch_nodes[nnod][1]) ** 2.0 + (
+#                        mesh_nodes[i][2] - branch_nodes[nnod][2]) ** 2.0 + (
+#                                           mesh_nodes[i][3] - branch_nodes[nnod][3]) ** 2.0)
+#            if (distance < min_distance):
+#                min_distance = distance
+#                close_node = int(mesh_nodes[i][0])
+#        node_info[close_node - 1][1] = node_info[close_node - 1][1] + 1
+#    if (export):
+#        f = open(exportfile, 'w')
+#    for i in range(0, len(mesh_nodes)):
+#        node_info[i][0] = int(mesh_nodes[i][0])
+#        if (export):
+#            f.write("%s %s\n" % (node_info[i][0], node_info[i][1]))
+#    if (export):
+#        f.close()
+
+
+def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
+    """Locate where the 3D mesh nodes are located inside the sampling grid mesh
+
+     Inputs are:
+      - rectangular mesh: rectangular sampling grid mesh
+      - mesh_node_loc: node locations of mesh
+
+     Return:
+      - mesh_node_elems: array which shows the sampling grid element where the mesh nodes are located
+
+    """
+    mesh_node_elems = np.zeros((len(mesh_node_loc), 2), dtype=int)
+    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
+    for nt in range(0, len(mesh_node_loc)):
+        coord_node = mesh_node_loc[nt][1:4]
+        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8], coord_node)
+        mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
+        mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
+        # print(mesh_node_elems[nt])
+    return mesh_node_elems
+
+
+def porosity(vol_frac):
+    """ Calculate porosity
+
+    Input is:
+     - vol_frac: volume fraction of element
+
+    Return:
+     - porosity: porosity of element
+
+    """
+    porosity = np.zeros(len(vol_frac))
+    porosity = 1 - vol_frac
+    return porosity
+
 def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_system):
 
     # branch inputs
@@ -1187,6 +1699,75 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
     return np.concatenate((values_by_order, values_overall),0)
 
 
+def smooth_on_sg(rectangular_mesh, non_empties, field):
+    node_field = np.zeros((rectangular_mesh['total_nodes'], 2))
+
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        for j in range(1, 9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            node_field[nnod][0] = node_field[nnod][0] + field[ne]
+            node_field[nnod][1] = node_field[nnod][1] + 1.0
+
+    for i in range(0, rectangular_mesh['total_nodes']):
+        if (node_field[i][1] != 0.0):
+            node_field[i][0] = node_field[i][0] / node_field[i][1]
+
+    for i in range(0, len(non_empties)):
+        ne = non_empties[i]
+        elem_field = 0.0
+        for j in range(1, 9):
+            nnod = rectangular_mesh['elems'][ne][j]
+            elem_field = elem_field + node_field[nnod][0]
+        elem_field = elem_field / 8.0
+        field[ne] = elem_field
+
+    return field
+
+
+def terminal_villous_diameter(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute):
+    """ The concept to calculate terminal villous diameter follows the same as terminal_villous_volume calculation.
+    Multiply vol of each branch with diameter of each branch and summation of them to be able to calculate the weighted_diameter in the next subroutine
+
+    Inputs:
+       - num_int_gens: Number of generations of intermediate villous per terminal 'stem' villus
+       - num_convolutes: Number of terminal convolutes per intermediate villous
+       - len_int: Length of a typical intermediate villous
+       - rad_int: Radius of a typical intermediate villous
+       - len_convolute: Length of a typical terminal convolute
+       - rad_convolute: Radius of a typical terminal convolute
+
+    Return:
+    - term_vill_diameter: diameter value of terminal conduits
+
+    A way you might want to use me is:
+
+    >>> num_int_gens = 3
+    >>> num_convolutes = 10
+    >>> len_int = 1.5 #mm
+    >>> rad_int = 0.03 #mm
+    >>> len_convolute = 3.0 #mm
+    >>> rad_convolute = 0.025 #mm
+
+    This will return:
+
+    >>> term_vill_diameter: 0.09
+    """
+    num_ints = 1
+    term_vill_diameter = 0.0
+    for i in range(0, num_int_gens + 2):
+        num_ints = num_ints * 2.0
+        diameter_ints = num_ints * (np.pi * len_int * rad_int ** 2.0) * 2 * rad_int
+        if i > 0:
+            diameter_convolutes = num_ints * num_convolutes * (
+                    np.pi * len_convolute * rad_convolute ** 2.0) * 2 * rad_convolute
+        else:
+            diameter_convolutes = 0.0
+        term_vill_diameter = term_vill_diameter + diameter_ints + diameter_convolutes
+
+    return term_vill_diameter
+
+
 def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
     """ Counts the number of terminals in a sampling grid element, will only work with
     rectangular mesh created as in generate_shapes.gen_rectangular_mesh
@@ -1227,80 +1808,6 @@ def terminals_in_sampling_grid_fast(rectangular_mesh, terminal_list, node_loc):
         terminals_in_grid[nelem] = terminals_in_grid[nelem] + 1
         terminal_elems[nt] = nelem  # record what element the terminal is in
     return {'terminals_in_grid': terminals_in_grid, 'terminal_elems': terminal_elems}
-
-
-def major_minor(geom, elem_down):
-    """
-     Find the Major/Minor ratios of length, diameter and branch angle
-       Inputs:
-       - geom: contains elements, and their radii, angles and lengths
-       - elem_down: contains the index of the downstream elements at each element
-       Outputs:
-       - major and minor angle info for each element
-    """
-
-    # extract data
-    radii=geom['radii']
-    angles=geom['branch angles']
-    length=geom['length']
-
-    # create arrays
-    Ne=len(elem_down)
-
-    Minor_angle=-1*np.ones(Ne)
-    Major_angle = -1*np.ones(Ne)
-
-    D_Major_Minor = -1 * np.ones(Ne)
-    D_min_parent = -1 * np.ones(Ne)
-    D_maj_parent = -1 * np.ones(Ne)
-
-    L_Major_Minor = -1 * np.ones(Ne)
-    L_min_parent = -1 * np.ones(Ne)
-    L_maj_parent = -1 * np.ones(Ne)
-
-    for i in range(0, Ne):
-        numDown=elem_down[i, 0]
-
-        if numDown>1: # then this element has multiple children, find minor / major child
-            print('should be true for elem 0',i,numDown)
-            d_min=100000
-            d_max=0
-            for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
-                child=np.int(elem_down[i, j])
-                d_child=radii[child]
-
-                if d_child>=d_max:
-                    d_max=d_child
-                    daughter_max=child
-                if d_child<d_min:
-                    d_min = d_child
-                    daughter_min = child
-
-            if daughter_max!=daughter_min: # ensure two distinct daughters
-
-                Minor_angle[i]=angles[daughter_min]
-                Major_angle[i]=angles[daughter_max]
-
-                if radii[daughter_min]!=0: # avoid divide by zero errors
-                    D_Major_Minor[i]=radii[daughter_max]/radii[daughter_min]
-                if radii[i] != 0:
-                    D_min_parent[i]=radii[daughter_min]/radii[i]
-                    D_maj_parent[i]=radii[daughter_max]/radii[i]
-
-                if length[daughter_min] != 0:
-                    L_Major_Minor[i] = length[daughter_max] / length[daughter_min]
-                if length[i] != 0:
-                    L_min_parent[i] = length[daughter_min] / length[i]
-                    L_maj_parent[i] = length[daughter_max] / length[i]
-            else: #two daughters ar the same size
-                D_Major_Minor[i] = 1.0
-                D_min_parent[i] = radii[daughter_max]/radii[i]
-                D_maj_parent[i] = D_min_parent[i]
-                L_Major_Minor[i] = 1.0
-                L_maj_parent[i] = length[daughter_max] / length[i]
-                L_min_parent[i] = L_maj_parent[i]
-
-    return {'Minor_angle': Minor_angle, 'Major_angle': Major_angle, 'D_maj_min': D_Major_Minor, 'D_min_P': D_min_parent,'D_maj_P': D_maj_parent, 'L_maj_min': L_Major_Minor, 'L_min_P': L_min_parent,'L_maj_P': L_maj_parent}
 
 
 
@@ -1476,303 +1983,6 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc, volume, t
     return {'term_vol_in_grid': total_vol_samp_gr, 'term_diameter_in_grid': total_diameter_samp_gr}
 
 
-def ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points):
-    """ Calculates the placental volume associated with each element in a samplling grid
-
-    Inputs are:
-    - rectangular_mesh: the rectangular sampling grid
-    - volume: placental volume
-    - thickness: placental thickness
-    - ellipiticity: placental ellipticity
-    - num_test_points: resolution of integration quadrature
-
-    Return:
-    - pl_vol_in_grid: array of placental volume in each sampling grid element
-    - non_empty_rects: array of sampling grid elements that are occupied by placental tissue
-
-    A way you might want to use me is:
-
-    >>> thickness =  (3.0 * 1 / (4.0 * np.pi)) ** (1.0 / 3.0) * 2.0  #mm
-    >>> ellipticity = 1.00  #no unit
-    >>> spacing = 1.0 #no unit
-    >>> volume=1 #mm3
-    >>> rectangular_mesh = {}
-    >>> rectangular_mesh['nodes'] = [[0., 0., 0.], [ thickness/2.0, 0., 0.],[0., thickness/2.0, 0.],[ thickness/2.0, thickness/2.0, 0.],[0., 0., thickness/2.0], [ thickness/2.0, 0., thickness/2.0],[0., thickness/2.0,thickness/2.0],[ thickness/2.0, thickness/2.0, thickness/2.0]]
-    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7]]
-    >>> rectangular_mesh['total_nodes'] =8
-    >>> rectangular_mesh['total_elems'] = 1
-    >>> num_test_points=25
-    >>> ellipse_volume_to_grid(rectangular_mesh, volume, thickness, ellipticity, num_test_points)
-
-    This will return:
-
-    >>> pl_vol_in_grid: 0.12485807941
-    >>> non_empty_rects: 0
-    """
-    total_elems = rectangular_mesh['total_elems']
-    elems = rectangular_mesh['elems']
-    nodes = rectangular_mesh['nodes']
-
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
-    z_radius = radii['z_radius']
-    x_radius = radii['x_radius']
-    y_radius = radii['y_radius']
-
-    # Initialise the array that defines the volume of placenta in each grid element
-    pl_vol_in_grid = np.zeros(total_elems)
-    non_empty_loc = np.zeros(total_elems, dtype=int)
-    non_empty_count = 0
-
-    for ne in range(0, len(elems)):  # looping through elements
-        count_in_range = 0
-        nod_in_range = np.zeros(8, dtype=int)
-        # define range of x, y , and z in the element
-        startx = nodes[elems[ne][1]][0]
-        endx = nodes[elems[ne][8]][0]
-        starty = nodes[elems[ne][1]][1]
-        endy = nodes[elems[ne][8]][1]
-        startz = nodes[elems[ne][1]][2]
-        endz = nodes[elems[ne][8]][2]
-        for nod in range(1, 9):
-            check_in_range = pg_utilities.check_in_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
-                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
-            check_on_range = pg_utilities.check_on_ellipsoid(nodes[elems[ne][nod]][0], nodes[elems[ne][nod]][1],
-                                                             nodes[elems[ne][nod]][2], x_radius, y_radius, z_radius)
-            if check_in_range or check_on_range:
-                count_in_range = count_in_range + 1
-                nod_in_range[nod - 1] = 1
-        if count_in_range == 8:  # if all 8 nodes are inside the ellipsoid
-            non_empty_loc[non_empty_count] = ne
-            non_empty_count = non_empty_count + 1
-            pl_vol_in_grid[ne] = (endx - startx) * (endy - starty) * (
-                    endz - startz)  # the placental vol in that samp_grid_el is same as vol of samp_grid_el
-        elif count_in_range == 0:  # if all 8 nodes are outside the ellpsiod
-            # since this samp_grid_el is completely outside, the placental vol is zero
-            pl_vol_in_grid[ne] = 0
-        else:  # if some nodes in and some nodes out, the samp_grid_el is at the edge of ellipsoid
-            # Use trapezoidal quadrature to caculate the volume under the surface of the ellipsoid in each element
-            non_empty_loc[non_empty_count] = ne
-            non_empty_count = non_empty_count + 1
-            # need to map to positive quadrant
-            repeat = False
-            if (startz < 0 and endz <= 0):
-                # need to project to positive z axis
-                startz = abs(nodes[elems[ne][8]][2])
-                endz = abs(nodes[elems[ne][1]][2])
-            elif (startz < 0 and endz > 0):
-                # Need to split into components above and below the axis and sum the two
-                startz = 0
-                endz = abs(nodes[elems[ne][1]][2])
-                startz_2 = 0
-                endz_2 = nodes[elems[ne][8]][2]
-                repeat = True
-            xVector = np.linspace(startx, endx, num_test_points)
-            yVector = np.linspace(starty, endy, num_test_points)
-            xv, yv = np.meshgrid(xVector, yVector)
-            zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
-            for i in range(num_test_points):
-                for j in range(num_test_points):
-                    if zv[i, j] <= startz ** 2:
-                        zv[i, j] = startz ** 2
-                    zv[i, j] = np.sqrt(zv[i, j])
-                    if zv[i, j] > endz:
-                        zv[i, j] = endz
-                    elif zv[i, j] < startz:
-                        zv[i, j] = startz
-            intermediate = np.zeros(num_test_points)
-            for i in range(0, num_test_points):
-                intermediate[i] = np.trapz(zv[:, i], xVector)
-            Value1 = np.trapz(intermediate, yVector)
-            pl_vol_in_grid[ne] = (Value1 - startz * (endx - startx) * (endy - starty))
-            if repeat:
-                xVector = np.linspace(startx, endx, num_test_points)
-                yVector = np.linspace(starty, endy, num_test_points)
-                xv, yv = np.meshgrid(xVector, yVector)
-                zv = z_radius ** 2 * (1 - (xv / x_radius) ** 2 - (yv / y_radius) ** 2)
-                for i in range(num_test_points):
-                    for j in range(num_test_points):
-                        if zv[i, j] <= startz_2 ** 2:
-                            zv[i, j] = startz_2 ** 2
-                        zv[i, j] = np.sqrt(zv[i, j])
-                        if zv[i, j] > endz_2:
-                            zv[i, j] = endz_2
-                        elif zv[i, j] < startz_2:
-                            zv[i, j] = startz_2
-                intermediate = np.zeros(num_test_points)
-                for i in range(0, num_test_points):
-                    intermediate[i] = np.trapz(zv[:, i], xVector)
-                Value1 = np.trapz(intermediate, yVector)
-                pl_vol_in_grid[ne] = pl_vol_in_grid[ne] + (Value1 - startz_2 * (endx - startx) * (
-                        endy - starty))
-
-    print('Number of Non-empty cells: ' + str(non_empty_count))
-    print('Total number of cells: ' + str(total_elems))
-    non_empty_loc = np.resize(non_empty_loc, non_empty_count)
-
-    return {'pl_vol_in_grid': pl_vol_in_grid, 'non_empty_rects': non_empty_loc}
-
-
-def cal_br_vol_samp_grid(rectangular_mesh, branch_nodes, branch_elems, branch_radius, volume, thickness, ellipticity,
-                         start_elem):
-    """ Calculate total volume and diameter of branches in each sampling grid element
-
-    Inputs are:
-    - rectangular_mesh: rectangular sampling grid 
-    - branch_nodes: array of coordinates (locations) of nodes of tree branches
-    - branch_elems: array of element showing element connectivity
-    - branch_radius: array of branch radius
-    - volume: volume of placenta
-    - thickness: thickness of placenta
-    - ellipticity: ellipticity of placenta
-    - start_elem: number of element to start calculating tissue volume
-
-    Return:
-    - br_vol_in_grid: array of total tissue volume in each sampling grid element      
-    - br_diameter_in_grid: array of total diameter*volume in each sampling grid element
-
-    A way you might want to use me is:
-
-    >>> thickness =  2.1  #mm
-    >>> ellipticity = 1.00  #no unit
-    >>> volume=5    #mm3
-    >>> rectangular_mesh = {}
-    >>> rectangular_mesh['nodes'] = np.array([[-0.5, -0.5, -1.5],[ 0.5, -0.5,-1.5],[-0.5,  0.5 ,-1.5],[ 0.5 , 0.5, -1.5],[-0.5 ,-0.5, -0.5],[ 0.5 ,-0.5 ,-0.5],[-0.5 , 0.5 ,-0.5],[ 0.5 , 0.5 ,-0.5],[-0.5, -0.5 , 0.5],[ 0.5, -0.5 , 0.5],[-0.5  ,0.5 , 0.5],[ 0.5 , 0.5  ,0.5]])
-    >>> rectangular_mesh['elems'] = [[ 0,  0,  1,  2,  3,  4, 5, 6, 7],[1,4,5,6,7,8,9,10,11]]
-    >>> rectangular_mesh['total_elems'] = 2
-    >>> branch_elems={}
-    >>> branch_elems['elems']=[[0 ,0, 1]]
-    >>> branch_nodes={}
-    >>> branch_nodes['nodes']=np.array([[ 0.,0.,0., -1., 2.,0.,0.],[ 1.,0.,0.,-0.5 ,2.,0.,0.]])
-    >>> branch_radius=[0.1]
-    >>> start_elem=0
-    >>> cal_br_vol_samp_grid(rectangular_mesh,  branch_nodes['nodes'], branch_elems['elems'],branch_radius, volume, thickness,ellipticity, start_elem)
-
-    This will return:
-
-    >>> br_vol_in_grid[0]: 0.01396263
-    >>> br_diameter_in_grid[0]: 0.00279253
-    """
-
-    # Define the resolution of cylinder for analysis
-    num_points_xy = 8
-    num_points_z = 8
-    # Define information about sampling grid required to place data points in correct locations
-    total_sample_elems = rectangular_mesh['total_elems']
-    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
-    # Define the placental ellipsoid
-    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)  # calculate radii of ellipsoid
-    z_radius = radii['z_radius']
-    x_radius = radii['x_radius']
-    y_radius = radii['y_radius']
-
-    unit_cyl_points = np.zeros((num_points_xy * num_points_xy * num_points_z, 3))
-    # Define a cylinder of points of radius 1 and length 1
-    x = np.linspace(-1, 1, num_points_xy)
-    y = np.linspace(-1, 1, num_points_xy)
-    num_accepted = 0
-    for k in range(0, num_points_z + 1):
-        for i in range(0, num_points_xy):
-            for j in range(0, num_points_xy):
-                if (x[i] ** 2 + y[j] ** 2) <= 1:
-                    new_z = 1 / np.double(num_points_z) * k
-                    unit_cyl_points[num_accepted][0] = x[i]
-                    unit_cyl_points[num_accepted][1] = y[j]
-                    unit_cyl_points[num_accepted][2] = new_z
-                    num_accepted = num_accepted + 1
-    unit_cyl_points.resize(num_accepted, 3, refcheck=False)
-    cyl_points = np.copy(unit_cyl_points)
-    cylindervector = np.array([0.0, 0.0, 1.0])
-
-    ###Define and initialise arrays to be populated
-
-    # The volume of each branch
-    vol_each_br = np.zeros(len(branch_elems))
-    # Array for total volume of sampling grid in each element
-    total_vol_samp_gr = np.zeros(total_sample_elems)
-    # Array for diameter variable of sampling grid in each element (this variable is to be used for weighted diameter calculation)
-    total_diameter_samp_gr = np.zeros(total_sample_elems)
-    # initialise counters
-    branch_count = 0
-    volume_outside_ellipsoid = 0.0
-    volume_inside_ellipsoid = 0.0
-
-    for ne in range(start_elem, len(branch_elems)):  # len(branch_elems)):  # looping for all branchs in tree
-
-        node1 = branch_nodes[branch_elems[ne][1]][1:4]  # coor of start node of a branch element
-        node2 = branch_nodes[branch_elems[ne][2]][1:4]  # coor of end node of a branch element
-        node1in = pg_utilities.check_in_on_ellipsoid(node1[0], node1[1], node1[2], x_radius, y_radius, z_radius)
-        node2in = pg_utilities.check_in_on_ellipsoid(node2[0], node2[1], node2[2], x_radius, y_radius, z_radius)
-
-        if not node1in and not node2in:
-            print('Warning, element ' + str(ne) + 'is not in ellipsoid, if this is not expected check your geometry')
-            print('Skipping this element from analysis')
-            continue
-        elif not node1in or not node2in:
-            print('Warning, element ' + str(ne) + 'has one node not in the ellipsoid.')
-            print('The first node ' + str(node1) + ' is ' + str(node1in) + ' (True means inside).')
-            print('The second node ' + str(node2) + ' is ' + str(node2in) + ' (True means inside).')
-            print('Skipping this element from analysis')
-            continue
-
-        branch_vector = node2 - node1
-        r = branch_radius[ne]
-        length = np.linalg.norm(branch_vector)
-        vol_each_br[ne] = np.pi * length * r ** 2.0
-        vol_per_point = vol_each_br[ne] / (np.double(num_accepted))
-
-        cyl_points[:, 0:2] = unit_cyl_points[:, 0:2] * r
-        cyl_points[:, 2] = unit_cyl_points[:, 2] * length
-
-        desiredvector = branch_vector / np.linalg.norm(branch_vector)
-
-        rotation_axis = np.cross(desiredvector, cylindervector)
-
-        if np.linalg.norm(rotation_axis) == 0:  # aligned
-            if node2[2] - node1[2] < 0:
-                cyl_points[:, 2] = -1.0 * cyl_points[:, 2]
-        else:
-            angle = pg_utilities.angle_two_vectors(cylindervector, desiredvector)
-            rotation_mat = pg_utilities.rotation_matrix_3d(rotation_axis, angle)
-            cyl_points = np.array(np.matrix(cyl_points) * np.matrix(rotation_mat))
-
-        cyl_points[:, 0] = cyl_points[:, 0] + node1[0]
-        cyl_points[:, 1] = cyl_points[:, 1] + node1[1]
-        cyl_points[:, 2] = cyl_points[:, 2] + node1[2]
-
-        # Array for vol distribution of inidvidual branch (not total)
-        vol_distribution_each_br = np.zeros(total_sample_elems, dtype=float)
-
-        for nt in range(0, num_accepted):
-
-            coord_point = cyl_points[nt][0:3]
-            inside = pg_utilities.check_in_on_ellipsoid(coord_point[0], coord_point[1], coord_point[2], x_radius,
-                                                        y_radius, z_radius)
-            if inside:
-                nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
-                                                 coord_point)
-                total_vol_samp_gr[nelem] = total_vol_samp_gr[nelem] + vol_per_point
-                vol_distribution_each_br[nelem] = vol_distribution_each_br[nelem] + vol_per_point
-                volume_inside_ellipsoid = volume_inside_ellipsoid + vol_per_point
-            else:
-                # Data points lie outside the ellipsoid - this is OK in some cases, so the code shouldn't exit. However,
-                # users should be able to check how much is outside of ellipsoid if they believe their branching geometry
-                # is set up NOT to go outside the ellipsoid at all.
-                volume_outside_ellipsoid = volume_outside_ellipsoid + vol_per_point
-
-        total_diameter_samp_gr = total_diameter_samp_gr + vol_distribution_each_br * 2.0 * r  # this variable is calculated as summation of diameter * vol of branch in grid (to be used for weight_diam)
-
-    percent_outside = volume_outside_ellipsoid / np.sum(total_vol_samp_gr) * 100.0
-
-    total_vol_ml = (volume_outside_ellipsoid + np.sum(total_vol_samp_gr))/1000.0
-    sum_branch_ml = np.sum(vol_each_br)/1000.0
-
-    print('Analysis complete ' + str(percent_outside) + '% of analysed points lie outside the ellipsoid.')
-    print('Total branch volume analysed ' + str(total_vol_ml) + ' (compared with summed branch vol ' + str(
-        sum_branch_ml) + ')')
-
-
-    return {'br_vol_in_grid': total_vol_samp_gr, 'br_diameter_in_grid': total_diameter_samp_gr}
-
 
 def terminal_villous_volume(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute,
                             smallest_radius):
@@ -1892,118 +2102,7 @@ def vol_frac_in_samp_gr(tissue_vol, sampling_grid_vol,max_allowed,min_allowed):
             vol_frac[ne] = min_allowed
 
     return vol_frac
-    
-def smooth_on_sg(rectangular_mesh,non_empties,field):
-    
-    node_field = np.zeros((rectangular_mesh['total_nodes'],2))
-    
-    for i in range(0, len(non_empties)):
-        ne = non_empties[i]
-        for j in range(1,9):
-            nnod = rectangular_mesh['elems'][ne][j]
-            node_field[nnod][0] = node_field[nnod][0] + field[ne]
-            node_field[nnod][1] = node_field[nnod][1] + 1.0
-    
-    for i in range(0,rectangular_mesh['total_nodes']):
-        if(node_field[i][1] != 0.0 ):
-            node_field[i][0]  = node_field[i][0]/node_field[i][1]
-    
-    for i in range(0, len(non_empties)):
-        ne = non_empties[i]
-        elem_field = 0.0
-        for j in range(1,9):
-            nnod = rectangular_mesh['elems'][ne][j]
-            elem_field = elem_field + node_field[nnod][0]
-        elem_field = elem_field/8.0
-        field[ne] = elem_field
-            
-        
-            
-            
-            
-            
-    
-    
-    return field
 
-
-def conductivity_samp_gr(vol_frac, weighted_diameter, elem_list):
-    """Calculate conductivity of sampling grid element where villous branches are located
-
-    Inputs are: 
-    - vol_frac: tissue volume fraction of sampling grid element
-    - weighted_diameter: weighted diameter of sampling grid element
-    - elem_list: list of elements to assess
-
-    Return:
-    - conductivity: conductivity of sampling grid element where the placental tissue are located
-    will be in the same units as the weighted diameter (typically mm)
-
-    A way you might want to use me:
-
-    >>> vol_frac= [0.72401065]
-    >>> weighted_diameter=[0.17988357]
-    >>> non_empties=[0]
-    >>> conductivity_samp_gr(vol_frac,weighted_diameter,non_empties)
-
-    This will return:
-
-    >>> conductivity: 7.20937313e-06"""
-    max_cond = 0.52
-    conductivity = np.zeros(len(vol_frac))
-    for i in range(0, len(elem_list)):
-        ne = elem_list[i]
-        if vol_frac[ne] != 0.0:
-            conductivity[ne] = weighted_diameter[ne] ** 2 * (1 - vol_frac[ne]) ** 3 / (180.0 * vol_frac[ne] ** 2)
-        elif vol_frac[ne] == 0.0:  # see mabelles thesis
-            conductivity[ne] = max_cond
-        if conductivity[ne] > max_cond:
-            conductivity[ne] = max_cond
-
-    return conductivity
-
-
-def terminal_villous_diameter(num_int_gens, num_convolutes, len_int, rad_int, len_convolute, rad_convolute):
-    """ The concept to calculate terminal villous diameter follows the same as terminal_villous_volume calculation.
-    Multiply vol of each branch with diameter of each branch and summation of them to be able to calculate the weighted_diameter in the next subroutine
-
-    Inputs:
-       - num_int_gens: Number of generations of intermediate villous per terminal 'stem' villus
-       - num_convolutes: Number of terminal convolutes per intermediate villous
-       - len_int: Length of a typical intermediate villous
-       - rad_int: Radius of a typical intermediate villous
-       - len_convolute: Length of a typical terminal convolute
-       - rad_convolute: Radius of a typical terminal convolute
-   
-    Return:
-    - term_vill_diameter: diameter value of terminal conduits
-    
-    A way you might want to use me is:
-
-    >>> num_int_gens = 3
-    >>> num_convolutes = 10
-    >>> len_int = 1.5 #mm
-    >>> rad_int = 0.03 #mm
-    >>> len_convolute = 3.0 #mm
-    >>> rad_convolute = 0.025 #mm
-
-    This will return:
-
-    >>> term_vill_diameter: 0.09
-    """
-    num_ints = 1
-    term_vill_diameter = 0.0
-    for i in range(0, num_int_gens+2):
-        num_ints = num_ints * 2.0
-        diameter_ints = num_ints * (np.pi * len_int * rad_int ** 2.0) * 2 * rad_int
-        if i > 0:
-            diameter_convolutes = num_ints * num_convolutes * (
-                        np.pi * len_convolute * rad_convolute ** 2.0) * 2 * rad_convolute
-        else:
-            diameter_convolutes = 0.0
-        term_vill_diameter = term_vill_diameter + diameter_ints + diameter_convolutes
-
-    return term_vill_diameter
 
 
 def weighted_diameter_in_samp_gr(term_diameter_in_grid, br_diameter_in_grid, tissue_vol):
@@ -2027,113 +2126,6 @@ def weighted_diameter_in_samp_gr(term_diameter_in_grid, br_diameter_in_grid, tis
     return weighted_diameter
 
 
-def porosity(vol_frac):
-    """ Calculate porosity
-
-    Input is: 
-     - vol_frac: volume fraction of element
-
-    Return: 
-     - porosity: porosity of element
-    
-    """
-    porosity = np.zeros(len(vol_frac))
-    porosity = 1 - vol_frac
-    return porosity
-
-
-def node_in_sampling_grid(rectangular_mesh, mesh_node_loc):
-    """Locate where the 3D mesh nodes are located inside the sampling grid mesh
-
-     Inputs are:
-      - rectangular mesh: rectangular sampling grid mesh
-      - mesh_node_loc: node locations of mesh
-
-     Return:
-      - mesh_node_elems: array which shows the sampling grid element where the mesh nodes are located
-
-    """
-    mesh_node_elems = np.zeros((len(mesh_node_loc), 2), dtype=int)
-    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
-    for nt in range(0, len(mesh_node_loc)):
-        coord_node = mesh_node_loc[nt][1:4]
-        nelem = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8], coord_node)
-        mesh_node_elems[nt][0] = int(mesh_node_loc[nt][0])
-        mesh_node_elems[nt][1] = nelem  # record what element the darcy node is in
-        # print(mesh_node_elems[nt])
-    return mesh_node_elems
-
-def mapping_fields_from_data(datapoints,rectangular_mesh,field1, field2, field3):
-    data_elems = np.zeros(len(datapoints), dtype=int)
-    data_fields = np.zeros((len(datapoints),3))
-    gr = pg_utilities.samp_gr_for_node_loc(rectangular_mesh)
-    for nt in range(0,len(datapoints)):
-        data_elems[nt] = pg_utilities.locate_node(gr[0], gr[1], gr[2], gr[3], gr[4], gr[5], gr[6], gr[7], gr[8],
-                                               datapoints[nt][:])
-        data_fields[nt,0]= field1[data_elems[nt]]
-        data_fields[nt,1] = field2[data_elems[nt]]
-        data_fields[nt, 2] = field3[data_elems[nt]]
-
-
-    return data_fields
 
 
 
-
-def mapping_mesh_sampl_gr(mesh_node_elems, non_empty_rects, conductivity, porosity, export, exportfile):
-    """Map the conductivity and porosity value of mesh node with sampling grid element
-
-      Inputs are:
-       - darcy_node_elems: array showing where darcy nodes are located inside the sampling grid 
-       - non_empty_rects: array of non empty sampling grid element
-       - conductiviy: conductivity of non-empty sampling grid element
-       - porosity: porosity of non-empty sampling grid element
-
-     Return:
-       - mapped_con_por: mapped value of conductivity and porosity of each darcy mesh node"""
-
-    mapped_con_por = np.zeros((len(mesh_node_elems), 3)).astype(object)
-    mapped_con_por[:, 0] = mapped_con_por[:, 0].astype(int)
-
-    if (export):
-        f = open(exportfile, 'w')
-
-    for el in range(0, len(mesh_node_elems)):
-        mapped_con_por[el, 0] = el + 1
-        if (np.argwhere(non_empty_rects == mesh_node_elems[el][1])):
-            mapped_con_por[el, 1] = conductivity[np.argwhere(non_empty_rects == mesh_node_elems[el][1])][0, 0]
-            mapped_con_por[el, 2] = porosity[np.where(non_empty_rects == mesh_node_elems[el][1])][0]
-        else:  # node sits right on surface, assume empty
-            # print('surface node',mesh_node_elems[el][1])
-            mapped_con_por[el, 1] = 0.52
-            mapped_con_por[el, 2] = 1.0
-        if (export):
-            f.write("%s %s %s\n" % (mesh_node_elems[el][0], mapped_con_por[el, 1], mapped_con_por[el, 2]))
-
-    if (export):
-        f.close()
-
-    return mapped_con_por
-
-
-def map_mesh_terminals(mesh_nodes, terminal_nodes, branch_nodes, export, exportfile):
-    node_info = np.zeros((len(mesh_nodes), 2), dtype=int)
-    for nnod in terminal_nodes:
-        min_distance = 10000
-        for i in range(0, len(mesh_nodes)):
-            distance = np.sqrt((mesh_nodes[i][1] - branch_nodes[nnod][1]) ** 2.0 + (
-                        mesh_nodes[i][2] - branch_nodes[nnod][2]) ** 2.0 + (
-                                           mesh_nodes[i][3] - branch_nodes[nnod][3]) ** 2.0)
-            if (distance < min_distance):
-                min_distance = distance
-                close_node = int(mesh_nodes[i][0])
-        node_info[close_node - 1][1] = node_info[close_node - 1][1] + 1
-    if (export):
-        f = open(exportfile, 'w')
-    for i in range(0, len(mesh_nodes)):
-        node_info[i][0] = int(mesh_nodes[i][0])
-        if (export):
-            f.write("%s %s\n" % (node_info[i][0], node_info[i][1]))
-
-    if (export):
-        f.close()
