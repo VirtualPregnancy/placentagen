@@ -9,6 +9,10 @@ Use pip to install the libraries
 ```
   pip install git+https://github.com/virtualpregnancy/placentagen.git
 ```
+To use pip to install the libraries when you have cloned them onto your machine (note this is best to do within a virtual environment)
+```
+  pip install -e /path/to/placentagen 
+```
 ### Running
 
 Once installed the libraries can called from python
