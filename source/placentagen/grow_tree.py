@@ -103,7 +103,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     nnod = num_nodes_old - 1  # current maximum node number
     numtb = 0  # count of terminals
 
-    parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
+    parentlist = get_stems(initial_geom['elem_down'])
 
     # Initialise LD array to map each seed point to a parent branch.
     # For a single parent, all seed points will initially be mapped to
@@ -1043,6 +1043,17 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
 
 
     return ld
+
+def get_stems(elem_downstream):
+
+    parentlist = []
+    for ne in range(0,len(elem_downstream)):
+        if elem_downstream[ne][0] == 0:
+            parentlist.append(ne)
+
+    print('Found ' + str(len(parentlist)) + ' stems')
+
+    return parentlist
 
 def reassign_data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
     '''
