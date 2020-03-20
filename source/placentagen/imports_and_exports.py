@@ -23,15 +23,15 @@ def export_ex_coords(data, groupname, filename, type):
     for x in range(0, data_num):
         if data_length is 4:
             f.write("Node:  "        "%s\n" % int(data[x][0] + 1))
-            f.write("          %s\n" % data[x][1])
-            f.write("          %s\n" % data[x][2])
-            f.write("          %s\n" % data[x][3])
+            f.write("          %s\n" % (data[x][1]*1000.0))
+            f.write("          %s\n" % (data[x][2]*1000.0))
+            f.write("          %s\n" % (data[x][3]*1000.0))
         else:
             f.write("Node:  "        "%s\n" % (x + 1))
             f.write("          %s\n" % data[x][0])
             f.write("          %s\n" % data[x][1])
             f.write("          %s\n" % data[x][2])
-    f.close()
+            f.close()
 
 def export_ex_field(data, groupname, fieldname, filename, type):
     # Exports coordinates to exnode or exdata format
@@ -51,6 +51,38 @@ def export_ex_field(data, groupname, fieldname, filename, type):
     for x in range(0, data_num):
         f.write("Node:  "        "%s\n" % (x + 1))
         f.write("          %s\n" % data[x])
+    f.close()
+    
+def export_nodal_rad_field(data, groupname, fieldname, filename, type,nodes,elems):
+    # Exports coordinates to exnode or exdata format
+    # data = array of data
+    # groupname = what you want your data to be called in cmgui
+    # filename = file name without extension
+    # type = exnode or exdata
+    # first entry
+    data_num = len(data)
+    filename = filename + '.' + type
+    f = open(filename, 'w')
+    f.write(" Group name: %s\n" % groupname)
+    f.write(" #Fields=1\n")
+    f.write(" 1) %s, coordinate, rectangular cartesian, #Components=1\n" % fieldname)
+    f.write(" %s.  Value index=1, #Derivatives=0\n" %fieldname)
+    print(len(nodes))
+    num_per_node = np.zeros(len(nodes))
+    node_rad = np.zeros(len(nodes))
+    for x in range(0, data_num):
+        np1 = elems[x][1]
+        np2 = elems[x][2]
+        num_per_node[np1] = num_per_node[np1]+1.
+        num_per_node[np2] = num_per_node[np2]+1.
+        node_rad[np1] = node_rad[np1] + data[x]
+        node_rad[np2] = node_rad[np2] + data[x]
+    
+    for y in range(0,len(nodes)):
+    	node_rad[y] = node_rad[y]/num_per_node[y]
+        f.write("Node:  "        "%s\n" % (y + 1))
+        f.write("          %s\n" % (node_rad[y]))
+        print(y,node_rad[y])
     f.close()
 
 

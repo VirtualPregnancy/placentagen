@@ -1279,7 +1279,6 @@ def major_minor(geom, elem_down):
         numDown=elem_down[i, 0]
 
         if numDown>1: # then this element has multiple children, find minor / major child
-            print('should be true for elem 0',i,numDown)
             d_min=100000
             d_max=0
             for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
@@ -1940,7 +1939,7 @@ def terminal_volume_to_grid(rectangular_mesh, terminal_list, node_loc, volume, t
     y_radius = radii['y_radius']
 
     term_vol_points = np.zeros((num_points_xyz * num_points_xyz * num_points_xyz, 3))
-    # Define a cylinder of points of radius 1 and length 1
+    # Define a cylinder of points of radius 1 and length 1 #ARC is this a cube
     x = np.linspace(-1, 1, num_points_xyz)
     y = np.linspace(-1, 1, num_points_xyz)
     zlist = np.linspace(-1, 1, num_points_xyz)
