@@ -23,9 +23,9 @@ def export_ex_coords(data, groupname, filename, type):
     for x in range(0, data_num):
         if data_length is 4:
             f.write("Node:  "        "%s\n" % int(data[x][0] + 1))
-            f.write("          %s\n" % (data[x][1]*1000.0))
-            f.write("          %s\n" % (data[x][2]*1000.0))
-            f.write("          %s\n" % (data[x][3]*1000.0))
+            f.write("          %s\n" % (data[x][1]))
+            f.write("          %s\n" % (data[x][2]))
+            f.write("          %s\n" % (data[x][3]))
         else:
             f.write("Node:  "        "%s\n" % (x + 1))
             f.write("          %s\n" % data[x][0])
