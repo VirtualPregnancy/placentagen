@@ -79,7 +79,7 @@ def export_nodal_rad_field(data, groupname, fieldname, filename, type,nodes,elem
         node_rad[np2] = node_rad[np2] + data[x]
     
     for y in range(0,len(nodes)):
-    	node_rad[y] = node_rad[y]/num_per_node[y]
+        node_rad[y] = node_rad[y]/num_per_node[y]
         f.write("Node:  "        "%s\n" % (y + 1))
         f.write("          %s\n" % (node_rad[y]))
         print(y,node_rad[y])
