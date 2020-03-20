@@ -67,7 +67,6 @@ def export_nodal_rad_field(data, groupname, fieldname, filename, type,nodes,elem
     f.write(" #Fields=1\n")
     f.write(" 1) %s, coordinate, rectangular cartesian, #Components=1\n" % fieldname)
     f.write(" %s.  Value index=1, #Derivatives=0\n" %fieldname)
-    print(len(nodes))
     num_per_node = np.zeros(len(nodes))
     node_rad = np.zeros(len(nodes))
     for x in range(0, data_num):
@@ -82,7 +81,6 @@ def export_nodal_rad_field(data, groupname, fieldname, filename, type,nodes,elem
         node_rad[y] = node_rad[y]/num_per_node[y]
         f.write("Node:  "        "%s\n" % (y + 1))
         f.write("          %s\n" % (node_rad[y]))
-        print(y,node_rad[y])
     f.close()
 
 
