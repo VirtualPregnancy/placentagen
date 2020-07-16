@@ -1516,3 +1516,720 @@ def gen_3d_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareS
     nzid = np.nonzero(surface_nodes)
     surface_nodes = surface_nodes[nzid]
     return{'nodes':node_array,'elems':elems,'surface_nodes':surface_nodes, 'node_list':nodelist}
+
+def gen_half_ellipsoid_structured(size_el, volume, thickness, ellipticity, squareSizeRatio, circle_prop, el_type, debug):
+    """ Generates a structured ellipsoid mesh to solve 3D problems. The aim is for a quality computational mesh that
+    has as regular elements as possible, within the constraints of typical dimensions of ellipsoids representing the
+    volume of the placenta. This code is derived from an openCMISS example written by Chris Bradley, which is used to
+    simulate fluid structure interactions in a cylinder. Note that this hasn't been tested on linear elements
+
+
+    Inputs:
+       - size_el: approximate dimension of an element in each axis that we are aiming for
+       - volume: volume of placental ellipsoid
+       - thickness: placental thickness (z-dimension)
+       - ellipticity: ratio of y to x axis dimension
+       - squareSizeRatio: ratio of square in mesh cross-section to radius
+       - circle_prop: proportion of ellipse in x-y that is made up by 'plate' of nodes and elements
+       - debug (True or False) allows you to print certain statements to screen
+
+    Returns:
+       - placental_node_coor: nodes location of mesh
+       - placental_el_con: element connectivity of mesh (tetrahedral element)
+       - node_array: array of nodes
+       - element_array: array of elements
+    """
+    radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
+    ellipsoidRadius_z = radii['z_radius']
+    ellipsoidRadius_x = radii['x_radius']
+    ellipsoidRadius_y = radii['y_radius']
+
+    if (debug):
+        print('Solving a model with x-radius: ' + str(ellipsoidRadius_x) + ' y-radius: ' + str(
+            ellipsoidRadius_y) + 'z-radius: ' + str(ellipsoidRadius_z))
+
+    nel_x = int(np.floor((ellipsoidRadius_x * 2) / size_el))  # number of elems needed in x aixs in mesh
+    nel_y = int(np.floor((ellipsoidRadius_y * 2) / size_el))  # number of elems needed in  in y axis in mesh (need to
+    #  implement having different x,y element numbers
+    nel_z = int(np.floor((ellipsoidRadius_z * 2) / size_el))  # number of elems needed in  in z axis in  mesh
+    # total number of elements in x,y are number in square plus 2* number in arm
+    # If square takes up half the radius need even numbers in arm and square at one third of total each
+    # If square takes up squareSizeRatio of the total, then need the square part to be multiplied by that proportion
+    total_square_arm = 2.0 * nel_x / 3.0
+    numberOfSquareElements = int(np.floor(squareSizeRatio * total_square_arm))
+    numberOfArmElements = int(np.floor((1 - squareSizeRatio) * total_square_arm))
+    # In future for cross-sections that deviate a lot from circular will need different number of elements in square
+    # and arm in x- and y-
+    numberOfZElements = nel_z
+
+    if (el_type == 1):  # linear
+        numberOfNodesXi = 2
+    elif (el_type == 2):  # quadratic
+        numberOfNodesXi = 3
+
+    numberOfLocalNodes = numberOfNodesXi * numberOfNodesXi * numberOfNodesXi
+    numberOfLocalInterfaceNodes = numberOfNodesXi * numberOfNodesXi
+    localNodeIdx000 = 0
+    localNodeIdx100 = numberOfNodesXi - 1
+    localNodeIdx010 = numberOfNodesXi * (numberOfNodesXi - 1)
+    localNodeIdx110 = numberOfNodesXi * numberOfNodesXi - 1
+    localNodeIdx001 = numberOfNodesXi * numberOfNodesXi * (numberOfNodesXi - 1)
+    localNodeIdx101 = numberOfNodesXi - 1 + numberOfNodesXi * numberOfNodesXi * (numberOfNodesXi - 1)
+    localNodeIdx011 = numberOfNodesXi * (numberOfNodesXi - 1) + numberOfNodesXi * numberOfNodesXi * (
+            numberOfNodesXi - 1)
+    localNodeIdx111 = numberOfLocalNodes - 1
+
+    numberOfNodesPerBlock = numberOfSquareElements * (numberOfNodesXi - 1) * (
+                numberOfArmElements * (numberOfNodesXi - 1) + 1)
+    numberOfElementsPerBlock = numberOfSquareElements * numberOfArmElements
+    numberOfNodesPerLength = 4 * numberOfNodesPerBlock + \
+                             (numberOfSquareElements * (numberOfNodesXi - 1) - 1) * (
+                                         numberOfSquareElements * (numberOfNodesXi - 1) - 1)
+    numberOfElementsPerLength = 4 * numberOfElementsPerBlock + numberOfSquareElements * numberOfSquareElements
+    numberOfNodes = numberOfNodesPerLength * (numberOfZElements * (numberOfNodesXi - 1) + 1)
+    numberOfElements = numberOfElementsPerLength * numberOfZElements
+
+    if debug:
+        print('  Mesh Parameters:')
+        print('    numberOfSquareElements: %d' % (numberOfSquareElements))
+        print('    numberOfArmElements: %d' % (numberOfArmElements))
+        print('    numberOfZElements: %d' % (numberOfZElements))
+        print('    numberOfNodesXi: %d' % (numberOfNodesXi))
+        print('    numberOfNodesPerBlock: %d' % (numberOfNodesPerBlock))
+        print('    numberOfElementPerBlock: %d' % (numberOfElementsPerBlock))
+        print('    numberOfNodesPerLength: %d' % (numberOfNodesPerLength))
+        print('    numberOfElementsPerLength: %d' % (numberOfElementsPerLength))
+        print('    numberOfNodes: %d' % (numberOfNodes))
+        print('    numberOfElements: %d' % (numberOfElements))
+        print('    numberOfLocalNodes: %d' % (numberOfLocalNodes))
+
+
+    elems = np.zeros((numberOfElements, numberOfLocalNodes+1), dtype='int32')
+    node_array = np.zeros((numberOfNodes,4))
+    nodelist = [0]*numberOfNodes
+    surface_nodes = [0] * numberOfNodes
+    num_surface_nodes = 0
+    elementNumber = 0
+    localNodes = [0] * numberOfLocalNodes
+    for zElementIdx in range(1, max(numberOfZElements + 1, 2)):
+        # Handle the arm blocks first
+        previousBlock = 4
+        for blockIdx in range(1, 5):  # generating arm blocks
+            # DEFINING NODES AND ELEMENTS WITH CONNECTIVITY
+            for yElementIdx in range(1, numberOfArmElements + 1):
+                for xElementIdx in range(1, numberOfSquareElements + 1):
+                    localNodes = [0] * numberOfLocalNodes  # Nodes local to this arm block
+                    elementNumber = xElementIdx + (yElementIdx - 1) * numberOfSquareElements + (
+                            blockIdx - 1) * numberOfSquareElements * numberOfArmElements + \
+                                    (zElementIdx - 1) * numberOfElementsPerLength
+                    if (xElementIdx == 1):
+                        localNodes[localNodeIdx000] = (
+                                                              previousBlock - 1) * numberOfNodesPerBlock + numberOfSquareElements * (
+                                                              numberOfNodesXi - 1) + \
+                                                      (yElementIdx - 1) * (
+                                                              numberOfNodesXi - 1) * numberOfSquareElements * (
+                                                              numberOfNodesXi - 1) + \
+                                                      (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+                        localNodes[localNodeIdx100] = (blockIdx - 1) * numberOfNodesPerBlock + numberOfNodesXi - 1 + \
+                                                      (yElementIdx - 1) * (
+                                                              numberOfNodesXi - 1) * numberOfSquareElements * (
+                                                              numberOfNodesXi - 1) + \
+                                                      (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+                    else:
+                        localNodes[localNodeIdx000] = (blockIdx - 1) * numberOfNodesPerBlock + (xElementIdx - 2) * (
+                                numberOfNodesXi - 1) + (numberOfNodesXi - 2) + 1 + \
+                                                      (yElementIdx - 1) * (numberOfNodesXi - 1) * (
+                                                              numberOfSquareElements * (numberOfNodesXi - 1)) + \
+                                                      (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+                        localNodes[localNodeIdx100] = localNodes[localNodeIdx000] + numberOfNodesXi - 1
+                    localNodes[localNodeIdx010] = localNodes[localNodeIdx000] + numberOfSquareElements * (
+                            numberOfNodesXi - 1) * (numberOfNodesXi - 1)
+                    localNodes[localNodeIdx110] = localNodes[localNodeIdx100] + numberOfSquareElements * (
+                            numberOfNodesXi - 1) * (numberOfNodesXi - 1)
+                    localNodes[localNodeIdx001] = localNodes[localNodeIdx000] + numberOfNodesPerLength * (
+                            numberOfNodesXi - 1)
+                    localNodes[localNodeIdx101] = localNodes[localNodeIdx100] + numberOfNodesPerLength * (
+                            numberOfNodesXi - 1)
+                    localNodes[localNodeIdx011] = localNodes[localNodeIdx010] + numberOfNodesPerLength * (
+                            numberOfNodesXi - 1)
+                    localNodes[localNodeIdx111] = localNodes[localNodeIdx110] + numberOfNodesPerLength * (
+                            numberOfNodesXi - 1)
+                    if (el_type == 2):
+                        localNodes[1] = localNodes[localNodeIdx100] - 1
+                        localNodes[3] = localNodes[localNodeIdx000] + numberOfSquareElements * (numberOfNodesXi - 1)
+                        localNodes[4] = localNodes[1] + numberOfSquareElements * (numberOfNodesXi - 1)
+                        localNodes[5] = localNodes[4] + 1
+                        localNodes[7] = localNodes[localNodeIdx110] - 1
+                        localNodes[9] = localNodes[0] + numberOfNodesPerLength
+                        localNodes[10] = localNodes[1] + numberOfNodesPerLength
+                        localNodes[11] = localNodes[2] + numberOfNodesPerLength
+                        localNodes[12] = localNodes[3] + numberOfNodesPerLength
+                        localNodes[13] = localNodes[4] + numberOfNodesPerLength
+                        localNodes[14] = localNodes[5] + numberOfNodesPerLength
+                        localNodes[15] = localNodes[6] + numberOfNodesPerLength
+                        localNodes[16] = localNodes[7] + numberOfNodesPerLength
+                        localNodes[17] = localNodes[8] + numberOfNodesPerLength
+                        localNodes[19] = localNodes[10] + numberOfNodesPerLength
+                        localNodes[21] = localNodes[12] + numberOfNodesPerLength
+                        localNodes[22] = localNodes[13] + numberOfNodesPerLength
+                        localNodes[23] = localNodes[14] + numberOfNodesPerLength
+                        localNodes[25] = localNodes[16] + numberOfNodesPerLength
+                    linearNodes = [localNodes[localNodeIdx000], localNodes[localNodeIdx100],
+                                   localNodes[localNodeIdx010], localNodes[localNodeIdx110], \
+                                   localNodes[localNodeIdx001], localNodes[localNodeIdx101],
+                                   localNodes[localNodeIdx011], localNodes[localNodeIdx111]]
+                    if (debug):
+                        print('    Element %8d; Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                              (elementNumber, linearNodes[0], linearNodes[1], linearNodes[2], linearNodes[3],
+                               linearNodes[4], linearNodes[5], linearNodes[6], linearNodes[7]))
+                        if (el_type == 2):
+                            print('                      Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[0], localNodes[1], localNodes[2], localNodes[3], localNodes[4],
+                                   localNodes[5], localNodes[6], localNodes[7], localNodes[8]))
+                            print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[9], localNodes[10], localNodes[11], localNodes[12], localNodes[13],
+                                   localNodes[14], localNodes[15], localNodes[16], localNodes[17]))
+                            print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[18], localNodes[19], localNodes[20], localNodes[21], localNodes[22],
+                                   localNodes[23], localNodes[24], localNodes[25], localNodes[26]))
+
+                    if (el_type == 1):
+                        elems[elementNumber-1][0] = elementNumber
+                        elems[elementNumber-1][1:numberOfLocalNodes+1] = linearNodes
+                    if (el_type == 2):
+                        elems[elementNumber - 1][0] = elementNumber
+                        elems[elementNumber - 1][1:numberOfLocalNodes + 1] = localNodes
+            previousBlock = blockIdx
+            # Handle the square block
+        if (numberOfSquareElements == 1):
+            elementNumber = elementNumber + 1
+            localNodes[localNodeIdx000] = 3 * numberOfNodesPerBlock + \
+                                          (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx100] = 4 * numberOfNodesPerBlock + \
+                                          (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx010] = 2 * numberOfNodesPerBlock + \
+                                          (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx110] = numberOfNodesPerBlock + \
+                                          (zElementIdx - 1) * numberOfNodesPerLength * (numberOfNodesXi - 1)
+            if (el_type == 2):
+                localNodes[1] = localNodes[localNodeIdx100] - 1
+                localNodes[3] = localNodes[localNodeIdx000] - 1
+                localNodes[4] = localNodes[localNodeIdx100] + 1
+                localNodes[5] = localNodes[localNodeIdx110] - 1
+                localNodes[7] = localNodes[localNodeIdx010] - 1
+            localNodes[localNodeIdx001] = localNodes[localNodeIdx000] + numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx101] = localNodes[localNodeIdx100] + numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx011] = localNodes[localNodeIdx010] + numberOfNodesPerLength * (numberOfNodesXi - 1)
+            localNodes[localNodeIdx111] = localNodes[localNodeIdx110] + numberOfNodesPerLength * (numberOfNodesXi - 1)
+            linearNodes = [localNodes[localNodeIdx000], localNodes[localNodeIdx100], localNodes[localNodeIdx010],
+                           localNodes[localNodeIdx110], \
+                           localNodes[localNodeIdx001], localNodes[localNodeIdx101], localNodes[localNodeIdx011],
+                           localNodes[localNodeIdx111]]
+            if (el_type == 2):
+                localNodes[9] = localNodes[0] + numberOfNodesPerLength
+                localNodes[10] = localNodes[1] + numberOfNodesPerLength
+                localNodes[11] = localNodes[2] + numberOfNodesPerLength
+                localNodes[12] = localNodes[3] + numberOfNodesPerLength
+                localNodes[13] = localNodes[4] + numberOfNodesPerLength
+                localNodes[14] = localNodes[5] + numberOfNodesPerLength
+                localNodes[15] = localNodes[6] + numberOfNodesPerLength
+                localNodes[16] = localNodes[7] + numberOfNodesPerLength
+                localNodes[17] = localNodes[8] + numberOfNodesPerLength
+                localNodes[19] = localNodes[10] + numberOfNodesPerLength
+                localNodes[21] = localNodes[12] + numberOfNodesPerLength
+                localNodes[22] = localNodes[13] + numberOfNodesPerLength
+                localNodes[23] = localNodes[14] + numberOfNodesPerLength
+                localNodes[25] = localNodes[16] + numberOfNodesPerLength
+            if (debug):
+                print('    Element %8d; Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                      (elementNumber, linearNodes[0], linearNodes[1], linearNodes[2], linearNodes[3], linearNodes[4],
+                       linearNodes[5], linearNodes[6], linearNodes[7]))
+                if (el_type == 2):
+                    print('                      Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                          (localNodes[0], localNodes[1], localNodes[2], localNodes[3], localNodes[4], localNodes[5],
+                           localNodes[6], localNodes[7], localNodes[8]))
+                    print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                          (
+                          localNodes[9], localNodes[10], localNodes[11], localNodes[12], localNodes[13], localNodes[14],
+                          localNodes[15], localNodes[16], localNodes[17]))
+                    print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                          (localNodes[18], localNodes[19], localNodes[20], localNodes[21], localNodes[22],
+                           localNodes[23], localNodes[24], localNodes[25], localNodes[26]))
+
+            if (el_type == 1):
+                elems[elementNumber - 1][0] = elementNumber
+                elems[elementNumber - 1][1:numberOfLocalNodes + 1] = linearNodes
+            if (el_type == 2):
+                elems[elementNumber - 1][0] = elementNumber
+                elems[elementNumber - 1][1:numberOfLocalNodes + 1] = localNodes
+        else:
+            for yElementIdx in range(1, numberOfSquareElements + 1):
+                for xElementIdx in range(1, numberOfSquareElements + 1):
+                    localNodes = [0] * numberOfLocalNodes
+                    elementNumber = 4 * numberOfElementsPerBlock + xElementIdx + (
+                            yElementIdx - 1) * numberOfSquareElements + \
+                                    (zElementIdx - 1) * numberOfElementsPerLength
+                    if (yElementIdx == 1):
+                        if (xElementIdx == 1):
+                            # Bottom-left
+                            localNodes[localNodeIdx000] = 3 * numberOfNodesPerBlock + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = 3 * numberOfNodesPerBlock + numberOfArmElements * (
+                                        numberOfNodesXi - 1) * \
+                                                          numberOfSquareElements * (numberOfNodesXi - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = 3 * numberOfNodesPerBlock - (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 2) + (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx100] - 1
+                                localNodes[3] = localNodes[localNodeIdx000] - 1
+                                localNodes[4] = localNodes[localNodeIdx110] - numberOfSquareElements * (
+                                            numberOfNodesXi - 1)
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx110] - 1
+                        elif (xElementIdx == numberOfSquareElements):
+                            # Bottom-right
+                            localNodes[localNodeIdx000] = 4 * numberOfNodesPerBlock - (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = 4 * numberOfNodesPerBlock + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 1) - (numberOfNodesXi - 2) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = numberOfSquareElements * (numberOfNodesXi - 1) * \
+                                                          numberOfArmElements * (numberOfNodesXi - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx010] - numberOfSquareElements * (
+                                            numberOfNodesXi - 1) + 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[localNodeIdx110] - 1
+                                localNodes[7] = localNodes[localNodeIdx010] + 1
+                        else:
+                            # Bottom
+                            localNodes[localNodeIdx000] = 3 * numberOfNodesPerBlock + numberOfSquareElements * (
+                                        numberOfNodesXi - 1) * \
+                                                          numberOfArmElements * (numberOfNodesXi - 1) + (
+                                                                      xElementIdx - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = localNodes[localNodeIdx000] + (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 2) + (xElementIdx - 1) * (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = localNodes[localNodeIdx010] + (numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx010] - numberOfSquareElements * (
+                                            numberOfNodesXi - 1) + 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx110] - 1
+                    elif (yElementIdx == numberOfSquareElements):
+                        if (xElementIdx == 1):
+                            # Top-left
+                            localNodes[localNodeIdx000] = 2 * numberOfNodesPerBlock + numberOfSquareElements * (
+                                        numberOfNodesXi - 1) * \
+                                                          numberOfArmElements * (numberOfNodesXi - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((numberOfSquareElements - 1) * (numberOfNodesXi - 1) - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = 2 * numberOfNodesPerBlock + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = 2 * numberOfNodesPerBlock - (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx100] - 1
+                                localNodes[3] = localNodes[localNodeIdx000] - 1
+                                localNodes[4] = localNodes[1] + numberOfSquareElements * (numberOfNodesXi - 1) - 1
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx110] + 1
+                        elif (xElementIdx == numberOfSquareElements):
+                            # Top-right
+                            localNodes[localNodeIdx000] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((numberOfSquareElements - 1) * (numberOfNodesXi - 1) - 1) + \
+                                                          (numberOfSquareElements - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = numberOfSquareElements * (numberOfNodesXi - 1) * \
+                                                          numberOfArmElements * (numberOfNodesXi - 1) + \
+                                                          (numberOfSquareElements - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = numberOfNodesPerBlock + numberOfSquareElements * (
+                                        numberOfNodesXi - 1) * \
+                                                          numberOfArmElements * (numberOfNodesXi - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = numberOfNodesPerBlock + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx000] + numberOfSquareElements * (
+                                            numberOfNodesXi - 1) - 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[localNodeIdx110] - 1
+                                localNodes[7] = localNodes[localNodeIdx010] - 1
+                        else:
+                            # Top
+                            localNodes[localNodeIdx000] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((numberOfSquareElements - 1) * (numberOfNodesXi - 1) - 1) + \
+                                                          (xElementIdx - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = localNodes[localNodeIdx000] + (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = 2 * numberOfNodesPerBlock - (xElementIdx - 1) * (
+                                        numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = localNodes[localNodeIdx010] - (numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx000] + numberOfSquareElements * (
+                                            numberOfNodesXi - 1) - 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx010] - 1
+                    else:
+                        if (xElementIdx == 1):
+                            # Left
+                            localNodes[localNodeIdx000] = 3 * numberOfNodesPerBlock - (yElementIdx - 1) * (
+                                        numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((yElementIdx - 1) * (numberOfNodesXi - 1) - 1) + (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = localNodes[localNodeIdx000] - (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = localNodes[localNodeIdx100] + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx100] - 1
+                                localNodes[3] = localNodes[localNodeIdx000] - 1
+                                localNodes[4] = localNodes[localNodeIdx110] - numberOfSquareElements * (
+                                            numberOfNodesXi - 1)
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx110] - 1
+                        elif (xElementIdx == numberOfSquareElements):
+                            # Right
+                            localNodes[localNodeIdx000] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((yElementIdx - 1) * (numberOfNodesXi - 1) - 1) + (
+                                                                      numberOfSquareElements - 1) * (
+                                                                      numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = numberOfSquareElements * (
+                                        numberOfNodesXi - 1) * numberOfArmElements * (numberOfNodesXi - 1) + \
+                                                          (yElementIdx - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = localNodes[localNodeIdx000] + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = localNodes[localNodeIdx100] + (numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx010] - numberOfSquareElements * (
+                                            numberOfNodesXi - 1) + 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[localNodeIdx100] + 1
+                                localNodes[7] = localNodes[localNodeIdx010] + 1
+                        else:
+                            # Middle
+                            localNodes[localNodeIdx000] = 4 * numberOfNodesPerBlock + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          ((yElementIdx - 1) * (numberOfNodesXi - 1) - 1) + (
+                                                                      xElementIdx - 1) * (numberOfNodesXi - 1) + \
+                                                          (zElementIdx - 1) * numberOfNodesPerLength * (
+                                                                      numberOfNodesXi - 1)
+                            localNodes[localNodeIdx100] = localNodes[localNodeIdx000] + (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx010] = localNodes[localNodeIdx000] + (
+                                        numberOfSquareElements * (numberOfNodesXi - 1) - 1) * \
+                                                          (numberOfNodesXi - 1)
+                            localNodes[localNodeIdx110] = localNodes[localNodeIdx010] + (numberOfNodesXi - 1)
+                            if (el_type == 2):
+                                localNodes[1] = localNodes[localNodeIdx000] + 1
+                                localNodes[3] = localNodes[localNodeIdx000] + numberOfSquareElements * (
+                                            numberOfNodesXi - 1) - 1
+                                localNodes[4] = localNodes[3] + 1
+                                localNodes[5] = localNodes[4] + 1
+                                localNodes[7] = localNodes[localNodeIdx010] + 1
+                    localNodes[localNodeIdx001] = localNodes[localNodeIdx000] + numberOfNodesPerLength * (
+                                numberOfNodesXi - 1)
+                    localNodes[localNodeIdx101] = localNodes[localNodeIdx100] + numberOfNodesPerLength * (
+                                numberOfNodesXi - 1)
+                    localNodes[localNodeIdx011] = localNodes[localNodeIdx010] + numberOfNodesPerLength * (
+                                numberOfNodesXi - 1)
+                    localNodes[localNodeIdx111] = localNodes[localNodeIdx110] + numberOfNodesPerLength * (
+                                numberOfNodesXi - 1)
+                    linearNodes = [localNodes[localNodeIdx000], localNodes[localNodeIdx100],
+                                   localNodes[localNodeIdx010], localNodes[localNodeIdx110], \
+                                   localNodes[localNodeIdx001], localNodes[localNodeIdx101],
+                                   localNodes[localNodeIdx011], localNodes[localNodeIdx111]]
+                    if (el_type == 2):
+                        localNodes[9] = localNodes[0] + numberOfNodesPerLength
+                        localNodes[10] = localNodes[1] + numberOfNodesPerLength
+                        localNodes[11] = localNodes[2] + numberOfNodesPerLength
+                        localNodes[12] = localNodes[3] + numberOfNodesPerLength
+                        localNodes[13] = localNodes[4] + numberOfNodesPerLength
+                        localNodes[14] = localNodes[5] + numberOfNodesPerLength
+                        localNodes[15] = localNodes[6] + numberOfNodesPerLength
+                        localNodes[16] = localNodes[7] + numberOfNodesPerLength
+                        localNodes[17] = localNodes[8] + numberOfNodesPerLength
+                        localNodes[19] = localNodes[10] + numberOfNodesPerLength
+                        localNodes[21] = localNodes[12] + numberOfNodesPerLength
+                        localNodes[22] = localNodes[13] + numberOfNodesPerLength
+                        localNodes[23] = localNodes[14] + numberOfNodesPerLength
+                        localNodes[25] = localNodes[16] + numberOfNodesPerLength
+                    if (debug):
+                        print('    Element %8d; Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                              (elementNumber, linearNodes[0], linearNodes[1], linearNodes[2], linearNodes[3],
+                               linearNodes[4], linearNodes[5], linearNodes[6], linearNodes[7]))
+                        if (el_type == 2):
+                            print('                      Nodes: %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[0], localNodes[1], localNodes[2], localNodes[3], localNodes[4],
+                                   localNodes[5], localNodes[6], localNodes[7], localNodes[8]))
+                            print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[9], localNodes[10], localNodes[11], localNodes[12], localNodes[13],
+                                   localNodes[14], localNodes[15], localNodes[16], localNodes[17]))
+                            print('                             %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d, %8d' % \
+                                  (localNodes[18], localNodes[19], localNodes[20], localNodes[21], localNodes[22],
+                                   localNodes[23], localNodes[24], localNodes[25], localNodes[26]))
+                    if (el_type == 1):
+                        elems[elementNumber-1][0] = elementNumber
+                        elems[elementNumber-1][1:numberOfLocalNodes+1] = linearNodes
+                    if (el_type == 2):
+                        elems[elementNumber - 1][0] = elementNumber
+                        elems[elementNumber - 1][1:numberOfLocalNodes + 1] = localNodes
+
+    if (debug):
+        print('   Nodes:')
+
+    k = 0.0
+    for zNodeIdx in range(1, numberOfZElements * (numberOfNodesXi - 1) + 2):
+        k = abs(((zNodeIdx-1)/(float(numberOfZElements * (numberOfNodesXi - 1)))))
+        prop = 1 - (1 - circle_prop) * k
+        sign = np.sign(k)
+        #This is the z height associated with this prop
+        zPosition = sign * ellipsoidRadius_z * np.sqrt(1 - prop ** 2)
+        #This is the radius of the ellipse that lies in the ellipsoid at this z-height
+        new_x_radius = ellipsoidRadius_x * np.sqrt(ellipsoidRadius_z ** 2.0 - zPosition ** 2.0) \
+                       / (ellipsoidRadius_z)
+        new_y_radius = ellipsoidRadius_y * np.sqrt(ellipsoidRadius_z ** 2.0 - zPosition ** 2.0) \
+                       / (ellipsoidRadius_z)
+
+        angle_theta = np.arctan(new_y_radius / new_x_radius)
+
+        squareSize_x = squareSizeRatio * new_x_radius * np.cos(angle_theta)
+        squareSize_y = squareSizeRatio * new_y_radius * np.sin(angle_theta)
+
+        #squareSize_x = squareSizeRatio * ellipsoidRadius_x * np.cos(angle_theta)
+        #squareSize_y = squareSizeRatio *  ellipsoidRadius_y * np.sin(angle_theta)
+
+        # Handle the arm blocks first
+        previousBlock = 4
+        for blockIdx in range(1, 5):
+            # print('Block which ' + str(blockIdx) + ' ' + str(zNodeIdx))
+            for yNodeIdx in range(1, numberOfArmElements * (numberOfNodesXi - 1) + 2):
+                for xNodeIdx in range(1, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                    nodeNumber = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                                yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                                 (zNodeIdx - 1) * numberOfNodesPerLength
+                    #nodeDomain = decomposition.NodeDomainGet(nodeNumber, 1)
+                    if(nodeNumber > numberOfNodes + 1):
+                        print(nodeNumber)
+                    else:
+                        if (yNodeIdx == numberOfArmElements * (numberOfNodesXi - 1) + 1):
+                            # On the square
+                            # print('On the square', xNodeIdx,yNodeIdx)
+
+                            if (blockIdx == 1):
+                                xPosition = squareSize_x - 2.0 * xNodeIdx * squareSize_x / (
+                                            numberOfSquareElements * (numberOfNodesXi - 1))
+                                yPosition = squareSize_y
+                            elif (blockIdx == 2):
+                                xPosition = -squareSize_x
+                                yPosition = squareSize_y - 2.0 * xNodeIdx * squareSize_y / (
+                                            numberOfSquareElements * (numberOfNodesXi - 1))
+                            elif (blockIdx == 3):
+                                xPosition = -squareSize_x + 2.0 * xNodeIdx * squareSize_x / (
+                                            numberOfSquareElements * (numberOfNodesXi - 1))
+                                yPosition = -squareSize_y
+                            elif (blockIdx == 4):
+                                xPosition = squareSize_x
+                                yPosition = -squareSize_y + 2.0 * xNodeIdx * squareSize_y / (
+                                            numberOfSquareElements * (numberOfNodesXi - 1))
+                        else:
+                            # In the arm
+                            # Work out the r, theta position of each point equally spread on the block
+                            if (blockIdx == 1):
+                                start_theta = np.arctan(new_y_radius / new_x_radius)
+                                end_theta = np.pi - start_theta
+                                theta = start_theta + xNodeIdx * (end_theta - start_theta) / (numberOfSquareElements * (
+                                        numberOfNodesXi - 1))
+                                # theta is the angle from the centre of the mesh to the surface of the ellipsoid
+                                sq_x = squareSize_x - 2.0 * xNodeIdx * squareSize_x / (
+                                        numberOfSquareElements * (numberOfNodesXi - 1))
+                                sq_y = squareSize_y
+                            elif (blockIdx == 2):
+                                start_theta = np.pi - np.arctan(new_y_radius / new_x_radius)
+                                end_theta = np.pi + np.arctan(new_y_radius / new_x_radius)
+                                theta = start_theta + xNodeIdx * (end_theta - start_theta) / (numberOfSquareElements * (
+                                        numberOfNodesXi - 1))
+                                sq_x = -squareSize_x
+                                sq_y = squareSize_y - 2.0 * xNodeIdx * squareSize_y / (
+                                        numberOfSquareElements * (numberOfNodesXi - 1))
+                            elif (blockIdx == 3):
+                                start_theta = np.pi + np.arctan(new_y_radius / new_x_radius)
+                                end_theta = 2.0 * np.pi - np.arctan(new_y_radius / new_x_radius)
+                                theta = start_theta + xNodeIdx * (end_theta - start_theta) / (numberOfSquareElements * (
+                                        numberOfNodesXi - 1))
+                                sq_x = -squareSize_x + 2.0 * xNodeIdx * squareSize_x / (
+                                            numberOfSquareElements * (numberOfNodesXi - 1))
+                                sq_y = -squareSize_y
+                            elif (blockIdx == 4):
+                                start_theta = 2.0 * np.pi - np.arctan(new_y_radius / new_x_radius)
+                                end_theta = 2.0 * np.pi + np.arctan(new_y_radius / new_x_radius)
+                                theta = start_theta + xNodeIdx * (end_theta - start_theta) / (numberOfSquareElements * (
+                                        numberOfNodesXi - 1))
+                                sq_x = squareSize_x
+                                sq_y = -squareSize_y + 2.0 * xNodeIdx * squareSize_y / (
+                                        numberOfSquareElements * (numberOfNodesXi - 1))
+
+                            armRadius = new_y_radius * new_x_radius / np.sqrt(
+                                new_x_radius ** 2 * np.sin(theta) ** 2 + new_y_radius ** 2 * np.cos(theta) ** 2)
+                            arm_x = armRadius * np.cos(theta)
+                            arm_y = armRadius * np.sin(theta)
+
+                            arm_no = (yNodeIdx - 1) / (numberOfArmElements * (numberOfNodesXi - 1) + 1.0)
+
+                            xPosition = arm_x - arm_no * (arm_x - sq_x)
+                            yPosition = arm_y - arm_no * (arm_y - sq_y)
+
+                        if (zNodeIdx == numberOfZElements * (numberOfNodesXi - 1) + 1): #project to top and bottom
+                            # surface
+                            zPosition = ellipsoidRadius_z * np.sqrt(
+                                1 - xPosition ** 2 / ellipsoidRadius_x ** 2 - yPosition ** 2 / ellipsoidRadius_y ** 2)
+
+                            surface_nodes[num_surface_nodes] = nodeNumber
+                            num_surface_nodes = num_surface_nodes + 1
+                        elif(yNodeIdx == 1): #outer ring
+
+                            surface_nodes[num_surface_nodes] = nodeNumber
+                            num_surface_nodes = num_surface_nodes + 1
+                        nodelist[nodeNumber-1] = nodeNumber
+                        node_array[nodeNumber-1][:]= [nodeNumber,xPosition,yPosition,zPosition]
+
+                        if (debug):
+                            print('      Node        %d:' % (nodeNumber))
+                            print('         Position         = [ %.2f, %.2f, %.2f ]' % (
+                            xPosition, yPosition, zPosition))
+
+        # Now handle square
+        for yNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+            for xNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                nodeNumber = 4 * numberOfNodesPerBlock + (xNodeIdx - 1) + (yNodeIdx - 2) * (
+                            numberOfSquareElements * (numberOfNodesXi - 1) - 1) + \
+                             (zNodeIdx - 1) * numberOfNodesPerLength
+                if (nodeNumber > numberOfNodes + 1):
+                    print(nodeNumber)
+                else:
+                    xPosition = squareSize_x - squareSize_x * (yNodeIdx - 1) / (
+                                numberOfSquareElements * (numberOfNodesXi - 1)) * 2.0
+                    yPosition = -squareSize_y + squareSize_y * (xNodeIdx - 1) / (
+                                numberOfSquareElements * (numberOfNodesXi - 1)) * 2.0
+                    if (zNodeIdx == numberOfZElements * (numberOfNodesXi - 1) + 1):
+                        zPosition = ellipsoidRadius_z * np.sqrt(
+                            1 - xPosition ** 2 / ellipsoidRadius_x ** 2 - yPosition ** 2 / ellipsoidRadius_y ** 2)
+                        num_surface_nodes = num_surface_nodes + 1
+                        surface_nodes[num_surface_nodes] = nodeNumber
+                    nodelist[nodeNumber - 1] = nodeNumber
+                    node_array[nodeNumber - 1][:] = [nodeNumber, xPosition, yPosition, zPosition]
+
+                    if (debug):
+                        print('      Node        %d:' % (nodeNumber))
+                        print('         Position         = [ %.2f, %.2f, %.2f ]' % (xPosition, yPosition, zPosition))
+
+    #As we project the top and bottom rows to the surface of the ellipsoid, uneven nodal distribution can impact on
+    # mesh quality so we resistribute the nodes immediately underneath the surface to improve quality metrics. In half ellipsoid only the top ring is projected
+
+    second_rows = [numberOfZElements * (numberOfNodesXi - 1)]
+    for zNodeIdx in second_rows:
+        # Handle the arm blocks first
+        previousBlock = 4
+        for blockIdx in range(1, 5):
+            # print('Block which ' + str(blockIdx) + ' ' + str(zNodeIdx))
+            for yNodeIdx in range(1, numberOfArmElements * (numberOfNodesXi - 1) + 2):
+                for xNodeIdx in range(1, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                    nodeNumber = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx - 1) * numberOfNodesPerLength
+                    nodeNumber_above = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx -1 - 1) * numberOfNodesPerLength
+                    nodeNumber_below = (blockIdx - 1) * numberOfNodesPerBlock + xNodeIdx + (
+                        yNodeIdx - 1) * numberOfSquareElements * (numberOfNodesXi - 1) + \
+                             (zNodeIdx + 1 - 1) * numberOfNodesPerLength
+                    # nodeDomain = decomposition.NodeDomainGet(nodeNumber, 1)
+                    if (nodeNumber > numberOfNodes + 1):
+                        print(nodeNumber)
+                    else:
+                        zPosition_above = node_array[nodeNumber_above - 1][3]
+                        zPosition_below = node_array[nodeNumber_below - 1][3]
+                        zPosition = (zPosition_above + zPosition_below)/2.0
+                        node_array[nodeNumber - 1][3] = zPosition
+        # Now handle square
+        for yNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+            for xNodeIdx in range(2, numberOfSquareElements * (numberOfNodesXi - 1) + 1):
+                nodeNumber = 4 * numberOfNodesPerBlock + (xNodeIdx - 1) + (yNodeIdx - 2) * (
+                            numberOfSquareElements * (numberOfNodesXi - 1) - 1) + \
+                             (zNodeIdx - 1) * numberOfNodesPerLength
+                if (nodeNumber > numberOfNodes + 1):
+                    print(nodeNumber)
+                else:
+                    zPosition_above = node_array[nodeNumber_above - 1][3]
+                    zPosition_below = node_array[nodeNumber_below - 1][3]
+                    zPosition = (zPosition_above + zPosition_below) / 2.0
+                    node_array[nodeNumber - 1][3] = zPosition
+
+
+    surface_nodes = np.unique(surface_nodes)
+    nzid = np.nonzero(surface_nodes)
+    surface_nodes = surface_nodes[nzid]
+    return{'nodes':node_array,'elems':elems,'surface_nodes':surface_nodes, 'node_list':nodelist}
