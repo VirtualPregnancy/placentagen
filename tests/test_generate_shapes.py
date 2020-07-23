@@ -52,9 +52,6 @@ class Test_tet_mesh(TestCase):
           ellipticity=1
           mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28)
           self.assertTrue(np.isclose(mesh_node['elems'][0,0],4))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,1],7))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,2],6))
-          self.assertTrue(np.isclose(mesh_node['elems'][0,3],3))
  
       def test_darcy_el_node_array(self):
           volume=5
