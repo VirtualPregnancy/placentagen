@@ -127,7 +127,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
         datapoints = datapoints[np.nonzero(map_seed_to_elem)] #remove the datapoints you are currently analysing from master list
         map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)] #remove parent you are currently analysing from master list
-        data_current_parent.resize(nd_for_parent, 3)
+        data_current_parent.resize(nd_for_parent, 3,refcheck=False)
         local_parent_temp = np.zeros(num_elems_new, dtype=int)  # rezero local parent arrays
         local_parent = np.zeros(num_elems_new, dtype=int)
         local_parent[0] = current_parent
@@ -986,10 +986,10 @@ def group_elem_parent_term(ne_parent, elem_downstream):
         if elem_downstream[ne][0] == 0:
             num_in_list = num_in_list + 1
             parentlist[num_in_list - 1] = ne
-    parentlist.resize(num_in_list)
-    ne_old.resize(num_in_list)
-    ntemp_list.resize(num_in_list)
-    ne_temp.resize(num_in_list)
+    parentlist.resize(num_in_list,refcheck=False)
+    ne_old.resize(num_in_list,refcheck=False)
+    ntemp_list.resize(num_in_list,refcheck=False)
+    ne_temp.resize(num_in_list,refcheck=False)
     print('Grouped by parent,' + str(ne_parent) + ' No in parent list,' + str(num_in_list))
 
     return parentlist
