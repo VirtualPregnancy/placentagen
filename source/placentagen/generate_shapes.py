@@ -80,7 +80,7 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
         if coord_check is True:  # Has to be strictly in the ellipsoid
             datapoints[num_data, :] = data_coords[i, :]  # add to data array
             num_data = num_data + 1
-    datapoints.resize(num_data, 3)  # resize data array to correct size
+    datapoints.resize(num_data, 3,refcheck=False)  # resize data array to correct size
 
     print('Data points within ellipsoid allocated. Total = ' + str(len(datapoints)))
 
@@ -227,7 +227,7 @@ def gen_ellip_mesh_tet(volume, thickness, ellipticity, n):
         if inside:
             ellipsoid_node[count, :] = coord_point[:]
             count = count + 1
-    ellipsoid_node.resize(count, 3)
+    ellipsoid_node.resize(count, 3,refcheck=False)
     xyList = ellipsoid_node[:, [0, 1]]
     xyListUnique = np.vstack({tuple(row) for row in xyList})
     # looking for z_coordinate of surface nodes
@@ -283,9 +283,9 @@ def gen_ellip_mesh_tet(volume, thickness, ellipticity, n):
 
 def gen_rectangular_node(x_width, y_width, z_width, nnod_x, nnod_y, nnod_z):
     # Create linspaces for x y and z coordinates
-    x = np.linspace(-x_width / 2.0, x_width / 2.0, nnod_x)  # linspace for x axis
-    y = np.linspace(-y_width / 2.0, y_width / 2.0, nnod_y)  # linspace for y axis
-    z = np.linspace(-z_width / 2.0, z_width / 2.0, nnod_z)  # linspace for z axis
+    x = np.linspace(-x_width / 2.0, x_width / 2.0, int(nnod_x))  # linspace for x axis
+    y = np.linspace(-y_width / 2.0, y_width / 2.0, int(nnod_y))  # linspace for y axis
+    z = np.linspace(-z_width / 2.0, z_width / 2.0, int(nnod_z))  # linspace for z axis
     node_loc_temp = np.vstack(np.meshgrid(y, z, x)).reshape(3, -1).T  # generate nodes for rectangular mesh
     node_loc = np.zeros((len(node_loc_temp), 3))
     for i in range(0, len(node_loc)):

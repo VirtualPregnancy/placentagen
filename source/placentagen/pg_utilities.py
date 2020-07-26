@@ -131,7 +131,7 @@ def group_elem_parent(ne_parent, elem_downstream):
             ne_count = ne_count + 1
             ntemp_list[ne_count] = ne_temp[n]
 
-    ntemp_list.resize(ne_count+1)
+    ntemp_list.resize(ne_count+1,refcheck=False)
 
     return ntemp_list
 
