@@ -472,7 +472,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
             np_prt_start = int(elems[ne_parent][1])
             # Split the seed points by the plane defined by the parent branch and the com of the
             # seedpoints attached to it
-            if sorv is 'surface':
+            if sorv == 'surface':
                 split_data = data_splitby_xy(map_seed_to_elem, datapoints, com, node_loc[np_start][1:3], ne_parent, ne,
                                              point_limit)
             else:
@@ -497,7 +497,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                     end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                         (com - start_node_loc))
                     # Checks that branch angles are appropriate
-                    if sorv is 'surface':
+                    if sorv == 'surface':
                         # first node is 1st parent node
                         node1 = np.array(
                             [node_loc[elems[ne_parent][1]][0], node_loc[elems[ne_parent][1]][1], 0])
@@ -508,7 +508,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
                         end_node = mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, ne + 1)
                         end_node_loc[0:2] = end_node[0:2]
                         end_node_loc[2] = pg_utilities.z_from_xy(end_node[0], end_node[1], x_radius, y_radius, z_radius)
-                    elif sorv is 'volume':
+                    elif sorv == 'volume':
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
                                                         start_node_loc, end_node_loc, ne_parent, ne + 1)
 

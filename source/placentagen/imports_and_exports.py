@@ -21,7 +21,7 @@ def export_ex_coords(data, groupname, filename, type):
     f.write(" z.  Value index=1, #Derivatives=0\n")
 
     for x in range(0, data_num):
-        if data_length is 4:
+        if data_length == 4:
             f.write("Node:  "        "%s\n" % int(data[x][0] + 1))
             f.write("          %s\n" % (data[x][1]))
             f.write("          %s\n" % (data[x][2]))
