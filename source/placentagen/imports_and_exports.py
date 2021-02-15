@@ -7,6 +7,7 @@ def export_ex_coords(data, groupname, filename, type):
     # groupname = what you want your data to be called in cmgui
     # filename = file name without extension
     # type = exnode or exdata
+    print('filename',filename)
     data_length = len(
         data[0])  # if this is 3 then number nodes or data automatically if 4 then node numbers are given as
     # first entry
@@ -31,7 +32,7 @@ def export_ex_coords(data, groupname, filename, type):
             f.write("          %s\n" % data[x][0])
             f.write("          %s\n" % data[x][1])
             f.write("          %s\n" % data[x][2])
-            f.close()
+    f.close()
 
 def export_ex_field(data, groupname, fieldname, filename, type):
     # Exports coordinates to exnode or exdata format
