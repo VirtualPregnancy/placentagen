@@ -46,6 +46,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
             - tb_loc: The location of that datapoint
 
     '''
+
+    np.random.seed(seed=1) #so if you randomly perturb in growing you get repeatable results
+
     if (volume==0) or (thickness==0) or (ellipticity==0):
         check_in_ellipsoid = 0
     else:
