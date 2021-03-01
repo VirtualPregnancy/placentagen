@@ -3,4 +3,3 @@ coverage
 scipy
 numpy
 scikit-image
-warnings
