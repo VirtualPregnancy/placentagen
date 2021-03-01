@@ -1,5 +1,13 @@
 #!/usr/bin/env python
+
+
 import numpy as np
+from . import pg_utilities
+import warnings
+import skimage
+from skimage import io
+
+
 
 def export_ex_coords(data, groupname, filename, type):
     # Exports coordinates to exnode or exdata format
@@ -418,6 +426,52 @@ def export_exfield_1d_linear(data, groupname, fieldname, filename):
                 data[x], data[x]))
     f.close()
 
+
+######
+# Function: takes data from the csv and converts it to arrays
+# Inputs: data_file - generated from the panadas read_csv function, containing results from imageJ image analysis
+#         Arrays - a group of arrays each with length N for their first axis
+# Outputs: nodes - an M x 3 array giving cartesian coordinates (x,y,z) for the node locations in the tree
+#         elems - an N x 3 array, the first colum in the element number, the second two columns are the index of the start and end node
+#         radii, length, euclidean_length - there are all an N x 1 array containing a property for each element
+######
+
+def import_imagej_skel_csv(data_file,keep_skeleton,what_skel):
+    # If keep_skeleton = 0 we keep all the elements in the skeleton
+    #Otherwise we can select one out from the dataset to analyse
+    if what_skel == "less": #implies we want <= value
+            data_file = data_file[data_file.SkeletonID <= keep_skeleton]
+    elif what_skel == "single":
+        data_file = data_file[data_file.SkeletonID == keep_skeleton]
+    elif what_skel == "all":
+        print("reading all skeletons: could take a while")
+    else:
+        print("Not a valid option for reading skeltons")
+        return
+
+
+    # get skeleton properties as arrays
+    euclid_length = data_file.Euclideandistance.values
+    length = data_file.Branchlength.values
+    radii = data_file.averageintensityinner3rd.values
+    branch_id = data_file.SkeletonID.values
+
+
+    print("sorting data")
+    # get elem and node data
+    data_file = data_file.drop(['SkeletonID', 'Branchlength', 'averageintensityinner3rd', 'Euclideandistance'], axis=1)
+    data_file = data_file.values
+    (elems, nodes) = pg_utilities.sort_elements(data_file[:, 0:3], data_file[:, 3:6])
+
+    print("elements sorted")
+    # get rid of dud elements
+    (elems, [length, euclid_length, radii,branch_id]) = pg_utilities.remove_rows(elems, [length, euclid_length,
+                                                                                         radii,branch_id])
+
+    return {'nodes': nodes, 'elems': elems, 'radii': radii, 'length': length, 'euclidean length': euclid_length,
+            'branch_id': branch_id}
+
+
 def import_stemxy(stem_file):
 
     # reading in the stem vessel to map the spiral artery location
@@ -816,3 +870,34 @@ def export_exfield_3d_quadratic(data, groupname, fieldname, filename):
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
 
     f.close()
+
+    ######
+    # Function: Loads in a stack of images, located in path, and with naming convention name (goes slice at a time to avoid memory errors)
+    #     Inputs: numImages - integer, number of images in the stack
+    #             name - string for name of images. Note images must be numbered from 0
+    #     Outputs: Image, a 3D BOOLEAN array containing image
+    ######
+
+def load_image_bool(name, numImages):
+
+    # read in first image + get dimensions to initialize array
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        print(name.format(0))
+        im = io.imread(name.format(0))
+        gray_image = skimage.color.rgb2gray(im)
+        skimage.img_as_bool(gray_image)
+        Image = np.zeros([im.shape[0], im.shape[1], numImages], dtype=bool)
+        Image[:, :, 0] = gray_image
+
+        # load all slices
+    for i in range(0, numImages):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            im = io.imread(name.format(i))
+            gray_image = skimage.color.rgb2gray(im)
+            skimage.img_as_bool(gray_image)
+        Image[:, :, i] = gray_image
+
+    print('Image ' + name + ' loaded. Shape: ' + str(Image.shape))
+    return Image

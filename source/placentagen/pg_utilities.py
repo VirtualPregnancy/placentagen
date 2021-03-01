@@ -210,6 +210,61 @@ def samp_gr_for_node_loc(rectangular_mesh):
     return startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, nelem_z
 
 
+
+
+def sort_elements(v1, v2):
+    ######
+    # Function: takes a list of node pairs (v1, v2) and creates a list of nodes and elements
+    # Inputs: v1 - N x 3 array of start node coordinates
+    #         v2 - N x 3 array of end node coordinates
+    # Outputs: nodes - an M x 3 array giving cartesian coordinates (x,y,z) for the node locations in the tree
+    #          elems - an N x 3 array, the first colum in the element number, the second two columns are the index of the start and end node
+    #          elements that start and end at the same node are given a value of -1
+    ######
+    Nelem = len(v1)
+    print("number of elements",Nelem)
+    elems = np.zeros([Nelem, 3])
+    nodes = np.zeros([Nelem * 2, 3])  # max number of nodes possible
+
+    iN = 0  # node index
+
+    # go through first node list
+    for iE in range(0, Nelem):
+
+        v = v1[iE, :]
+        index = is_member(v, nodes[0:iN][:])  # see if the node is in the nodes list
+
+        if index == -1:  # if not, create a new node
+            nodes[iN, :] = v
+            index = iN
+            iN = iN + 1
+
+        # else just use index of existing node
+        elems[iE, 1] = int(index)
+        elems[iE, 0] = int(iE)  # first column of elements is just the element number
+
+    # go through second node list
+    for iE in range(0, Nelem):
+
+        v = v2[iE, :]
+        index = is_member(v, nodes[0:iN, :])
+
+        if index == -1:
+            nodes[iN, :] = v
+            index = iN
+            iN = iN + 1
+
+        elems[iE, 2] = int(index)
+
+        if elems[iE][1] == elems[iE][2]:
+            elems[iE, 0:2] = int(-1)
+
+    nodes = nodes[0:iN:1][:]  # truncate based on how many nodes were actually assigned
+
+    return (elems, nodes)
+
+
+
 def locate_node(startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, nelem_z, coord_node):
     # calculate where a give point/node is located in a given rectangular mesh
     # Inputs:
@@ -238,14 +293,15 @@ def locate_node(startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, n
                 nelem_x * nelem_y))  # this is the element where the point/node located
     return nelem
 
-######
-# Function: Remove rows from both mainArray and Arrays at which main array has values less than zero
-# Inputs: mainArray - an N x M array of values
-#         Arrays - a list of arrays each with length N for their first axis
-# Outputs: for each row of mainArray for which the first element is below zero; this row is removed from mainArray and from each array
-######
 
 def remove_rows(main_array, arrays):
+    ######
+    # Function: Remove rows from both mainArray and Arrays at which main array has values less than zero
+    # Inputs: mainArray - an N x M array of values
+    #         Arrays - a list of arrays each with length N for their first axis
+    # Outputs: for each row of mainArray for which the first element is below zero; this row is removed from mainArray and from each array
+    ######
+
     i = 0
 
     while i < len(main_array):
@@ -366,7 +422,8 @@ def find_maximum_joins(elems):
     elems = elems.astype(int)
     result = np.bincount(elems)
     Nc = (max(result)) + 1
-
+    plt.plot(result)
+    plt.show()
     # Warning if detect an unusual value
     if Nc > 12:
         print('Warning, large number of elements at one node: ' + str(Nc))
