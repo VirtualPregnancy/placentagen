@@ -42,7 +42,7 @@ class Test_tet_mesh(TestCase):
           volume=5
           thickness=2.1
           ellipticity=1
-          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28)
+          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28.0)
           self.assertTrue(np.isclose(mesh_node['nodes'][0,0],0))
           self.assertTrue(np.isclose(mesh_node['nodes'][0,1],0))
           self.assertTrue(np.isclose(mesh_node['nodes'][0,2],-1.05))
@@ -50,14 +50,19 @@ class Test_tet_mesh(TestCase):
           volume=5
           thickness=2.1
           ellipticity=1
-          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28)
+          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28.0)
           self.assertTrue(np.isclose(mesh_node['elems'][0,0],4))
+
+          #self.assertTrue(np.isclose(mesh_node['elems'][0,1],7))
+          #self.assertTrue(np.isclose(mesh_node['elems'][0,2],6))
+          self.assertTrue(np.isclose(mesh_node['elems'][0,3],3))
+
  
       def test_darcy_el_node_array(self):
           volume=5
           thickness=2.1
           ellipticity=1
-          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28)
+          mesh_node = placentagen.gen_ellip_mesh_tet(volume, thickness, ellipticity,28.0)
           self.assertTrue(mesh_node['element_array'][0] == 1)
           self.assertTrue(mesh_node['node_array'][0] == 1)
 
@@ -105,7 +110,14 @@ class Test_pl_mesh_qua(TestCase):
 class Test_surface_node(TestCase):
       def test_surf_node(self):
           surfacenode = placentagen.identify_surface_node_quad(1,1,1)
-          self.assertTrue((surfacenode == [1,2,3,4,5,6,7,8,9,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,26,27]).all())   
+          self.assertTrue((surfacenode == [1,2,3,4,5,6,7,8,9,10,11,12,13,15,16,17,18,19,20,21,22,23,24,25,26,27]).all())
+
+class Test_half_ellipse(TestCase):
+      def test_half_ellipse(self):
+          pl_mesh = placentagen.gen_half_ellipsoid_structured(1,(np.pi*4/3),2,1,0.75,0.85,1,False)
+          self.assertTrue(np.isclose(pl_mesh['nodes'][0][1],-0.5303300858899107))
+          self.assertTrue(np.isclose(pl_mesh['nodes'][0][2], 0.5303300858899107))
+          self.assertTrue(np.isclose(pl_mesh['nodes'][0][3], 0.0))
 
 #TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), 'Testdata/stem_xy.txt')
 #class Test_vessel_node(TestCase):
