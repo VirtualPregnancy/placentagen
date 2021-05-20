@@ -39,7 +39,7 @@ class Test_grow_trees(TestCase):
         seed_geom['elem_down'] = [[2, 1, 2], [0, 0, 0], [0, 0, 0]]
         data = placentagen.uniform_data_on_ellipsoid(5,1,1,1,0)
         geom = placentagen.grow_large_tree(90 * np.pi / 180, 45 * np.pi / 180, 0.5, 0.1, 1,
-                                                              1, 1, 1, data, seed_geom)
+                                                              1, 1, 1, data, seed_geom,1)
         self.assertTrue(geom['nodes'][6][3], 0.22301891)
 
 

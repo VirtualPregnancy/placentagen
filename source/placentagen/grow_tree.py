@@ -72,7 +72,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
 
-    print('total_estimated', total_estimated) #Monika
+    print('total_estimated', total_estimated)
     # Define the total number of nodes and elements prior to growing, plus the new number expected
     num_elems_old = len(initial_geom["elems"])
     num_nodes_old = len(initial_geom["nodes"])
