@@ -13,7 +13,7 @@ from . import analyse_tree
 
 
 def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
-                    datapoints, initial_geom):
+                    datapoints, initial_geom, random_seed):
     '''
     :Function name: **grow_tree_large**
 
@@ -47,7 +47,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
     '''
 
-    np.random.seed(seed=1) #so if you randomly perturb in growing you get repeatable results
+    np.random.seed(seed=random_seed) #so if you randomly perturb in growing you get repeatable results
 
     if (volume==0) or (thickness==0) or (ellipticity==0):
         check_in_ellipsoid = 0
