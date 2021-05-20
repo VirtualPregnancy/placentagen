@@ -297,8 +297,8 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                                                     local_parent[0:num_next_parents], node_loc,
                                                     elems)
             # Could make this an optional output at a later date
-            #print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-             #     '   ' + str(numtb) + '   ' + str(remaining_data))
+            print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+                  '   ' + str(numtb) + '   ' + str(remaining_data))
 
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
