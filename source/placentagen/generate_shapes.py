@@ -115,7 +115,6 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     and with the y-axis dimension 1.1 times the x-axis dimension.
 
     """
-    np.random.seed(seed=2) #so if you randomly perturb in growing you get repeatable results
 
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
@@ -125,7 +124,7 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     data_spacing = 0.85 * np.sqrt(area_estimate / n)
 
     chorion_data = np.zeros((n, 3))
-    np.random.seed(random_seed)
+    np.random.seed(seed = random_seed)
     generated_seed = 0
     acceptable_attempts = n * 1000  # try not to have too many failures
     attempts = 0
