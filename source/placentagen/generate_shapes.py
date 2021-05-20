@@ -115,6 +115,8 @@ def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
     and with the y-axis dimension 1.1 times the x-axis dimension.
 
     """
+    np.random.seed(seed=2) #so if you randomly perturb in growing you get repeatable results
+
     radii = pg_utilities.calculate_ellipse_radii(volume, thickness, ellipticity)
     z_radius = radii['z_radius']
     x_radius = radii['x_radius']
