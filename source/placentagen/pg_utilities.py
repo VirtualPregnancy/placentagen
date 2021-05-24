@@ -42,7 +42,7 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
-    zero_tol = 1e-10
+    zero_tol = 1.e-10
     on_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if abs(coord_check - 1.0) < zero_tol:
@@ -52,7 +52,7 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
-    zero_tol = 1e-10
+    zero_tol = 1.e-10
     in_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if coord_check < 1.0:
@@ -75,7 +75,7 @@ def angle_two_vectors(vector1, vector2):
         dotprod = np.dot(vector1_u, vector2_u)
         if np.isclose(1.0, dotprod):
             # can't do arccos of 1
-            angle = np.sqrt(2 * np.abs(1 - dotprod))  # small angle approximation to cos near theta =1
+            angle = np.sqrt(2. * np.abs(1. - dotprod))  # small angle approximation to cos near theta =1
         else:
             angle = np.arccos(dotprod)
 
@@ -149,6 +149,7 @@ def plane_from_3_pts(x0, x1, x2, normalise):
     diff1 = x1 - x0
     diff2 = x1 - x2
 
+
     norml[0] = diff1[1] * diff2[2] - diff1[2] * diff2[1]
     norml[1] = diff1[2] * diff2[0] - diff1[0] * diff2[2]
     norml[2] = diff1[0] * diff2[1] - diff1[1] * diff2[0]
@@ -167,11 +168,11 @@ def check_colinear(x0, x1, x2):
     colinear = False
     vector1 = (x1 - x0) / np.linalg.norm(x1 - x0)
     vector2 = (x1 - x2) / np.linalg.norm(x1 - x2)
-    array_test1 = np.equal(vector1, vector2)
-    array_test2 = np.equal(vector1, -1 * vector2)
-    if array_test1.all is True:
+    array_test1 = np.isclose(vector1, vector2)
+    array_test2 = np.isclose(vector1, -1. * vector2)
+    if all(array_test1) is True:
         colinear = True
-    elif array_test2.all is True:
+    elif all(array_test2) is True:
         colinear = True
 
     return colinear
@@ -331,8 +332,8 @@ def plot_vasculature_3d(nodes, elems, colour, radii):
     ax = fig.gca(projection='3d')
 
     # scale colour and radii
-    colour = (colour - min(colour)) / max(colour) * 255
-    radii = radii / max(radii) * 3
+    colour = (colour - min(colour)) / max(colour) * 255.
+    radii = radii / max(radii) * 3.
 
     for i in range(0, Ne):
         # get start and end node
