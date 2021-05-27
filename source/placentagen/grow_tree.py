@@ -13,7 +13,7 @@ from . import analyse_tree
 
 
 def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, volume, thickness, ellipticity,
-                    datapoints, initial_geom):
+                    datapoints, initial_geom, random_seed):
     '''
     :Function name: **grow_tree_large**
 
@@ -47,7 +47,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
     '''
 
-    np.random.seed(seed=1) #so if you randomly perturb in growing you get repeatable results
+    np.random.seed(seed=random_seed) #so if you randomly perturb in growing you get repeatable results
 
     if (volume==0) or (thickness==0) or (ellipticity==0):
         check_in_ellipsoid = 0
@@ -72,7 +72,7 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     for i in range(0, est_generation + 1):
         total_estimated = total_estimated + 2 ** i
 
-    print('total_estimated', total_estimated) #Monika
+    print('total_estimated', total_estimated)
     # Define the total number of nodes and elements prior to growing, plus the new number expected
     num_elems_old = len(initial_geom["elems"])
     num_nodes_old = len(initial_geom["nodes"])
@@ -161,9 +161,17 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                 length_parent  = np.linalg.norm(point1 - point2)
                 # Split the seed points by the plane defined by the parent branch and the com of the
                 # seedpoints attached to it
+                colinear = pg_utilities.check_colinear(point1,point2, com)
+                if colinear:
+                    #peturb COM slightly (exclude one data point)
+                    com = mesh_com(ne_parent, map_seed_to_elem_new, data_current_parent[1:len(data_current_parent)])
                 split_data = data_splitby_plane(map_seed_to_elem_new, data_current_parent, com,
                                                 node_loc[np_prt_start][1:4],
                                                 node_loc[np_start][1:4], ne_parent, ne, point_limit)
+
+                too_short =0
+                too_long =0
+                not_in =0
                 # Check that there ar enough seedpoints in both groups to proceed
                 # Note long term one could allow one group to continue and the other not to
                 if split_data['enough_points'][0] and split_data['enough_points'][1]:
@@ -179,13 +187,17 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         if length_new < min_length:
                             length_new = min_length
                             branch = False
+                            too_short = 1
                         if(length_new > 2.0*length_parent and ngen > 4):
                             length_new = length_parent
                             branch = False
+                            too_long = 1
 
                         # calculate location of end node
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
                             (com - start_node_loc))
+
+
 
                         # Checks that branch angles are appropriate
                         end_node_loc = mesh_check_angle(angle_min, angle_max, node_loc[elems[ne_parent][1]][1:4],
@@ -195,9 +207,9 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                            #Check end node is in the ellipsoid
                            in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
                                                                        x_radius, y_radius, z_radius)
-
                            if(not in_ellipsoid):
                               branch = False #This should be the last branch here.
+                              not_in = 1
                               count = 0
                               while(not in_ellipsoid and count <=50):
                                  length_new = 0.95*length_new
@@ -245,7 +257,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                                 dist = dist_two_vectors(data_current_parent[nd][:],node_loc[int(elems[ne][2])][1:4])
                                 if dist < min_dist:
                                     if map_seed_to_elem_new[nd] == ne:
-                                        # print(ne_parent,nd)
                                         count_data = count_data + 1
                                         nd_min = nd
                                         min_dist = dist
@@ -269,7 +280,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                             dist = dist_two_vectors(data_current_parent[nd][:], node_loc[int(elems[ne_parent][2])][1:4])
                             if dist < min_dist:
                                 if map_seed_to_elem_new[nd] == ne_parent:
-                                    #print(ne_parent,nd)
                                     count_data = count_data + 1
                                     nd_min = nd
                                     min_dist = dist
@@ -296,9 +306,10 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                 map_seed_to_elem_new = reassign_data_to_mesh(map_seed_to_elem_new, data_current_parent,
                                                     local_parent[0:num_next_parents], node_loc,
                                                     elems)
-            # Could make this an optional output at a later date
-            #print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
-             #     '   ' + str(numtb) + '   ' + str(remaining_data))
+
+            #    # Could make this an optional output at a later date
+            #    print('   ' + str(ngen) + '   ' + str(noelem_gen) + '   ' + str(ne) +
+            #          '   ' + str(numtb) + '   ' + str(remaining_data))
 
     elems.resize(ne + 1, 3, refcheck=False)
     elem_upstream.resize(ne + 1, 3, refcheck=False)
@@ -334,7 +345,7 @@ def grow_chorionic_surface(angle_max, angle_min, fraction, min_length, point_lim
     :Function name: **grow_chorionic_surface**
 
     Grows a tree constrained to the surface of an semi-ellipsoid and based on data points defined on that surface.
-    Employs the space filling branching algorithm
+   Employs the space filling branching algorithm
 
     :inputs:
         - angle_max: The maximum angle between two branches
@@ -767,12 +778,8 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
     vector1_u = vector1 / np.linalg.norm(vector1)
     vector2 = (node3 - node2)
     vector2_u = vector2 / np.linalg.norm(vector2)
-    # angle = pg_utilities.angle_two_vectors(vector1, vector2)
-    # if angle == 0:
-    #    print('in',vector1 / np.linalg.norm(vector1),vector2 / np.linalg.norm(vector2))
-
-    if (np.isclose(vector1_u, vector2_u)).all() or (np.isclose(vector1_u, -1.0 * vector2_u)).all():
-        #   perturb new node slightly to 'misalign vectors and allow for normal to plane to be calculated
+    angle = pg_utilities.angle_two_vectors(vector1, vector2)
+    if angle <= 1.e-15:
         length = np.linalg.norm(vector2)
         node3[0] = node3[0] + np.random.uniform(-0.01 * length, 0.01 * length)
         node3[1] = node3[1] + np.random.uniform(-0.01 * length, 0.01 * length)
@@ -781,8 +788,6 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
 
     # want to rotate vector 2 wrt vector 1
     angle = pg_utilities.angle_two_vectors(vector1, vector2)
-    if angle == 0:
-        print('out', vector1 / np.linalg.norm(vector1), vector2 / np.linalg.norm(vector2))
 
     normal_to_plane[0] = (vector2[1] * vector1[2] - vector2[2] * vector1[1])
     normal_to_plane[1] = (vector2[0] * vector1[2] - vector2[2] * vector1[0])
@@ -796,8 +801,9 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
 
     dotprod = np.dot(vector2, vector_cross_n)
 
-    if dotprod < 0:
-        angle = -1 * angle
+
+    if dotprod < 0.:
+        angle = -1. * angle
 
     if abs(angle) < angle_min:
         # Need to adjust node3 to get a angle equal to  angle_min
@@ -923,7 +929,10 @@ def data_splitby_plane(ld, datapoints, x0, x1, x2, ne_parent, ne_current, point_
             for i in range(0, 3):
                 checkvalue = checkvalue + plane[i] * datapoints[nd][i]
             checkvalue = -1.0 * checkvalue - plane[3]
-            if checkvalue >= 0:
+            if(np.isclose(checkvalue,0.0)):
+                dat1 = dat1 + 1
+                ld[nd] = ne_current + 1
+            elif checkvalue > 0:
                 dat1 = dat1 + 1
                 ld[nd] = ne_current + 1
             else:
@@ -946,7 +955,7 @@ def data_splitby_plane(ld, datapoints, x0, x1, x2, ne_parent, ne_current, point_
 def calc_branch_direction(vector):
     length = 0.0
     for i in range(0, len(vector)):
-        length = length + vector[i] ** 2
+        length = length + vector[i] ** 2.0
     length = np.sqrt(length)
 
     branch_direction = vector / length
@@ -955,7 +964,7 @@ def calc_branch_direction(vector):
 
 
 def dist_two_vectors(vector1, vector2):
-    dist = np.sqrt((vector1[0] - vector2[0]) ** 2 + (vector1[1] - vector2[1]) ** 2 + (vector1[2] - vector2[2]) ** 2)
+    dist = np.sqrt((vector1[0] - vector2[0]) ** 2. + (vector1[1] - vector2[1]) ** 2. + (vector1[2] - vector2[2]) ** 2.)
 
     return dist
 
@@ -1028,7 +1037,7 @@ def data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
     for nd in range(0, len(datapoints)):
         if ld[nd] != 0:
             ne_min = 0
-            min_dist = 1e10
+            min_dist = 1.e10
             for noelem in range(0, len(parentlist)):
                 ne = int(parentlist[noelem])
                 nnod = int(elems[ne][2])
@@ -1078,7 +1087,7 @@ def reassign_data_to_mesh(ld, datapoints, parentlist, node_loc, elems):
             if (ld[nd] not in parentlist):
                 #print('needs to be redistributed',nd,ld[nd])
                 ne_min = 0
-                min_dist = 1e10
+                min_dist = 1.e10
                 for noelem in range(0, len(parentlist)):
                     ne = int(parentlist[noelem])
                     nnod = int(elems[ne][2])
@@ -1266,17 +1275,16 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
 
 
 def mesh_com(ld_val, ld, datapoints):
-    dat = 0
-
-    com = np.zeros(3)
-    for nd in range(0, len(datapoints)):
-        nsp = ld[nd]
-        if nsp == ld_val:
+    dat = 0 #Integer counter
+    com = np.zeros(3) #real number
+    for nd in range(0, len(datapoints)): #going through the datapoints
+        nsp = ld[nd] #datapoint location
+        if nsp == ld_val: #is it associated with this el (
             dat = dat + 1
             for nj in range(0, 3):
                 com[nj] = com[nj] + datapoints[nd][nj]
     if dat != 0:
-        com = com / dat
+       com = com / np.real(dat)
 
     return com
 
