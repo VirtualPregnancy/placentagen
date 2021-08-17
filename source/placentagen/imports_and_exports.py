@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import numpy as np
+import warnings
+import skimage
+from skimage import io
 
 def export_ex_coords(data, groupname, filename, type):
     # Exports coordinates to exnode or exdata format
@@ -816,3 +819,24 @@ def export_exfield_3d_quadratic(data, groupname, fieldname, filename):
                 data[x], data[x], data[x], data[x], data[x], data[x], data[x]))
 
     f.close()
+
+def load_image_bool(name, numImages):
+
+    # read in first image + get dimensions to initialize array
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        im = io.imread(name.format(0))
+        skimage.img_as_bool(im)
+    Image=np.zeros([im.shape[0], im.shape[1], numImages], dtype=bool)
+    Image[:, :, 0] = im
+
+    # load all slices
+    for i in range(1, numImages):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            im = io.imread(name.format(i))
+            skimage.img_as_bool(im)
+        Image[:,:,i]=im
+
+    print('Image ' + name + ' loaded. Shape: ' + str(Image.shape))
+    return Image
