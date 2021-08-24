@@ -174,8 +174,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                 not_in =0
                 # Check that there ar enough seedpoints in both groups to proceed
                 # Note long term one could allow one group to continue and the other not to
-                if(ne_parent==227):
-                    print(split_data['enough_points'],com)
                 if split_data['enough_points'][0] and split_data['enough_points'][1]:
                     for n in range(0, 2):
                         branch = True
@@ -186,21 +184,14 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                         # length of new branch
                         length_new = np.linalg.norm(fraction * (com - start_node_loc))
                         # check that the new branch is long enough and if not need to adjust length and remove associated data point
-                        if (ne_parent == 227):
-                            print(ne_parent,ne+1,'length',length_new,start_node_loc,com)
-
                         if length_new < min_length:
                             length_new = min_length
                             branch = False
                             too_short = 1
-                            if(ne_parent==267):
-                                print('branch too short')
                         if(length_new > 2.0*length_parent and ngen > 4):
                             length_new = length_parent
                             branch = False
                             too_long = 1
-                            if(ne_parent==427):
-                                print('branch too long')
 
                         # calculate location of end node
                         end_node_loc = start_node_loc + length_new * (com - start_node_loc) / np.linalg.norm(
@@ -217,8 +208,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                            in_ellipsoid = pg_utilities.check_in_ellipsoid(end_node_loc[0], end_node_loc[1], end_node_loc[2],
                                                                        x_radius, y_radius, z_radius)
                            if(not in_ellipsoid):
-                              if (ne_parent == 427):
-                                   print('not in ellipsoid')
                               branch = False #This should be the last branch here.
                               not_in = 1
                               count = 0
@@ -790,10 +779,7 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
     vector2 = (node3 - node2)
     vector2_u = vector2 / np.linalg.norm(vector2)
     angle = pg_utilities.angle_two_vectors(vector1, vector2)
-    if(ne_parent == 996):
-        print(vector1,vector2,angle)
     if angle <= 1.e-15:
-        print('perturbing', ne_parent)
         length = np.linalg.norm(vector2)
         node3[0] = node3[0] + np.random.uniform(-0.01 * length, 0.01 * length)
         node3[1] = node3[1] + np.random.uniform(-0.01 * length, 0.01 * length)
@@ -802,8 +788,6 @@ def mesh_check_angle(angle_min, angle_max, node1, node2, node3, ne_parent, myno)
 
     # want to rotate vector 2 wrt vector 1
     angle = pg_utilities.angle_two_vectors(vector1, vector2)
-    if angle == 0:
-        print('out',ne_parent, vector1 / np.linalg.norm(vector1), vector2 / np.linalg.norm(vector2))
 
     normal_to_plane[0] = (vector2[1] * vector1[2] - vector2[2] * vector1[1])
     normal_to_plane[1] = (vector2[0] * vector1[2] - vector2[2] * vector1[0])
@@ -945,8 +929,6 @@ def data_splitby_plane(ld, datapoints, x0, x1, x2, ne_parent, ne_current, point_
             for i in range(0, 3):
                 checkvalue = checkvalue + plane[i] * datapoints[nd][i]
             checkvalue = -1.0 * checkvalue - plane[3]
-            if(ne_parent ==227):
-                print(checkvalue,plane)
             if(np.isclose(checkvalue,0.0)):
                 dat1 = dat1 + 1
                 ld[nd] = ne_current + 1

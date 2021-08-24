@@ -2,3 +2,4 @@ nose
 coverage
 scipy
 numpy
+scikit-image
