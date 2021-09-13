@@ -458,5 +458,55 @@ def find_strahler_ratio(Orders, Factor):
     #plt.title(heading)
     #plt.legend()
     #plt.show()
-
     return grad, r2
+
+
+######
+# Function: Remove rows from both mainArray and Arrays at which main array has values less than zero
+# Inputs: mainArray - an N x M array of values
+#         Arrays - a list of arrays each with length N for their first axis
+# Outputs: for each row of mainArray for which the first element is below zero; this row is removed from mainArray and from each array
+######
+
+def remove_rows(main_array, arrays):
+    i = 0
+
+    while i < len(main_array):
+        if main_array[i, 0] < 0:  # then get rid of row from all arrays
+
+            for j in range(0, len(arrays)):
+                array = arrays[j]
+                array = np.delete(array, (i), axis=0)
+                arrays[j] = array
+            main_array = np.delete(main_array, (i), axis=0)
+
+        else:
+            i = i + 1
+
+    return main_array, arrays
+
+######
+# Function: Swaps 2 rows in an array
+# Inputs: array - a N x M array
+#         row1 & row2 - the indices of the two rows to be swapped
+# Outputs: array, with row1 and row2 swapped
+######
+
+def row_swap_2d(array, row1, row2):
+    placeholder = np.copy(array[row1, :])
+    array[row1, :] = array[row2, :]
+    array[row2, :] = placeholder
+    return array
+
+######
+# Function: Swaps 2 rows in an array
+# Inputs: array - a N x 1 array
+#         row1 & row2 - the indices of the two rows to be swapped
+# Outputs: array, with row1 and row2 swapped
+######
+
+def row_swap_1d(array, row1, row2):
+    placeholder = np.copy(array[row1])
+    array[row1] = array[row2]
+    array[row2] = placeholder
+    return array
