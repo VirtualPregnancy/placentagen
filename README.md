@@ -1,7 +1,7 @@
-# Placenta Generator ![Build Status](https://travis-ci.org/VirtualPregnancy/placentagen.svg?branch=develop)
+# Placenta Generator ![Build Status](https://travis-ci.com/VirtualPregnancy/placentagen.svg?branch=develop)
 # Python library to generate meshes representing placentas!
 
-Link to most recent Travis build https://travis-ci.org/VirtualPregnancy/placentagen
+Link to most recent Travis build https://travis-ci.com/VirtualPregnancy/placentagen
 
 ### Installation
 

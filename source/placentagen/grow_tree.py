@@ -998,6 +998,7 @@ def group_elem_parent_term(ne_parent, elem_downstream):
         if elem_downstream[ne][0] == 0:
             num_in_list = num_in_list + 1
             parentlist[num_in_list - 1] = ne
+
     parentlist.resize(num_in_list,refcheck=False)
     ne_old.resize(num_in_list,refcheck=False)
     ntemp_list.resize(num_in_list,refcheck=False)
@@ -1272,6 +1273,26 @@ def umbilical_seed_geometry(volume, thickness, ellipticity, insertion_x, inserti
     elem_downstream[8][0] = 0
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream}
+
+def make_double_inlet_from_single(geom):
+
+    geom['nodes'][0, 2] = geom['nodes'][2, 2]
+    geom['nodes'][0, 3] = geom['nodes'][1, 3]
+    geom['nodes'][1, 2] = geom['nodes'][3, 2]
+    geom['nodes'][2, 3] = geom['nodes'][4, 3]+(geom['nodes'][1, 3]-geom['nodes'][4, 3])/2.0
+    geom['nodes'][3, 3] = geom['nodes'][4, 3]+(geom['nodes'][1, 3]-geom['nodes'][4, 3])/2.0
+
+    geom['elems'][0, :] = [0, 0, 2]  # make 1 an inlet
+    geom['elems'][1,:] = [1,1,3] #make 1 an inlet
+    geom['elems'][2,:] = [2,2,3] #anastomosis
+
+    for i in range(0,6):
+
+        print(geom['nodes'][i,:])
+        print(geom['elems'][i,:])
+
+
+    return geom
 
 
 def mesh_com(ld_val, ld, datapoints):
