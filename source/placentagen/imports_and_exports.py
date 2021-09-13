@@ -43,7 +43,7 @@ def export_ex_coords(data, groupname, filename, type):
     f.close()
 
 def export_ex_field(data, groupname, fieldname, filename, type):
-    # Exports coordinates to exnode or exdata format
+    # Exports field to exnode or exdata format
     # data = array of data
     # groupname = what you want your data to be called in cmgui
     # filename = file name without extension

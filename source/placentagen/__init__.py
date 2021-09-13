@@ -4,4 +4,5 @@ from .grow_tree import *
 from .analyse_tree import *
 from .pg_utilities import *
 from .visualisation import *
+from .skeleton_to_tree import *
 
