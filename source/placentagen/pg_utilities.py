@@ -458,7 +458,7 @@ def find_strahler_ratio(Orders, Factor):
     #plt.title(heading)
     #plt.legend()
     #plt.show()
-
+    return grad, r2
 
 
 ######
