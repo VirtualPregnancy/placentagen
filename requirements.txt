@@ -3,5 +3,3 @@ coverage
 scipy
 numpy
 scikit-image
-ismember
-tabulate
