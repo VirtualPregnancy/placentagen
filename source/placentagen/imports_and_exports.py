@@ -43,7 +43,7 @@ def export_ex_coords(data, groupname, filename, type):
 
 
 def export_ex_field(data, groupname, fieldname, filename, type):
-    # Exports coordinates to exnode or exdata format
+    # Exports field to exnode or exdata format
     # data = array of data
     # groupname = what you want your data to be called in cmgui
     # filename = file name without extension
@@ -553,7 +553,7 @@ def import_exelem_tree(filename):
             else:
                 line_num = is_float(line_type)  # checking if the line is a number
                 if (line_num):  # it is a number
-                    if "#Values" not in line and "l.Lagrange" not in line and "0.1000000000000000E+01" not in line:
+                    if "#Values" not in line and "l.Lagrange" not in line and "1.000000000000000e+00" not in line and "0.1000000000000000E+01" not in line:
                         count_atribute = count_atribute + 1
                         el_array[count_el - 1][count_atribute] = float(str.split(line)[0]) - 1  # first node of element
                         el_array[count_el - 1][count_atribute + 1] = float(

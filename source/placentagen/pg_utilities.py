@@ -294,6 +294,147 @@ def locate_node(startx, starty, startz, xside, yside, zside, nelem_x, nelem_y, n
                 nelem_x * nelem_y))  # this is the element where the point/node located
     return nelem
 
+def renumber_geom(nodes,elems):
+    #renumbers nodes and elements in case of skipped nodes in external editing
+    nodes_list = nodes['nodes'][:,0].astype(int)
+    elems_temp = elems['elems']
+    total_nodes = nodes['total_nodes']
+    total_elems = elems['total_elems']
+    nod_array = np.copy(nodes['nodes'])
+    el_array = np.copy(elems_temp)
+    total_el = 0
+    for ne in range(0,total_elems):
+        new_np1 = np.where(nodes_list == elems_temp[ne,1])[0][0]
+        new_np2 = np.where(nodes_list == elems_temp[ne,2])[0][0]
+
+        if new_np1 != new_np2:#removing accidental node to node connections
+            #np.where(el_array[:,1]==new_np1 and el_array[:,2]==new_np2))
+            el_array[total_el,0] = total_el
+            if new_np1 <   new_np2:
+                el_array[total_el,1] = new_np1
+                el_array[total_el, 2] = new_np2
+            else:
+                el_array[total_el,1] = new_np2
+                el_array[total_el, 2] = new_np1
+            total_el = total_el + 1
+            unq, count = np.unique(el_array[0:total_el,1:3], axis=0, return_counts=True)
+            repeated_groups = unq[count > 1]
+            if len(repeated_groups) > 0:
+                print('removing duplicate')
+                el_array[total_el, :] = 0
+                total_el = total_el - 1
+        else:
+            print('removing isolated')
+
+
+    for nnod in range(0,total_nodes):
+        nod_array[nnod,0] = nnod
+
+    return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
+
+def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
+    new_parent_list = np.zeros(2,dtype = int)
+    continuing = False
+    elem = elems_at_node[first_node][1]
+    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
+    branch_starts_at = first_node
+    loop_parent = len(elems)+1
+    while connected_elems_no ==2 or inlet_branch: #continuing branch
+        inlet_branch = False
+        if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
+            connected_elems_no=1
+            loop_parent = first_node
+        else:
+            for i in range(0, connected_elems_no):
+                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                if not seen_elements[elem]:
+                    branch_id[elem] = branches
+                    if elems[elem][1] != first_node:
+                        # swap nodes
+                        elems[elem][2] = elems[elem][1]
+                        elems[elem][1] = first_node
+                    seen_elements[elem] = True
+                    first_node = elems[elem][2]
+                    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
+                    if connected_elems_no == 3:
+                        new_parents = 0
+                        for i in range(0, connected_elems_no):
+                            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                            if not seen_elements[elem]:
+                                new_parent_list[new_parents] = elem
+                                new_parents = new_parents + 1
+                                branch_id[elem] = branches + new_parents
+                                if elems[elem][1] != first_node:
+                                    # swap nodes
+                                    elems[elem][2] = elems[elem][1]
+                                    elems[elem][1] = first_node
+                            seen_elements[elem] = True
+                            continuing = True
+                    if connected_elems_no == 1:
+                        continuing = False
+                        break
+
+    return new_parent_list,continuing,loop_parent,elem
+
+def fix_elem_direction(inlet_node,nodes,elems):
+    # populate the elems_at_node array listing the elements connected to each node
+    num_nodes = len(nodes)
+    num_elems = len(elems)
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    for i in range(0, num_elems):
+        elems_at_node[elems[i][1]][0] = elems_at_node[elems[i][1]][0] + 1
+        j = elems_at_node[elems[i][1]][0]
+        elems_at_node[elems[i][1]][j] = elems[i][0]
+        elems_at_node[elems[i][2]][0] = elems_at_node[elems[i][2]][0] + 1
+        j = elems_at_node[elems[i][2]][0]
+        elems_at_node[elems[i][2]][j] = elems[i][0]
+
+    for i in range(0,num_nodes):
+        if np.all(nodes[i,1:4]== inlet_node):
+            first_node = i
+            print("FOUND FIRST NODE",i)
+    seen_elements = np.zeros((num_elems), dtype=bool)
+    branch_id = np.zeros((num_elems),dtype = int)
+    #first_node = inlet_node
+    branches = 1
+    continuing = True
+    old_parent_list = first_node
+    loop_list = np.zeros(1,dtype=int)
+    loop_list[0] = (num_elems+1)
+    branch_start = []
+    branch_end = []
+
+    branch_start = np.append(branch_start, elems_at_node[first_node,1])
+
+    [new_parent_list,continuing,loop_parent,branch_end_elem] = fix_branch_direction(first_node, elems_at_node, elems, seen_elements,branch_id,branches,old_parent_list,True)
+    branch_end = np.append(branch_end, branch_end_elem)
+    while len(new_parent_list)>0:
+        if len(new_parent_list) > 0:
+            new_parent_list2 = []
+            for parent in range(0,len(new_parent_list)):
+                second_node = elems[new_parent_list[parent],2]
+                if second_node not in loop_list:
+                    branches = branches + 1
+                    branch_start  = np.append(branch_start,new_parent_list[parent])
+                    branch_id[new_parent_list[parent]] = branches
+                    [branch_list, continuing,loop_parent,branch_end_elem] = fix_branch_direction(second_node, elems_at_node, elems, seen_elements,
+                                                           branch_id, branches,elems[new_parent_list,2],False)
+                    branch_end = np.append(branch_end, branch_end_elem)
+                else:
+                    print('the parent loop',second_node,loop_list)
+
+                if loop_parent< num_elems:
+                    loop_list = np.append(loop_list, [loop_parent], axis=0)
+                if continuing:
+                    new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
+
+            if(len(new_parent_list2)>0):
+                new_parent_list = new_parent_list2.astype(int)
+            else:
+                new_parent_list = []
+            print('new generation',new_parent_list)
+
+    return elems,branch_id,branch_start,branch_end
 
 def remove_rows(main_array, arrays):
     ######

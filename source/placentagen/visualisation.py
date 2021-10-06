@@ -54,6 +54,5 @@ def plot_vasculature_3d(nodes, elems, colour, radii,x_dim,y_dim,z_dim):
         z[i, 1] = nodes[nN2, 2]
 
         colour_value = np.asarray(cm.jet(int(colour[i])))
-        ax.plot(np.squeeze(x[i, :]), np.squeeze(y[i, :]), np.squeeze(z[i, :]), c=colour_value[0:3], linewidth=radii[i])
-
+        ax.plot(np.squeeze(x[i, :]), np.squeeze(y[i, :]), np.squeeze(z[i, :]), c=colour_value[0:3], linewidth=2.)#*radii[i])
     plt.show()
