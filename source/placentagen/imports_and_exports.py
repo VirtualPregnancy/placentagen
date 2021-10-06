@@ -549,7 +549,7 @@ def import_exelem_tree(filename):
             else:
                 line_num = is_float(line_type)  # checking if the line is a number
                 if (line_num):  # it is a number
-                    if "#Values" not in line and "l.Lagrange" not in line and "0.1000000000000000E+01" not in line:
+                    if "#Values" not in line and "l.Lagrange" not in line and "1.000000000000000e+00" not in line and "0.1000000000000000E+01" not in line:
                         count_atribute = count_atribute + 1
                         el_array[count_el - 1][count_atribute] = float(str.split(line)[0])-1  # first node of element
                         el_array[count_el - 1][count_atribute + 1] = float(str.split(line)[1])-1  # 2nd node of element
