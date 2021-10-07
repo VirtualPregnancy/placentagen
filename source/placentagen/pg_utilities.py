@@ -339,7 +339,10 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
     connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
     branch_starts_at = first_node
     loop_parent = len(elems)+1
+    print('Assessing branch',branches, 'inlet node', first_node)
+
     while connected_elems_no ==2 or inlet_branch: #continuing branch
+        check_for_changing = first_node
         inlet_branch = False
         if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
             connected_elems_no=1
@@ -370,10 +373,13 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
                                     elems[elem][1] = first_node
                             seen_elements[elem] = True
                             continuing = True
+                        break
                     if connected_elems_no == 1:
                         continuing = False
                         break
-
+        if check_for_changing == first_node:
+            break
+    print('Finished branch', branches, 'inlet node', first_node)
     return new_parent_list,continuing,loop_parent,elem
 
 def fix_elem_direction(inlet_node,nodes,elems):
