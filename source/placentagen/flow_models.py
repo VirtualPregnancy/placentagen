@@ -6,10 +6,10 @@ def bisection_method_diam(a, b, fit_passive_params, fit_myo_params, fit_flow_par
 
 
     if (tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, a, pressure) * tension_balance(fit_passive_params,fit_myo_params, fit_flow_params, fixed_flow_params, b, pressure)) > 0:
-        if verbose:
-            print ('Bisection interval will not work')
-            print(a, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, a, pressure), pressure)
-            print(b, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, b, pressure), pressure)
+        #if verbose:
+        #    print ('Bisection interval will not work')
+        #    print(a, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, a, pressure), pressure)
+        #    print(b, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, b, pressure), pressure)
         diam = 0
     else:
         a1 = a
@@ -145,7 +145,7 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
         if not include_myo and not include_flow:
             diameter= bisection_method_diam(5.,500.,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
         else:
-            diameter_pass = bisection_method_diam(5.,500.,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
+            diameter_pass = bisection_method_diam(5.,500.,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
             D0 = fit_passive_params[0]
             dp_blood = fixed_flow_params[2]
             reference_diameter = np.max([diameter_pass,D0])
@@ -157,43 +157,57 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
 
             diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
-            if verbose:
-                if diameter<10:
-                    #print(lowest_sign)
-                    print('zero',pressure,dp_blood)
-                    #print(diameter_pass,D0)  # calculates a passive diameter
-                    #diameter_act = diameter_pass
+            #if verbose:
+            if diameter<10:
+                #print(lowest_sign)
+                print('zero',pressure,dp_blood,lowest_sign,diameter_pass,reference_diameter)
+                lowest_sign = find_possible_roots(0.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
+                                                                                                     pressure,verbose)
+                print(diameter,lowest_sign)
+                #print(diameter_pass,D0)  # calculates a passive diameter
+                #diameter_act = diameter_pass
 
         return diameter
 
 def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, pressure,verbose):
 
     discretise = 500
-    diameter_range = np.linspace(low_diam,high_diam,discretise)
-    ten_resid = np.zeros(len(diameter_range))
+    diameter_range = np.linspace(high_diam,low_diam,discretise) #finding root closest to the passive diameter
+    ten_resid = np.zeros(len(diameter_range)) #tension residual
     lowest_signchange = np.zeros(2)
     i = 0
     ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i], pressure)
-    while ten_resid[i]<0.0:
+    print(np.sign(ten_resid[i]))
+    samesign = True
+    #for every diameter in the range calculate the tension residual
+    while samesign:
         i=i+1
         ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
-        if(i==(discretise -1)) and ten_resid[i]<0.:
-            ten_resid[i] = 0.
+        if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
+            print("chaning sign",i)
+            samesign = False
+        print(i,discretise)
+        if(i==(discretise -1)) and samesign:
+            samesign = False
+    print(i)
 
-    if i==(discretise-1) and ten_resid[i]==0.: #should be searching for a higher diameter
+
+    if i==(discretise-1) and samesign: #should be searching for a higher diameter
         diameter_range = np.linspace(high_diam,high_diam + (high_diam-low_diam), discretise)
         ten_resid = np.zeros(len(diameter_range))
-        lowest_signchange = np.zeros(2)
         i = 0
         ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i], pressure)
-        while ten_resid[i] < 0.0:
-            i = i + 1
-            ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params, diameter_range[i], pressure)
-            if (i == discretise-1) and ten_resid[i] < 0.:
-                ten_resid[i] = 0.
+        samesign = True
+        while samesign:
+            i=i+1
+            ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
+            if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
+                print("chaning sign",i)
+                samesign = False
         if verbose:
             print('had to go again')
-
+    lowest_signchange = np.zeros(2)
     lowest_signchange[0] = diameter_range[i]
     lowest_signchange[1] = diameter_range[i-1]
 
