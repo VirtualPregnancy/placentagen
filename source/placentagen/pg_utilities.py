@@ -3,6 +3,7 @@ import numpy as np
 
 
 def rotation_matrix_3d(axis, angle_rot):
+    #Creates a 3D transformation that rotates by angle_rot around axis
     axis = axis / np.linalg.norm(axis)  # normalise just in case
     R = np.zeros((3, 3))
     R[0][0] = np.cos(angle_rot) + axis[0] ** 2 * (1 - np.cos(angle_rot))
@@ -19,6 +20,7 @@ def rotation_matrix_3d(axis, angle_rot):
 
 
 def calculate_ellipse_radii(volume, thickness, ellipticity):
+    #Calculates x,y,z radii of ellipse based on three parameters, volume, thickness and eliptcity
     pi = np.pi
     z_radius = thickness / 2.0
     x_radius = np.sqrt(volume * 3.0 / (4.0 * pi * ellipticity * z_radius))
@@ -28,11 +30,13 @@ def calculate_ellipse_radii(volume, thickness, ellipticity):
 
 
 def z_from_xy(x, y, x_radius, y_radius, z_radius):
+    #Calculates z point on elipse surface from x,y coordinates
     z = z_radius * np.sqrt(1.0 - (x / x_radius) ** 2 - (y / y_radius) ** 2)
     return z
 
 
 def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #checks the point x,y,z is in an ellipsoid
     in_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if coord_check < 1.0:
@@ -42,6 +46,7 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #Checks the point x,yz, is on the surface of an ellipsoid to some tolerance
     zero_tol = 1.e-10
     on_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
@@ -52,6 +57,7 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #check if the point x,y, z is in OR on an ellipsoid
     zero_tol = 1.e-10
     in_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
@@ -64,6 +70,7 @@ def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def angle_two_vectors(vector1, vector2):
+    #Finds the angle between vector 1 and vector 2
     vector1_u = vector1 / np.linalg.norm(vector1)
     vector2_u = vector2 / np.linalg.norm(vector2)
 
@@ -83,6 +90,7 @@ def angle_two_vectors(vector1, vector2):
 
 
 def element_connectivity_1D(node_loc, elems):
+    # Calculates element connectivity in a bifurcating array
     # Initialise connectivity arrays
     num_elems = len(elems)
     elem_upstream = np.zeros((num_elems, 3), dtype=int)
@@ -109,7 +117,7 @@ def element_connectivity_1D(node_loc, elems):
     return {'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 def group_elem_parent(ne_parent, elem_downstream):
-
+    #Finds all the elements under a parent element
     ne_old = np.zeros(5000, dtype=int)
     ntemp_list = np.zeros(5000, dtype=int)
     ne_temp = np.zeros(5000, dtype=int)
@@ -165,6 +173,7 @@ def plane_from_3_pts(x0, x1, x2, normalise):
 
 
 def check_colinear(x0, x1, x2):
+    #Checks if three points are colinear
     colinear = False
     vector1 = (x1 - x0) / np.linalg.norm(x1 - x0)
     vector2 = (x1 - x2) / np.linalg.norm(x1 - x2)
@@ -333,6 +342,8 @@ def renumber_geom(nodes,elems):
     return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
 
 def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
+    #This routine should correct branch direction correctly in a generated tree
+
     new_parent_list = np.zeros(2,dtype = int)
     continuing = False
     elem = elems_at_node[first_node][1]
@@ -340,6 +351,7 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
     branch_starts_at = first_node
     loop_parent = len(elems)+1
     while connected_elems_no ==2 or inlet_branch: #continuing branch
+        print("Guess its this while", connected_elems_no, inlet_branch,first_node)
         inlet_branch = False
         if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
             connected_elems_no=1
@@ -347,7 +359,9 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
         else:
             for i in range(0, connected_elems_no):
                 elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                print(seen_elements[elem])
                 if not seen_elements[elem]:
+                    print("elem has not been seen")
                     branch_id[elem] = branches
                     if elems[elem][1] != first_node:
                         # swap nodes
@@ -373,10 +387,16 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
                     if connected_elems_no == 1:
                         continuing = False
                         break
+                else:
+                    print("elem has been seen")
+                    break
 
     return new_parent_list,continuing,loop_parent,elem
 
-def fix_elem_direction(inlet_node,nodes,elems):
+def fix_elem_direction(inlet_node,elems,nodes):
+
+    print('Entering fix element direction')
+
     # populate the elems_at_node array listing the elements connected to each node
     num_nodes = len(nodes)
     num_elems = len(elems)
@@ -393,9 +413,11 @@ def fix_elem_direction(inlet_node,nodes,elems):
         if np.all(nodes[i,1:4]== inlet_node):
             first_node = i
             print("FOUND FIRST NODE",i)
+        else:
+            first_node = 3218
+    ############
     seen_elements = np.zeros((num_elems), dtype=bool)
     branch_id = np.zeros((num_elems),dtype = int)
-    #first_node = inlet_node
     branches = 1
     continuing = True
     old_parent_list = first_node
@@ -413,6 +435,7 @@ def fix_elem_direction(inlet_node,nodes,elems):
             new_parent_list2 = []
             for parent in range(0,len(new_parent_list)):
                 second_node = elems[new_parent_list[parent],2]
+                print(parent,second_node,loop_list)
                 if second_node not in loop_list:
                     branches = branches + 1
                     branch_start  = np.append(branch_start,new_parent_list[parent])
@@ -427,12 +450,13 @@ def fix_elem_direction(inlet_node,nodes,elems):
                     loop_list = np.append(loop_list, [loop_parent], axis=0)
                 if continuing:
                     new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
-
+                print(continuing,new_parent_list2)
             if(len(new_parent_list2)>0):
                 new_parent_list = new_parent_list2.astype(int)
             else:
                 new_parent_list = []
             print('new generation',new_parent_list)
+        print(len(new_parent_list))
 
     return elems,branch_id,branch_start,branch_end
 
