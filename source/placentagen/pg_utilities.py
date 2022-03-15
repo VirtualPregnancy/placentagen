@@ -94,16 +94,18 @@ def element_connectivity_1D(node_loc, elems):
     # Calculates element connectivity in a bifurcating array
     # Initialise connectivity arrays
     num_elems = len(elems)
-    elem_upstream = np.zeros((num_elems, 10), dtype=int) #allow up to 10-fircations
-    elem_downstream = np.zeros((num_elems, 10), dtype=int)
+
     num_nodes = len(node_loc)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int) #allow up to 10-fircations
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int) #allow up to 10-furcations
     # determine elements that are associated with each node
     for ne in range(0, num_elems):
         for nn in range(1, 3):
             nnod = elems[ne][nn]
             elems_at_node[nnod][0] = elems_at_node[nnod][0] + 1
             elems_at_node[nnod][elems_at_node[nnod][0]] = ne
+            
+    elem_upstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
+    elem_downstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
     # assign connectivity
     for ne in range(0, num_elems):
         nnod2 = elems[ne][2]  # second node in elem
