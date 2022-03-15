@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def rotation_matrix_3d(axis, angle_rot):
@@ -93,10 +94,10 @@ def element_connectivity_1D(node_loc, elems):
     # Calculates element connectivity in a bifurcating array
     # Initialise connectivity arrays
     num_elems = len(elems)
-    elem_upstream = np.zeros((num_elems, 3), dtype=int)
-    elem_downstream = np.zeros((num_elems, 3), dtype=int)
+    elem_upstream = np.zeros((num_elems, 10), dtype=int) #allow up to 10-fircations
+    elem_downstream = np.zeros((num_elems, 10), dtype=int)
     num_nodes = len(node_loc)
-    elems_at_node = np.zeros((num_nodes, 4), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int) #allow up to 10-fircations
     # determine elements that are associated with each node
     for ne in range(0, num_elems):
         for nn in range(1, 3):
@@ -341,124 +342,38 @@ def renumber_geom(nodes,elems):
 
     return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
 
-def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
-    #This routine should correct branch direction correctly in a generated tree
+  
 
-    new_parent_list = np.zeros(2,dtype = int)
-    continuing = False
-    elem = elems_at_node[first_node][1]
-    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
-    branch_starts_at = first_node
-    loop_parent = len(elems)+1
-    while connected_elems_no ==2 or inlet_branch: #continuing branch
-        print("Guess its this while", connected_elems_no, inlet_branch,first_node)
-        inlet_branch = False
-        if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
-            connected_elems_no=1
-            loop_parent = first_node
-        else:
-            for i in range(0, connected_elems_no):
-                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                print(seen_elements[elem])
-                if not seen_elements[elem]:
-                    print("elem has not been seen")
-                    branch_id[elem] = branches
-                    if elems[elem][1] != first_node:
-                        # swap nodes
-                        elems[elem][2] = elems[elem][1]
-                        elems[elem][1] = first_node
-                    seen_elements[elem] = True
-                    first_node = elems[elem][2]
-                    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
-                    if connected_elems_no == 3:
-                        new_parents = 0
-                        for i in range(0, connected_elems_no):
-                            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                            if not seen_elements[elem]:
-                                new_parent_list[new_parents] = elem
-                                new_parents = new_parents + 1
-                                branch_id[elem] = branches + new_parents
-                                if elems[elem][1] != first_node:
-                                    # swap nodes
-                                    elems[elem][2] = elems[elem][1]
-                                    elems[elem][1] = first_node
-                            seen_elements[elem] = True
-                            continuing = True
-                    if connected_elems_no == 1:
-                        continuing = False
-                        break
-                else:
-                    print("elem has been seen")
-                    break
 
-    return new_parent_list,continuing,loop_parent,elem
-
-def fix_elem_direction(inlet_node,elems,nodes):
-
-    print('Entering fix element direction')
-
-    # populate the elems_at_node array listing the elements connected to each node
-    num_nodes = len(nodes)
-    num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
-    for i in range(0, num_elems):
-        elems_at_node[elems[i][1]][0] = elems_at_node[elems[i][1]][0] + 1
-        j = elems_at_node[elems[i][1]][0]
-        elems_at_node[elems[i][1]][j] = elems[i][0]
-        elems_at_node[elems[i][2]][0] = elems_at_node[elems[i][2]][0] + 1
-        j = elems_at_node[elems[i][2]][0]
-        elems_at_node[elems[i][2]][j] = elems[i][0]
-
-    for i in range(0,num_nodes):
-        if np.all(nodes[i,1:4]== inlet_node):
-            first_node = i
-            print("FOUND FIRST NODE",i)
-        else:
-            first_node = 3218
-    ############
-    seen_elements = np.zeros((num_elems), dtype=bool)
-    branch_id = np.zeros((num_elems),dtype = int)
-    branches = 1
-    continuing = True
-    old_parent_list = first_node
-    loop_list = np.zeros(1,dtype=int)
-    loop_list[0] = (num_elems+1)
-    branch_start = []
-    branch_end = []
-
-    branch_start = np.append(branch_start, elems_at_node[first_node,1])
-
-    [new_parent_list,continuing,loop_parent,branch_end_elem] = fix_branch_direction(first_node, elems_at_node, elems, seen_elements,branch_id,branches,old_parent_list,True)
-    branch_end = np.append(branch_end, branch_end_elem)
-    while len(new_parent_list)>0:
-        if len(new_parent_list) > 0:
-            new_parent_list2 = []
-            for parent in range(0,len(new_parent_list)):
-                second_node = elems[new_parent_list[parent],2]
-                print(parent,second_node,loop_list)
-                if second_node not in loop_list:
-                    branches = branches + 1
-                    branch_start  = np.append(branch_start,new_parent_list[parent])
-                    branch_id[new_parent_list[parent]] = branches
-                    [branch_list, continuing,loop_parent,branch_end_elem] = fix_branch_direction(second_node, elems_at_node, elems, seen_elements,
-                                                           branch_id, branches,elems[new_parent_list,2],False)
-                    branch_end = np.append(branch_end, branch_end_elem)
-                else:
-                    print('the parent loop',second_node,loop_list)
-
-                if loop_parent< num_elems:
-                    loop_list = np.append(loop_list, [loop_parent], axis=0)
-                if continuing:
-                    new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
-                print(continuing,new_parent_list2)
-            if(len(new_parent_list2)>0):
-                new_parent_list = new_parent_list2.astype(int)
-            else:
-                new_parent_list = []
-            print('new generation',new_parent_list)
-        print(len(new_parent_list))
-
-    return elems,branch_id,branch_start,branch_end
+def remove_small_length(elems,nodes,branch_id,branch_start,radii,threshold):
+    length = np.zeros(len(elems))
+    tmp_elems = np.copy(elems[:,0])
+    delete_list = []
+    for ne in range(0,len(elems)):
+        node_in = elems[ne,1]
+        node_out = elems[ne,2]
+        length[ne] = np.sqrt((nodes[node_in,1]-nodes[node_out,1])**2. + (nodes[node_in,2]-nodes[node_out,2])**2.+(nodes[node_in,3]-nodes[node_out,3])**2.)
+        
+    for nb in range(0,len(branch_start)):
+        tmp_elems1 = tmp_elems[branch_id == nb+1]
+        tmp_length = length[branch_id == nb+1]
+        branch_length = np.sum(tmp_length)
+        if branch_length <=threshold:
+           #print(branch_length,tmp_elems)
+           delete_list = np.append(delete_list,tmp_elems1) 
+           
+    if delete_list:      
+        delete_list = delete_list.astype(int)
+        #print(delete_list)
+        elems = np.delete(elems,delete_list,axis=0)
+        radii = np.delete(radii,delete_list,axis=0)
+     
+    for ne in range(0,len(elems)): #renumber elems
+        elems[ne,0] = ne    
+    
+    return elems, radii
+    
+    
 
 def remove_rows(main_array, arrays):
     ######

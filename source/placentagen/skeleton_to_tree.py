@@ -25,8 +25,7 @@ def create_graph_structure(pixel_graph, coordinates,dimensions,groupname,outputf
     graph_map = np.zeros(len(coordinates),dtype=int)
     nodal_degrees = np.zeros(len(coordinates))
     nodes = np.zeros((len(coordinates), 4))
-    potential_elems = np.empty((0, 2), dtype=int)#np.zeros((len(coordinates)*2,2),dtype=int)
-    print(potential_elems.shape)
+    potential_elems = np.empty((0, 2), dtype=int)
     count_new_vessel = 0
     for i in range(1, len(pixel_graph.indptr) - 1): #Looping through all points
 
@@ -48,24 +47,17 @@ def create_graph_structure(pixel_graph, coordinates,dimensions,groupname,outputf
             mydegrees[i] = num_attached
 
         if num_attached>=1 and num_attached<=most_allowed_fications:#possible element
-            print(pixel_graph.indices[pixel_graph.indptr[i]:pixel_graph.indptr[i+1]],num_attached)
             attached_elems = pixel_graph.indices[pixel_graph.indptr[i]:pixel_graph.indptr[i+1]]
             for k in range(0,num_attached):
-                print('ink',k, num_attached,attached_elems[k], attached_elems[k],count_new_vessel)
                 if attached_elems[k] != i: #avoiding self connections (simple loops)
                     potential_elems = np.append(potential_elems, np.zeros((1, 2), dtype=int), axis=0)
                     potential_elems[count_new_vessel,0] = int(min(i,attached_elems[k]))
                     potential_elems[count_new_vessel,1]= int(max(i,attached_elems[k]))
                     count_new_vessel = count_new_vessel + 1
-        #    print('Excluding',pixel_graph.indptr[i],pixel_graph.indptr[i+1])
 
-    print(potential_elems.shape)
 
     potential_elems = np.unique(potential_elems, axis=0)
 
-    print(potential_elems.shape)
-
-    print("Creating nodes")
     for i in range(1, len(pixel_graph.indptr) - 1):
         for j in range(pixel_graph.indptr[i], pixel_graph.indptr[i + 1]):
             inew = pixel_graph.indices[j] #grab nodes
@@ -110,6 +102,25 @@ def create_graph_structure(pixel_graph, coordinates,dimensions,groupname,outputf
     imports_and_exports.export_exelem_1d(elems, 'arteries', outputfile)
 
     return elems, nodes[:,:][0:node_kount],nodal_degrees[0:node_kount]
+    
+def cut_loops(elems,nodes,branch_id,branch_start,branch_end,cycles,radii):
+     delete_list = []
+     for i in range(0,len(branch_start)):
+         if cycles[i]:
+             tmp_elems = elems[branch_id == i+1]
+             tmp_radii = radii[branch_id == i+1]
+             where=np.argmin(tmp_radii)
+             delete_list = np.append(delete_list,tmp_elems[where,0])
+             
+     if delete_list != []:        
+         delete_list = delete_list.astype(int)
+         elems = np.delete(elems,delete_list,axis=0)
+         radii = np.delete(radii,delete_list,axis=0)
+     
+     for ne in range(0,len(elems)): #renumber elems
+        elems[ne,0] = ne
+             
+     return elems, radii
 
 def find_distances_using_normal(coord1, coord2, VolumeImage):
 
@@ -161,6 +172,70 @@ def find_distances_using_normal(coord1, coord2, VolumeImage):
         distances[i] = step - 0.1
 
     return distances
+    
+def find_inlet_auto(elems,nodes,radii,length_threshold):
+    # populate the elems_at_node array listing the elements connected to each node
+    num_nodes = len(nodes)
+    num_elems = len(elems)
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    possible_inlets = []
+    for i in range(0, num_elems):
+        elems_at_node[elems[i,1],0] = elems_at_node[elems[i,1],0] + 1
+        j = elems_at_node[elems[i,1],0]
+        elems_at_node[elems[i,1],j] = elems[i,0] #element number 1 at this node
+        elems_at_node[elems[i,2],0] = elems_at_node[elems[i,2],0] + 1
+        j = elems_at_node[elems[i,2],0]
+        elems_at_node[elems[i,2],j] = elems[i,0]
+        
+    biggest_branch = 0 
+    rad_max = 0.0
+    for i in range(0,num_nodes):
+        if i ==3218:
+           print('branch branch', elems_at_node[i,0],elems_at_node[i,1],elems_at_node[i,2],nodes[i,0])
+
+        if elems_at_node[i,0]==1:
+            branch_length = 0.
+            branch_radius = 0.
+            num_elems = 0.
+
+            ne = elems_at_node[i,1]
+            if i == elems[ne,1]:
+                first_node = elems[ne,2]
+            else:
+                first_node = elems[ne,1]
+            connected_elems_no = elems_at_node[first_node,0]
+            elem_list = []
+            while connected_elems_no == 2:
+               for k in range(0, connected_elems_no): #Goes through elems
+                   elem = elems_at_node[first_node,k + 1]
+                   if elem != ne and elem not in elem_list:
+                      elem_list = np.append(elem_list,elem)
+                      node_in = elems[elem,1]
+                      node_out = elems[elem,2]
+                      branch_length = branch_length + np.sqrt((nodes[node_in,1]-nodes[node_out,1])**2. + (nodes[node_in,2]-nodes[node_out,2])**2.+(nodes[node_in,3]-nodes[node_out,3])**2.)
+                      branch_radius = branch_radius + radii[elem]
+                      num_elems = num_elems+1
+                      #moving through the elements
+                      if first_node == elems[elem,1]:
+                          first_node = elems[elem,2]
+                      else:
+                          first_node = elems[elem,1]
+                      ne = elem
+                      connected_elems_no = elems_at_node[first_node,0]
+            if num_elems > 0:
+                branch_radius = branch_radius/num_elems #Mean branch radius
+            else:
+                branch_radius = 0.
+                
+                
+            if branch_length >= length_threshold:#exclude short branches
+                if(branch_radius>=rad_max):
+                    rad_max = branch_radius
+                    biggest_branch = i
+
+            
+    print('Determined inlet, node: ', biggest_branch)
+    return nodes[biggest_branch,:]
 
 def find_radius_euclidean(DistanceImage,elems,nodes):
 
@@ -177,27 +252,12 @@ def find_radius_euclidean(DistanceImage,elems,nodes):
         radius1 = DistanceImage[int(nodes[nod1,3]),int(nodes[nod1,2]),int(nodes[nod1,1])]
         radius2 = DistanceImage[int(nodes[nod2,3]),int(nodes[nod2,2]),int(nodes[nod2,1])]
         radius[ne]= (radius1+radius2)/2.
-        #if radius[ne]>300.:
-        #    radius[ne] = 0.
 
-    print(np.min(radius), np.max(radius), np.mean(radius))
 
     return radius
 
 
-#def remove_short_branches(nodes, elems,threshold)
-#    num_elem = len(elems)
-#    for ne in range(0,num_elem):
-#         node1 = nodes[elems[ne,1],1:4]
-#         node2 = nodes[elems[ne,2],1:4]
-#         length = np.sqrt((node1[0]-node2[0])**2. + (node1[1]-node2[1])**2. (node1[2]-node2[2])**2.)
-
-         
-    
-    #array = np.delete(array, (i), axis=0)
-
 def find_radius_normal_projection(SkeletonImage, VolumeImage, elems, nodes):
-    #, euclid_radii):
     ######
     # Function: Find radius by normal projection
     # Inputs: euclid_radii - radii according to shortest euclidean distance, Ne x 1
@@ -301,3 +361,164 @@ def find_radius_normal_projection(SkeletonImage, VolumeImage, elems, nodes):
     #normal_radii[difference > cutoff] = euclid_radii[difference > cutoff]
 
     return (normal_radii)
+    
+def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
+    #This routine should correct branch direction correctly in a generated tree
+    maxification = np.max(elems_at_node[:,0])
+    new_parents = 0
+    new_parent_list = np.zeros(int(maxification),dtype = int)
+    continuing = False
+    elem = elems_at_node[first_node][1]
+    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
+    branch_starts_at = first_node
+    loop_parent = len(elems)+1
+    cycle = False
+    
+    while connected_elems_no ==2 or inlet_branch: #continuing branch
+        inlet_branch = False #No longer an inlet branch, if it was
+        #Checking whether first node in an element is a parent, and its not where the branch starts (should be detecting loops)
+        if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
+            connected_elems_no=1
+            loop_parent = first_node
+        else:
+            if first_node == branch_starts_at and seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
+               connected_elems_no = 1                
+            for i in range(0, connected_elems_no): #Goes through elems
+                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                if not seen_elements[elem]:
+                    branch_id[elem] = branches #This is a new element and belongs in this branch
+                    if elems[elem][1] != first_node: #Swap nodes if going 'wrong way'
+                        # swap nodes
+                        elems[elem][2] = elems[elem][1]
+                        elems[elem][1] = first_node
+                    seen_elements[elem] = True
+                    first_node = elems[elem][2] #New first node is the second node of the element
+                    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
+                    #Now we check if we've reached the end of a branch (either a branch point, a termination, or we have come back in a loop around)
+                    if connected_elems_no >= 3: #Bifurcation or morefication? point
+                        # we are going to create just the first element in each new branch which will give a seed of parents to give back to our main code
+                        new_parents = 0
+                        for i in range(0, connected_elems_no):
+                            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                            if not seen_elements[elem]:
+                                new_parent_list[new_parents] = elem
+                                new_parents = new_parents + 1
+                                branch_id[elem] = branches + new_parents
+                                if elems[elem][1] != first_node:
+                                    # swap nodes
+                                    elems[elem][2] = elems[elem][1]
+                                    elems[elem][1] = first_node
+                            seen_elements[elem] = True
+                            continuing = True #We are going to grow some more branches from here
+                    elif connected_elems_no == 1: #Terminal
+                        continuing = False #This branch does not continue beyond this point
+                        break
+                    elif connected_elems_no == 2: 
+                         #A check to see if a branch has looped back on itself or another existing branch. If it has we want to backtrack through the branch and break it in the middle. However, for now lets see what happens if we treat simply as a terminal.
+                        if seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
+                            continuing = False
+                            cycle = True
+                            connected_elems_no = 1 #trick into leaving main loop here
+    if new_parents > 0:
+       new_parent_list = new_parent_list[0:new_parents]    
+    return new_parent_list,cycle,continuing,loop_parent,elem
+    
+def fix_elem_direction(inlet_node,elems,nodes):
+
+    # populate the elems_at_node array listing the elements connected to each node
+    num_nodes = len(nodes)
+    num_elems = len(elems)
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    branch_id = np.zeros((num_elems),dtype = int)
+    branch_start = []
+    branch_end = []
+    cycle_bool = []
+    for i in range(0, num_elems):
+        elems_at_node[elems[i][1]][0] = elems_at_node[elems[i][1]][0] + 1
+        j = elems_at_node[elems[i][1]][0]
+        elems_at_node[elems[i][1]][j] = elems[i][0]
+        elems_at_node[elems[i][2]][0] = elems_at_node[elems[i][2]][0] + 1
+        j = elems_at_node[elems[i][2]][0]
+        elems_at_node[elems[i][2]][j] = elems[i][0]
+        
+    
+    for i in range(0,num_nodes):
+        if np.all(nodes[i,1:4]== inlet_node):
+            first_node = i
+            print("FOUND FIRST NODE",i)
+            break
+
+    ############
+    seen_elements = np.zeros((num_elems), dtype=bool)
+    branches = 1
+    continuing = True
+    old_parent_list = first_node
+    loop_list = np.zeros(1,dtype=int)
+    loop_list[0] = (num_elems+1)
+  
+    branch_start = np.append(branch_start, elems_at_node[first_node,1]) #First element in branch
+
+    [new_parent_list,cycle,continuing,loop_parent,branch_end_elem] = fix_branch_direction(first_node, elems_at_node, elems, seen_elements,branch_id,branches,old_parent_list,True)
+    branch_end = np.append(branch_end, branch_end_elem)
+    cycle_bool = np.append(cycle_bool, cycle)
+    
+    while len(new_parent_list)>0:
+        if len(new_parent_list) > 0:
+            new_parent_list2 = []
+            for parent in range(0,len(new_parent_list)):
+                second_node = elems[new_parent_list[parent],2]
+                if second_node not in loop_list:
+                    branches = branches + 1
+                    branch_start  = np.append(branch_start,new_parent_list[parent])
+                    branch_id[new_parent_list[parent]] = branches
+                    
+                    [branch_list,cycle, continuing,loop_parent,branch_end_elem] = fix_branch_direction(second_node, elems_at_node, elems, seen_elements,
+                                                           branch_id, branches,elems[new_parent_list,2],False)
+                    branch_end = np.append(branch_end, branch_end_elem)
+                    cycle_bool = np.append(cycle_bool, cycle)
+
+                if loop_parent< num_elems:
+                    loop_list = np.append(loop_list, [loop_parent], axis=0) #Removes simple loops
+                if continuing:
+                    new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
+                #print(continuing,new_parent_list2)
+            if(len(new_parent_list2)>0):
+                new_parent_list = new_parent_list2.astype(int)
+            else:
+                new_parent_list = []
+
+
+    print("Number of branches identified: ", len(branch_start))
+    
+    return elems,branch_id,branch_start,branch_end,cycle_bool,seen_elements
+  
+def remove_disconnected(elems, euclid_radii, branch_id, seen):
+    #remove disconnected elements (not part of fix elem direction as there may be two inlets)
+    elems = elems[seen == True]
+    euclid_radii = euclid_radii[seen == True]
+    branch_id = branch_id[seen == True]
+    for ne in range(0,len(elems)): #renumber elems
+        elems[ne,0] = ne
+        
+    return elems, euclid_radii,branch_id
+    
+def remove_small_radius(elems,radii,threshold):
+    #Creating a list of elements with radii less than the threshold
+    delete_list = []
+    for ne in range(0,len(elems)):
+        if radii[ne]<=threshold:
+            delete_list = np.append(delete_list,int(ne))
+    
+    
+    if delete_list != []:
+        delete_list = delete_list.astype(int)
+        elems = np.delete(elems,delete_list,axis=0)
+        radii = np.delete(radii,delete_list,axis=0)
+
+    #Renumber the elements now some have been deleted      
+    for ne in range(0,len(elems)): #renumber elems
+        elems[ne,0] = ne
+    
+    
+    print('We have deleted based on radius, removing:',len(delete_list), " Elements")
+    return elems, radii
