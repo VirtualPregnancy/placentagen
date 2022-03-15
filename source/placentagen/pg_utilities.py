@@ -449,50 +449,6 @@ def is_member(v, matrix):
     return -1
 
 
-######
-# Function: Creates a 3D plot of branching tree
-# Inputs: nodes - an M x 3 array giving cartesian coordinates (x,y,z) for the node locations in the tree
-#         elems - an N x 3 array, the first colum in the element number, the second two columns are the index of the start and end node
-#         colour - an N x 1 array where value determines colour of corresponding element
-#         Nc - the maximum number of elements connected at a single node
-# Outputs: 3D plot of tree, with radius proportional to radii and colour depending on the input array
-######
-
-def plot_vasculature_3d(nodes, elems, colour, radii):
-    # initialize arrays
-    Ne = len(elems)
-    elems = elems[:, 1:3]
-    x = np.zeros([Ne, 2])
-    y = np.zeros([Ne, 2])
-    z = np.zeros([Ne, 2])
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    # scale colour and radii
-    colour = (colour - min(colour)) / max(colour) * 255.
-    radii = radii / max(radii) * 3.
-
-    for i in range(0, Ne):
-        # get start and end node
-        nN1 = int(elems[i, 0])
-        nN2 = int(elems[i, 1])
-
-        # get coordinates of nodes
-        x[i, 0] = nodes[nN1, 0]
-        y[i, 0] = nodes[nN1, 1]
-        z[i, 0] = nodes[nN1, 2]
-        x[i, 1] = nodes[nN2, 0]
-        y[i, 1] = nodes[nN2, 1]
-        z[i, 1] = nodes[nN2, 2]
-
-        colour_value = np.asarray(cm.jet(int(colour[i])))
-        ax.plot(np.squeeze(x[i, :]), np.squeeze(y[i, :]), np.squeeze(z[i, :]), c=colour_value[0:3], linewidth=radii[i])
-
-    plt.show()
-
-    return 0
-
 
 ######
 # Function: Finds the maximum number of elements that join at one node
@@ -567,28 +523,3 @@ def remove_rows(main_array, arrays):
 
     return main_array, arrays
 
-######
-# Function: Swaps 2 rows in an array
-# Inputs: array - a N x M array
-#         row1 & row2 - the indices of the two rows to be swapped
-# Outputs: array, with row1 and row2 swapped
-######
-
-def row_swap_2d(array, row1, row2):
-    placeholder = np.copy(array[row1, :])
-    array[row1, :] = array[row2, :]
-    array[row2, :] = placeholder
-    return array
-
-######
-# Function: Swaps 2 rows in an array
-# Inputs: array - a N x 1 array
-#         row1 & row2 - the indices of the two rows to be swapped
-# Outputs: array, with row1 and row2 swapped
-######
-
-def row_swap_1d(array, row1, row2):
-    placeholder = np.copy(array[row1])
-    array[row1] = array[row2]
-    array[row2] = placeholder
-    return array

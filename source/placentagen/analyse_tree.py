@@ -635,6 +635,7 @@ def evaluate_orders(node_loc, elems):
         else:
             generation[ne] = 1  # Inlet
         maxgen = np.maximum(maxgen, generation[ne])
+    print("have gone through the branches", maxgen)
 
     # Now need to loop backwards to do ordering systems
 
