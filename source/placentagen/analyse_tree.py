@@ -1703,18 +1703,30 @@ def summary_statistics(branchGeom, major_minor_results,ordering_system):
     L_maj_parent = L_maj_parent[(L_maj_parent > 0)]
     
     branchVols = np.multiply(branchGeom['radii'],branchGeom['radii'])*np.pi*branchLen
+    if (branchGeom['nodes'][:,3]!=branchGeom['nodes'][0,3]).all():
+        hull = sp.ConvexHull(branchGeom['nodes'][:,1:4])
     
-    hull = sp.ConvexHull(branchGeom['nodes'][:,1:4])
-    
-    #find maxim
-    distance_max = 0.
-    for i in range(0,len(hull.vertices)):
-      for j in range(0,len(hull.vertices)):
-          if i != j:
-             distance = np.linalg.norm(branchGeom['nodes'][hull.vertices[i],1:4]-branchGeom['nodes'][hull.vertices[j],1:4])
-             if distance > distance_max:
-                 distance_max = distance
-                 
+        #find maxim
+        distance_max = 0.
+        for i in range(0,len(hull.vertices)):
+          for j in range(0,len(hull.vertices)):
+              if i != j:
+                 distance = np.linalg.norm(branchGeom['nodes'][hull.vertices[i],1:4]-branchGeom['nodes'][hull.vertices[j],1:4])
+                 if distance > distance_max:
+                     distance_max = distance
+    else:
+        hull = sp.ConvexHull(branchGeom['nodes'][:, 1:3])
+        #hull.volume = 0.
+        # find maxim
+        distance_max = 0.
+        for i in range(0, len(hull.vertices)):
+            for j in range(0, len(hull.vertices)):
+                if i != j:
+                    distance = np.linalg.norm(
+                        branchGeom['nodes'][hull.vertices[i], 1:4] - branchGeom['nodes'][hull.vertices[j], 1:4])
+                    if distance > distance_max:
+                        distance_max = distance
+
     branch_statistics = np.zeros((48,1))
 
 
