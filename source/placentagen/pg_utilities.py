@@ -344,37 +344,7 @@ def renumber_geom(nodes,elems):
 
     return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
 
-  
 
-
-def remove_small_length(elems,nodes,branch_id,branch_start,radii,threshold):
-    length = np.zeros(len(elems))
-    tmp_elems = np.copy(elems[:,0])
-    delete_list = []
-    for ne in range(0,len(elems)):
-        node_in = elems[ne,1]
-        node_out = elems[ne,2]
-        length[ne] = np.sqrt((nodes[node_in,1]-nodes[node_out,1])**2. + (nodes[node_in,2]-nodes[node_out,2])**2.+(nodes[node_in,3]-nodes[node_out,3])**2.)
-        
-    for nb in range(0,len(branch_start)):
-        tmp_elems1 = tmp_elems[branch_id == nb+1]
-        tmp_length = length[branch_id == nb+1]
-        branch_length = np.sum(tmp_length)
-        if branch_length <=threshold:
-           #print(branch_length,tmp_elems)
-           delete_list = np.append(delete_list,tmp_elems1) 
-           
-    if delete_list:      
-        delete_list = delete_list.astype(int)
-        #print(delete_list)
-        elems = np.delete(elems,delete_list,axis=0)
-        radii = np.delete(radii,delete_list,axis=0)
-     
-    for ne in range(0,len(elems)): #renumber elems
-        elems[ne,0] = ne    
-    
-    return elems, radii
-    
     
 
 def remove_rows(main_array, arrays):
