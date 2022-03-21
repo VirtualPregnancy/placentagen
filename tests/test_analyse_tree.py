@@ -10,25 +10,6 @@ TESTDATA_FILENAME1 = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exe
 TESTDDATA_FILENAME2 = os.path.join(os.path.dirname(__file__), 'Testdata/stem_xy.txt')
 
 
-class test_analyse_branching(TestCase):
-
-    def test_analyse_branching(self):
-        geom = {}
-        geom['nodes'] = np.array(
-            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
-            [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 0, 1], [1, 1, 2], [2, 1, 3]], dtype=int)
-        geom['radii'] = np.array([0.5, 0.4, 0.1])
-        geom['length'] =np.array( [0.5, 0.4, 0.2])
-        geom['euclidean length'] = geom['length']
-
-        testgeom = placentagen.analyse_branching(geom, 'strahler', 1.0, 1.0)
-
-        print(testgeom['euclidean length'][0])
-        self.assertTrue(testgeom['euclidean length'][0] == 0.5)
-
-
-
 class test_arrange_by_br(TestCase):
 
     def arrange_by_branch_no_doubles(self):
