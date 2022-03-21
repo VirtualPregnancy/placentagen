@@ -344,7 +344,6 @@ def renumber_geom(nodes,elems):
 
     return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
 
-
     
 
 def remove_rows(main_array, arrays):

@@ -1,7 +1,38 @@
 import numpy as np
-from matplotlib import pyplot as plt
 from scipy import special
+
+
+def bisection_method_diam(a, b, fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, pressure,verbose):
+
+
+    if (tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, a, pressure) * tension_balance(fit_passive_params,fit_myo_params, fit_flow_params, fixed_flow_params, b, pressure)) > 0:
+        #if verbose:
+        #    print ('Bisection interval will not work')
+        #    print(a, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, a, pressure), pressure)
+        #    print(b, tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, b, pressure), pressure)
+        diam = 0
+    else:
+        a1 = a
+        b1 = b
+        eps = 1.0e-12
+        err = 1.0
+        while err >= eps:
+            x0 = (a1 + b1) / 2.
+            if (tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, a1,
+                                pressure) * tension_balance(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params,x0,
+                                                            pressure)) < 0:
+                b1 = x0
+                err = abs(a1 - x0)
+            else:
+                a1 = x0
+                err = abs(b1 - x0)
+        diam = x0
+
+    return diam
+
+
 def calc_plug_resistance(mu,Dp,porosity,radius, length):
+    #Calculates resistance of a completely plugged segment of tube (artery)
     K = (Dp ** 2. / 180.) * ((porosity ** 3.) / (1. - porosity) ** 2.) #permeability
     gamma = 1. / (1. + 2.5 * (1. - porosity))
     area = np.pi * radius ** 2.
@@ -9,6 +40,7 @@ def calc_plug_resistance(mu,Dp,porosity,radius, length):
     return resistance
 
 def calc_plug_shear(mu,Dp,porosity,radius, length,flow,resistance,r_val):
+    # Calculates shear stress a completely plugged segment of tube (artery)
     K = (Dp ** 2. / 180.) * ((porosity ** 3.) / (1. - porosity) ** 2.)  # permeability
     gamma = 1. / (1. + 2.5 * (1. - porosity))
     shear = np.zeros(len(r_val))
@@ -19,16 +51,18 @@ def calc_plug_shear(mu,Dp,porosity,radius, length,flow,resistance,r_val):
     return shear,shear_at_wall
 
 def calc_tube_resistance(mu,radius,length):
+    #Calculates resistance of a simple Poisseuille tube
     resistance = (8.* mu * length) / (np.pi * radius**4.);
     return resistance
 
 def calc_tube_shear(mu, radius,flow):
+    # Calculates shear in a simple Poisseuille tube
     shear = 4.* mu * flow/(np.pi * radius**3.)
     return shear
 
 
 def calc_funnel_resistance(mu, radius_a, radius_b, length_a,length_b):
-
+    #Calculates resistance of a funnel shaped segment of tube
     #Radius A is the smaller inlet radius, radius b is the larger outlet radius
     #length_a is distance down the main axis of the vessel that the funnel starts
     #length_b is distance down the main axis of the vessel that the funnel ends
@@ -38,6 +72,151 @@ def calc_funnel_resistance(mu, radius_a, radius_b, length_a,length_b):
     resistance =(8.* mu) / (np.pi * radius_a**4.)*(radius_a/(3.*rate_increase_c)-radius_a**4./(3.*rate_increase_c*(radius_a+rate_increase_c*(length_b-length_a))**3.))
 
     return resistance
+
+def calc_total_tension(fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params,diameter, pressure):
+
+    include_passive = True
+    include_flow = True
+    include_myo = True
+    if np.array(fit_myo_params).all() == 0:
+        include_myo = False
+    if np.array(fit_flow_params).all() == 0:
+        include_flow = False
+
+    #Defining parameters of importance in passive model
+    D0 = fit_passive_params[0]
+    Cpass = fit_passive_params[1]
+    Cpassdash = fit_passive_params[2]
+    if include_myo:
+        #Defining parameters relavent to myogenic model
+        Cact = fit_myo_params[0]
+        Cactdash = fit_myo_params[1]
+        Cactdashdash = fit_myo_params[2]
+        Cmyo = fit_myo_params[3]
+        Cdashdashtone = fit_myo_params[4]
+    if include_flow:
+        #Defining parameters related to blood flow through vessel
+        Cshear = fit_flow_params[0]
+        Cshear2 = -fit_flow_params[1]
+        tau1 = fit_flow_params[2]
+        tau2 = fit_flow_params[3]
+        mu = fixed_flow_params[0]
+        length = fixed_flow_params[1]
+        dp_blood = fixed_flow_params[2]
+        resistance = calc_tube_resistance(mu,diameter/2.,length)
+        flow = dp_blood/resistance
+        tau = calc_tube_shear(mu,diameter/2.,flow)
+
+    if not include_myo and not include_flow:
+        Tmaxact=0.
+        total_tension = Cpass * np.exp(Cpassdash * (diameter / D0 - 1.))
+    else:
+        if not include_flow:
+            Stone = Cmyo * pressure * diameter / 2. + Cdashdashtone
+        else:
+            if tau < tau1:
+                Stone = Cmyo * pressure * diameter / 2. + Cdashdashtone
+            elif tau < tau2:
+                Stone = Cmyo * pressure * diameter / 2. + Cdashdashtone + Cshear * (tau - tau1)
+            else:
+                Stone = Cmyo * pressure * diameter / 2. + Cdashdashtone + Cshear2 * (
+                            tau - (Cshear / Cshear2 * (tau1 - tau2) + tau2))
+
+
+        A = 1. / (1 + np.exp(-Stone))
+
+        Tmaxact = Cact * np.exp(-((diameter / D0 - Cactdash) / Cactdashdash) ** 2.)
+        total_tension = Cpass * np.exp(Cpassdash * (diameter / D0 - 1.))  + A * Tmaxact
+
+    return Tmaxact,total_tension
+
+def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose):
+        #Dp_blood is driving pressure (mmHg)
+        #pressure is transmural pressure (kPa)
+        # calculates a passive diameter under zero flow conditions
+        include_passive = True
+        include_flow = True
+        include_myo = True
+        if np.array(fit_myo_params).all() == 0:
+            include_myo = False
+        if np.array(fit_flow_params).all() == 0:
+            include_flow = False
+
+        if not include_myo and not include_flow:
+            diameter= bisection_method_diam(5.,500.,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
+        else:
+            diameter_pass = bisection_method_diam(5.,500.,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
+            D0 = fit_passive_params[0]
+            dp_blood = fixed_flow_params[2]
+            reference_diameter = np.max([diameter_pass,D0])
+            if(pressure>12.) or (dp_blood>0):
+                #Looks for a diameter between 5 um and 10% larger than the passive diameter at that transmural pressure as a possible root
+                lowest_sign = find_possible_roots(10.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+            else:
+                lowest_sign=np.array([10.,reference_diameter*1.10])
+
+            diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
+                                                                                                     pressure,verbose)
+            #if verbose:
+            if diameter<10:
+                #print(lowest_sign)
+                print('zero',pressure,dp_blood,lowest_sign,diameter_pass,reference_diameter)
+                lowest_sign = find_possible_roots(0.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
+                                                                                                     pressure,verbose)
+                print(diameter,lowest_sign)
+                #print(diameter_pass,D0)  # calculates a passive diameter
+                #diameter_act = diameter_pass
+
+        return diameter
+
+def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, pressure,verbose):
+
+    discretise = 500
+    diameter_range = np.linspace(high_diam,low_diam,discretise) #finding root closest to the passive diameter
+    ten_resid = np.zeros(len(diameter_range)) #tension residual
+    lowest_signchange = np.zeros(2)
+    i = 0
+    ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i], pressure)
+    print(np.sign(ten_resid[i]))
+    samesign = True
+    #for every diameter in the range calculate the tension residual
+    while samesign:
+        i=i+1
+        ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
+        if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
+            print("chaning sign",i)
+            samesign = False
+        print(i,discretise)
+        if(i==(discretise -1)) and samesign:
+            samesign = False
+    print(i)
+
+
+    if i==(discretise-1) and samesign: #should be searching for a higher diameter
+        diameter_range = np.linspace(high_diam,high_diam + (high_diam-low_diam), discretise)
+        ten_resid = np.zeros(len(diameter_range))
+        i = 0
+        ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i], pressure)
+        samesign = True
+        while samesign:
+            i=i+1
+            ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
+            if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
+                print("chaning sign",i)
+                samesign = False
+        if verbose:
+            print('had to go again')
+    lowest_signchange = np.zeros(2)
+    lowest_signchange[0] = diameter_range[i]
+    lowest_signchange[1] = diameter_range[i-1]
+
+    return lowest_signchange
+
+def tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params, diameter, pressure):
+    [Tmaxact,total_tension] = calc_total_tension(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params, diameter, pressure)
+    f = total_tension - pressure * diameter / 2.
+    return f
 
 
 def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds):
