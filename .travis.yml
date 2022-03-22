@@ -1,6 +1,6 @@
 language: python
 sudo: false
-dist: trusty
+dist: focal
 python:
   - "3.6"
   - "3.9"
