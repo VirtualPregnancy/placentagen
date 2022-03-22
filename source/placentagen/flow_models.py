@@ -159,14 +159,11 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
                                                                                                      pressure,verbose)
             #if verbose:
             if diameter<10:
-                #print(lowest_sign)
                 print('zero',pressure,dp_blood,lowest_sign,diameter_pass,reference_diameter)
                 lowest_sign = find_possible_roots(0.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
                 diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
                 print(diameter,lowest_sign)
-                #print(diameter_pass,D0)  # calculates a passive diameter
-                #diameter_act = diameter_pass
 
         return diameter
 
@@ -178,19 +175,15 @@ def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, 
     lowest_signchange = np.zeros(2)
     i = 0
     ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i], pressure)
-    print(np.sign(ten_resid[i]))
     samesign = True
     #for every diameter in the range calculate the tension residual
     while samesign:
         i=i+1
         ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
         if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
-            print("chaning sign",i)
             samesign = False
-        print(i,discretise)
         if(i==(discretise -1)) and samesign:
             samesign = False
-    print(i)
 
 
     if i==(discretise-1) and samesign: #should be searching for a higher diameter
@@ -203,7 +196,6 @@ def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, 
             i=i+1
             ten_resid[i] = tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params,diameter_range[i],pressure)
             if np.sign(ten_resid[i]) != np.sign(ten_resid[i-1]):
-                print("chaning sign",i)
                 samesign = False
         if verbose:
             print('had to go again')
