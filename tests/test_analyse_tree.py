@@ -10,25 +10,6 @@ TESTDATA_FILENAME1 = os.path.join(os.path.dirname(__file__), 'Testdata/Small.exe
 TESTDDATA_FILENAME2 = os.path.join(os.path.dirname(__file__), 'Testdata/stem_xy.txt')
 
 
-class test_analyse_branching(TestCase):
-
-    def test_analyse_branching(self):
-        geom = {}
-        geom['nodes'] = np.array(
-            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.5, -0.5, 2., 0., 0.],
-            [1., 0., 0.5, -0.5, 2., 0., 0.]])
-        geom['elems'] = np.array([[0, 0, 1], [1, 1, 2], [2, 1, 3]], dtype=int)
-        geom['radii'] = np.array([0.5, 0.4, 0.1])
-        geom['length'] =np.array( [0.5, 0.4, 0.2])
-        geom['euclidean length'] = geom['length']
-
-        testgeom = placentagen.analyse_branching(geom, 'strahler', 1.0, 1.0)
-
-        print(testgeom['euclidean length'][0])
-        self.assertTrue(testgeom['euclidean length'][0] == 0.5)
-
-
-
 class test_arrange_by_br(TestCase):
 
     def arrange_by_branch_no_doubles(self):
@@ -197,15 +178,15 @@ class test_summary_statistics(TestCase):
     def test_summary_statistics(self):
         geom = {}
         geom['nodes'] = np.array(
-            [[0., 0., 0., -1., 2., 0., 0.], [1., 0., 0., -0.5, 2., 0., 0.], [1., 0., -0.3, -0.8, 2., 0., 0.],
-             [1., 0., 0.5, -0.6, 2., 0., 0.]])
+            [[0., -1., 0., 0.], [1., -0.5, 0., 0.], [2., -0.8, -0.3, 0],
+             [3., -0.6, 0.5, 0.]])
         geom['elems'] = np.array([[0, 1, 2], [0, 0, 1], [0, 1, 3]], dtype=int)
         geom['radii'] = np.array([0.1, 0.1, 0.05])
         geom['length'] = np.array([0.5, 0.3, 0.2])
         geom['euclidean length'] = geom['length']
         geom['branch angles'] = np.array([0.1, 0.5, 0.4])
-        geom['diam_ratio'] = np.array([0.1, 0.3, 0.4])
-        geom['length_ratio'] = np.array([0.1, 1.0, 0.6])
+        geom['diam ratio'] = np.array([0.1, 0.3, 0.4])
+        geom['length ratio'] = np.array([0.1, 1.0, 0.6])
         elem_down = np.zeros((3, 3), dtype=int)
         elem_down[0, 0] = 2
         elem_down[0, 1] = 1
@@ -219,7 +200,7 @@ class test_summary_statistics(TestCase):
         elem_up[1, 1] = 0
         elem_up[2, 0] = 1
         elem_up[2, 1] = 0
-
+        geom['inlet radius'] = geom['radii'][0]
         elem_cnct = {}
         elem_cnct['elem_up'] = elem_up
         elem_cnct['elem_down'] = elem_down
@@ -227,11 +208,11 @@ class test_summary_statistics(TestCase):
         orders = {}
         orders['strahler'] = np.array([2, 1, 1], dtype=int)
         orders['generation'] = np.array([1, 2, 2], dtype=int)
+        geom['order'] = orders
 
         major_minor_results = placentagen.major_minor(geom, elem_down)
-        branchGeom = placentagen.arrange_by_branches(geom, elem_up, orders['strahler'], orders['generation'])
-        [geom, branchGeom] = placentagen.find_branch_angles(geom, orders, elem_cnct, branchGeom, 1.0, 1.0)
-        arranged = placentagen.summary_statistics(branchGeom, geom, orders, major_minor_results, 'strahler')
+        arranged,overall = placentagen.summary_statistics(geom, major_minor_results, 'strahler')
+        print(arranged)
         self.assertTrue((np.isclose(np.array(arranged[2][0:19]),np.array([-1.00000000e+00,3.00000000e+00,3.33333333e-01,
                         1.24721913e-01,1.66666667e-01,4.71404521e-02,4.78055340e-01,3.82503840e-02,2.00000000e+00,
                         4.08248290e-01,7.23581191e-01,3.32678936e-01,1.16062508e+02,7.62755935e+00,2.00000000e+00,

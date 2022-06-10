@@ -2,8 +2,10 @@
 import numpy as np
 from . import pg_utilities
 from . import imports_and_exports
+from . import skeleton_to_tree
 import sys
 from numpy import matlib
+from scipy import spatial as sp
 
 
 """
@@ -14,7 +16,7 @@ from numpy import matlib
 
 """
 
-def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
+def analyse_branching(geom,branch_geom,ordering_system,conversionFactor,voxelSize):
     """ Does a branching analysis on the tree defined by 'geom'
      Inputs:
        -  geom:  A geometry structure consisting of element list, node location and radii/lengths
@@ -25,18 +27,28 @@ def analyse_branching(geom,ordering_system,conversionFactor,voxelSize):
     """
 
     elem_cnct = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
-    orders = evaluate_orders(geom['nodes'], geom['elems'])
+    geom['order'] = evaluate_orders(geom['nodes'], geom['elems'])
+    print("Full geom has max order", np.max(geom['order']['strahler']))
+    geom['elem_up'] = elem_cnct['elem_up']
+    geom['elem_down'] = elem_cnct['elem_down']
 
-    # Find Results
-    branchGeom = arrange_by_branches(geom, elem_cnct['elem_up'], orders[ordering_system],orders['generation'])
-    [geom, branchGeom] = find_branch_angles(geom, orders, elem_cnct, branchGeom, voxelSize, conversionFactor)
-    major_minor_results=major_minor(geom, elem_cnct['elem_down']) #major/minor child stuff
+    elem_cnct_branch = pg_utilities.element_connectivity_1D(geom['nodes'], branch_geom['elems'])
+    branch_geom['order'] = evaluate_orders(geom['nodes'], branch_geom['elems'])
+    print("branch geom has max order", np.max(branch_geom['order']['strahler']))
+    branch_geom['elem_up'] = elem_cnct_branch['elem_up']
+    branch_geom['elem_down'] = elem_cnct_branch['elem_down']
 
-    # tabulate data
-    generation_summary_statistics(geom, orders, major_minor_results)
-    summary_statistics(branchGeom, geom, orders, major_minor_results,'strahler')
+    ## Find Results
+    branch_geom = branch_properties(geom,branch_geom)
+    major_minor_results=major_minor(branch_geom, branch_geom['elem_down']) #major/minor child stuff
 
-    return geom
+    ## tabulate data
+    
+    generation_table,bs = summary_statistics(branch_geom,  major_minor_results,'generation')
+    strahler_table,bs = summary_statistics(branch_geom,  major_minor_results,'strahler')
+
+    
+    return geom, branch_geom, generation_table,strahler_table,bs
 
 def arrange_by_branches(geom, elem_up, order,generation):
     """ Finds properties of according to each Branch of the tree, where a branch is a set of elements with the
@@ -96,7 +108,6 @@ def arrange_by_branches(geom, elem_up, order,generation):
 
     return {'radii': branchRad, 'length': branchLen, 'euclidean length': branchEucLen, 'order': branchOrder,
             'branches': branches}
-
 
 def arrange_by_strahler_order(geom, find_inlet_loc, inlet_loc):
     """ Rearranges elems (and corresponding properties) according to their strahler order
@@ -222,6 +233,72 @@ def arrange_by_strahler_order(geom, find_inlet_loc, inlet_loc):
 
     return {'elems': elems, 'radii': radii, 'length': lengths, 'euclidean length': euclid_lengths, 'nodes': nodes}
 
+def branch_properties(geom,branch_geom):
+    num_branch = len(branch_geom['elems'])
+    num_elems = len(geom['elems'])
+    branch_geom['length'] = np.zeros(num_branch)
+    branch_geom['radii']=np.zeros(num_branch)
+    branch_geom['branch angles'] = -1.*np.ones(num_branch)# seg_angles * 180 / np.pi
+    branch_geom['diam ratio'] = -1.*np.ones(num_branch)#diam_ratio
+    branch_geom['length ratio'] = -1.*np.ones(num_branch)#length_ratio
+    branch_geom['angles'] = -1.*np.ones(num_branch)# seg_angles * 180 / np.pi
+    branch_geom['inlet radius'] = 0.
+    my_elems = geom['elems'][:,0]
+    for nb in range(0,num_branch):
+       tmp_elems = my_elems[geom['branch id']==nb+1]
+       branch_geom['length'][nb] = np.sum(geom['length'][tmp_elems])
+       branch_geom['radii'][nb] = np.sum(geom['radii'][tmp_elems])/float(len(tmp_elems))
+       if nb<2:
+           print(geom['length'][tmp_elems],len(tmp_elems))
+       
+    for nb in range(0,num_branch):
+        if branch_geom['elem_up'][nb,0]>0:
+           nb_up = branch_geom['elem_up'][nb,1]
+           branch_geom['diam ratio'][nb] = branch_geom['radii'][nb]/branch_geom['radii'][nb_up]
+           branch_geom['length ratio'][nb] = branch_geom['length'][nb]/branch_geom['length'][nb_up]   
+        else: #Umbilical artery  (inlet)
+           branch_geom['inlet radius'] = branch_geom['radii'][nb]
+        if branch_geom['elem_down'][nb,0]>1:
+           nbUp = nb
+           endNode = int(branch_geom['elems'][nbUp, 2])
+           startNode = int(branch_geom['elems'][nbUp, 1])
+           v_parent = geom['nodes'][endNode, 1:4] - geom['nodes'][startNode, 1:4]
+           v_parent = v_parent / np.linalg.norm(v_parent)
+           for b in range(0,branch_geom['elem_down'][nb,0]):
+               nbDown = branch_geom['elem_down'][nb,b+1]
+               endNode = int(branch_geom['elems'][nbDown, 2])
+               startNode = int(branch_geom['elems'][nbDown, 1])
+               v_daughter = geom['nodes'][endNode, 1:4] - geom['nodes'][startNode, 1:4]
+               v_daughter = v_daughter / np.linalg.norm(v_parent)
+               angle = pg_utilities.angle_two_vectors(v_parent, v_daughter)*180./np.pi
+               #print(nb_daughter)
+               branch_geom['branch angles'][nbDown]=angle
+               #print(branch_geom['branch angles'][nb_daughter])
+        
+
+   # kb=0
+   # for ne in range(0,num_elems):
+   #     if geom['elem_down'][ne,0]>1:
+   #        neUp = ne
+   #        endNode = int(geom['elems'][neUp, 2])
+   #        startNode = int(geom['elems'][neUp, 1])
+   #        v_parent = geom['nodes'][endNode, 1:4] - geom['nodes'][startNode, 1:4]
+   #        v_parent = v_parent / np.linalg.norm(v_parent)
+   #        for b in range(0,geom['elem_down'][ne,0]):
+   #            neDown = geom['elem_down'][ne,b+1]
+   #            endNode = int(geom['elems'][neDown, 2])
+   #            startNode = int(geom['elems'][neDown, 1])
+   #            v_daughter = geom['nodes'][endNode, 1:4] - geom['nodes'][startNode, 1:4]
+   #            v_daughter = v_daughter / np.linalg.norm(v_parent)
+   #            angle = pg_utilities.angle_two_vectors(v_parent, v_daughter)*180./np.pi
+   #            nb_daughter = int(geom['branch id'][neDown-1])
+   #            #print(nb_daughter)
+   #            branch_geom['angles'][nb_daughter]=angle
+   #            #print(branch_geom['branch angles'][nb_daughter])
+   #     
+   #        kb= kb+geom['elem_down'][ne,0]
+   #        #print('branch_point',ne,kb,geom['branch id'][ne])
+    return branch_geom
 
 def calc_terminal_branch(node_loc, elems):
     """ Generates a list of terminal nodes associated with a branching geometry based on element connectivity.
@@ -772,7 +849,6 @@ def define_elem_lengths(node_loc, elems):
     # length array
     lengths = np.zeros(num_elems)
 
-
     for ne in range(0, num_elems):
         np1 = elems[ne][1]
         np2 = elems[ne][2]
@@ -890,7 +966,7 @@ def find_branch_angles(geom, orders, elem_connect, branchGeom, voxelSize, conver
 
     branchGeom['radii']= branchGeom['radii']/ conversionFactor
     branchGeom['radii'] = branchGeom['radii'] * voxelSize
-    branchGeom['branch_angles'] = branch_angles * 180 / np.pi
+    branchGeom['branch angles'] = branch_angles * 180 / np.pi
     branchGeom['length'] = branchGeom['length'] * voxelSize
     branchGeom['euclidean length'] = branchGeom['euclidean length'] * voxelSize
 
@@ -1425,14 +1501,14 @@ def porosity(vol_frac):
     porosity = 1 - vol_frac
     return porosity
 
-def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_system):
+def summary_statistics(branchGeom, major_minor_results,ordering_system):
 
     # branch inputs
-    branchDiam = 2 * branchGeom['radii']
+    branchDiam = np.multiply(2.,branchGeom['radii'])
     branchLen = branchGeom['length']
     branchEucLen = branchGeom['euclidean length']
-    branchOrder = branchGeom['order']
-    branchAngles = branchGeom['branch_angles']
+    branchOrder = branchGeom['order'][ordering_system]
+    branchAngles = branchGeom['branch angles']
     branchLenRatio = branchGeom['length ratio']
     branchDiamRatio = branchGeom['diam ratio']
 
@@ -1476,26 +1552,24 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
             np.extract(branch_list, branchLen) / np.extract(branch_list, branchEucLen))  # tortuosity
 
 
-        if n_ord < num_orders - 1:
 
+        angle_list = np.extract(branch_list, branchAngles)
+        angle_list = angle_list[angle_list > 0]
 
-            angle_list = np.extract(branch_list, branchAngles)
-            angle_list = angle_list[angle_list > 0]
+        values_by_order[n_ord, 12] = np.mean(angle_list)  # angles
+        values_by_order[n_ord, 13] = np.std(angle_list)  # angles std
 
-            values_by_order[n_ord, 12] = np.mean(angle_list)  # angles
-            values_by_order[n_ord, 13] = np.std(angle_list)  # angles std
+        lengthRatio = np.extract(branch_list, branchLenRatio)
+        lengthRatio = lengthRatio[lengthRatio > 0]
 
-            lengthRatio = np.extract(branch_list, branchLenRatio)
-            lengthRatio = lengthRatio[lengthRatio > 0]
+        values_by_order[n_ord, 14] = np.mean(lengthRatio)  # len ratio
+        values_by_order[n_ord, 15] = np.std(lengthRatio)  # len ratio
 
-            values_by_order[n_ord, 14] = np.mean(lengthRatio)  # len ratio
-            values_by_order[n_ord, 15] = np.std(lengthRatio)  # len ratio
+        diamRatio = np.extract(branch_list, branchDiamRatio)
+        diamRatio = diamRatio[diamRatio > 0]
 
-            diamRatio = np.extract(branch_list, branchDiamRatio)
-            diamRatio = diamRatio[diamRatio > 0]
-
-            values_by_order[n_ord, 16] = np.mean(diamRatio)  # diam ratio
-            values_by_order[n_ord, 17] = np.std(diamRatio)  # diam std
+        values_by_order[n_ord, 16] = np.mean(diamRatio)  # diam ratio
+        values_by_order[n_ord, 17] = np.std(diamRatio)  # diam std
 
         values_by_order[n_ord, 18] = values_by_order[n_ord-1, 1]/values_by_order[n_ord, 1]  # Bifurcation ratio
         values_by_order[n_ord, 19] = np.sum(np.square(diam_list)*np.pi/4 ) # Total CSA
@@ -1525,6 +1599,7 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
     print('-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
     #        ' %7i | %7.4f | %7.4f
     #        print(tabulate(values_by_order, headers=header))
+
 
     # statistics independent of order
     values_overall = np.zeros([1, 20])
@@ -1597,25 +1672,10 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
     print('      / \    ')
     print('     /   \   ')
     print('-------------')
-
-    # unpack inputs
-    strahler = orders['strahler']
-    generation = orders['generation']
-
-    diam = 2*geom['radii']
-    length = geom['length']
-    length2 = length[(diam > 0)]
-    diam = diam[(diam > 0)]
-    euclid_length = geom['euclidean length']
-
-    angles = geom['branch angles']
-    angles = angles[angles > 0]  # get rid of first elem
-
-    diam_ratio = geom['diam_ratio']
-    diam_ratio = diam_ratio[(diam_ratio > 0)]
-
-    length_ratio = geom['length_ratio']
-    length_ratio = length_ratio[(length_ratio > 0)]
+    
+    ## unpack inputs
+    strahler = branchGeom['order']['strahler']
+    generation = branchGeom['order']['generation']
 
     # unpack inputs
     Minor_angle = major_minor_results['Minor_angle']
@@ -1641,51 +1701,135 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
 
     L_maj_parent = major_minor_results['L_maj_P']
     L_maj_parent = L_maj_parent[(L_maj_parent > 0)]
+    
+    branchVols = np.multiply(branchGeom['radii'],branchGeom['radii'])*np.pi*branchLen
+    if (branchGeom['nodes'][:,3]!=branchGeom['nodes'][0,3]).all():
+        hull = sp.ConvexHull(branchGeom['nodes'][:,1:4])
+    
+        #find maxim
+        distance_max = 0.
+        for i in range(0,len(hull.vertices)):
+          for j in range(0,len(hull.vertices)):
+              if i != j:
+                 distance = np.linalg.norm(branchGeom['nodes'][hull.vertices[i],1:4]-branchGeom['nodes'][hull.vertices[j],1:4])
+                 if distance > distance_max:
+                     distance_max = distance
+    else:
+        hull = sp.ConvexHull(branchGeom['nodes'][:, 1:3])
+        #hull.volume = 0.
+        # find maxim
+        distance_max = 0.
+        for i in range(0, len(hull.vertices)):
+            for j in range(0, len(hull.vertices)):
+                if i != j:
+                    distance = np.linalg.norm(
+                        branchGeom['nodes'][hull.vertices[i], 1:4] - branchGeom['nodes'][hull.vertices[j], 1:4])
+                    if distance > distance_max:
+                        distance_max = distance
+
+    branch_statistics = np.zeros((48,1))
+
+
 
     # Segment statistics
-    print('Segment statistics: ')
+    print('Branch statistics: ')
     print('..................')
-    print('Num Segments = ' + str(len(strahler)))
-    print('Total length = ' + str(np.sum(branchGeom['length'])) + ' mm')
-    print('Num generations = ' + str(max(generation)))
-    print('Num Strahler Orders = ' + str(max(strahler)))
-    terminalGen = generation[(strahler == 1)]
-    print('Average Terminal generation (std) = ' + str(np.mean(terminalGen)) + ' (' + str(np.std(terminalGen)) + ')')
-    print('Segment Tortuosity = ' + str(np.mean(length / euclid_length)) + ' (' + str(
-        np.std(length / euclid_length)) + ')')
-    print('Average Length (std) = ' + str(np.mean(length)) + ' (' + str(np.std(length)) + ')')
-    print('Average Euclidean Length (std) = ' + str(np.mean(euclid_length)) + ' (' + str(np.std(euclid_length)) + ')')
-    print('Average Diameter (std) = ' + str(np.mean(diam)) + ' (' + str(np.std(diam)) + ')')
-    print('Average L/D (std) = ' + str(np.mean(length2/diam)) + ' (' + str(np.std(length2/diam)) + ')') ########
+    print('Num Segments = ' + str(len(branchGeom['elems'])))
+    branch_statistics[0]=len(branchGeom['elems'])
 
-    print('Segment Angles = ' + str(np.mean(angles)) + ' (' + str(np.std(angles)) + ')')
+    print('Total length = ' + str(np.sum(branchGeom['length'])) + ' mm')
+    branch_statistics[1]=np.sum(branchGeom['length'])
+    print('Total volume of  vessels identified = ' + str(np.sum(branchVols)) + ' mm3')
+    branch_statistics[2] =np.sum(branchVols)
+    print('Total volume of complex hull representing vessel volume = ' + str(hull.volume) + ' mm3')
+    branch_statistics[3] = hull.volume
+    print('Max vascular span = ' + str(distance_max) + ' mm')
+    branch_statistics[4] = distance_max
+    print('Inlet diameter = ' + str(branchGeom['inlet radius']*2.) + ' mm')
+    branch_statistics[5] = branchGeom['inlet radius']*2.
+    print('Num generations = ' + str(max(branchGeom['order']['generation'])))
+    branch_statistics[6]=max(branchGeom['order']['generation'])
+    print('Num Strahler Orders = ' + str(max(branchGeom['order']['strahler'])))
+    branch_statistics[7] =max(branchGeom['order']['strahler'])
+
+    terminalGen = generation[(strahler == 1)]
+    print('Average Terminal generation (std) = ' + str(np.mean(terminalGen)) + ' (' + str(np.std(terminalGen)) + ')')   
+    branch_statistics[8] = np.mean(terminalGen)
+    branch_statistics[9] = np.std(terminalGen)
+    print('Branch Tortuosity = ' + str(np.mean(branchLen / branchEucLen)) + ' (' + str(
+        np.std(branchLen / branchEucLen)) + ')')
+    branch_statistics[10] = np.mean(branchLen / branchEucLen)
+    branch_statistics[11] = np.std(branchLen / branchEucLen)
+    print('Average Length mm (std) = ' + str(np.mean(branchLen)) + ' (' + str(np.std(branchLen)) + ')')
+    branch_statistics[12] = np.mean(branchLen)
+    branch_statistics[13] =np.std(branchLen)
+    print('Average Euclidean Length mm (std) = ' + str(np.mean(branchEucLen)) + ' (' + str(np.std(branchEucLen)) + ')')
+    branch_statistics[14] = np.mean(branchEucLen)
+    branch_statistics[15] = np.std(branchEucLen)
+    print('Average Diameter (std) = ' + str(np.mean(branchDiam)) + ' (' + str(np.std(branchDiam)) + ')')
+    branch_statistics[16] =np.mean(branchDiam)
+    branch_statistics[17] = np.std(branchDiam)
+    print('Average L/D (std) = ' + str(np.mean(branchLen/branchDiam)) + ' (' + str(np.std(branchLen/branchDiam)) + ')') ########
+    branch_statistics[18] =np.mean(branchLen/branchDiam)
+    branch_statistics[19] =np.std(branchLen/branchDiam)
+    print('Branch Angles = ' + str(np.mean(branchAngles)) + ' (' + str(np.std(branchAngles)) + ')')
+    branch_statistics[20] = np.mean(branchAngles)
+    branch_statistics[21] = np.std(branchAngles)
     print('    Minor Angle = ' + str(np.mean(Minor_angle)) + ' (' + str(np.std(Minor_angle)) + ')')
+    branch_statistics[22] = np.mean(Minor_angle)
+    branch_statistics[23] = np.std(Minor_angle)
     print('    Major Angle = ' + str(np.mean(Major_angle)) + ' (' + str(np.std(Major_angle)) + ')')
-    print('D/Dparent = ' + str(np.mean(diam_ratio)) + ' (' + str(np.std(diam_ratio)) + ')')
+    branch_statistics[24] = np.mean(Major_angle)
+    branch_statistics[25] = np.std(Major_angle)
+    print('D/Dparent = ' + str(np.mean(branchDiamRatio)) + ' (' + str(np.std(branchDiamRatio)) + ')')
+    branch_statistics[26] = np.mean(branchDiamRatio)
+    branch_statistics[27] = np.std(branchDiamRatio)
     print('    Dmin/Dparent = ' + str(np.mean(D_min_parent)) + ' (' + str(np.std(D_min_parent)) + ')')
+    branch_statistics[28] = np.mean(D_min_parent)
+    branch_statistics[29] = np.std(D_min_parent)
     print('    Dmaj/Dparent = ' + str(np.mean(D_maj_parent)) + ' (' + str(np.std(D_maj_parent)) + ')')
+    branch_statistics[30] = np.mean(D_maj_parent)
+    branch_statistics[31] = np.std(D_maj_parent)
     print('    Dmaj/Dmin = ' + str(np.mean(D_Major_Minor)) + ' (' + str(np.std(D_Major_Minor)) + ')')
-    print('L/Lparent = ' + str(np.mean(length_ratio)) + ' (' + str(np.std(length_ratio)) + ')')
+    branch_statistics[32] = np.mean(D_Major_Minor)
+    branch_statistics[33] = np.std(D_Major_Minor)
+    print('L/Lparent = ' + str(np.mean(branchLenRatio)) + ' (' + str(np.std(branchLenRatio)) + ')')
+    branch_statistics[34] = np.mean(branchLenRatio)
+    branch_statistics[35] = np.std(branchLenRatio)
     print('    Lmin/Lparent = ' + str(np.mean(L_min_parent)) + ' (' + str(np.std(L_min_parent)) + ')')
+    branch_statistics[36] = np.mean(L_min_parent)
+    branch_statistics[37] = np.std(L_min_parent)
     print('    Lmaj/Lparent = ' + str(np.mean(L_maj_parent)) + ' (' + str(np.std(L_maj_parent)) + ')')
+    branch_statistics[38] = np.mean(L_maj_parent)
+    branch_statistics[39] = np.std(L_maj_parent)
     print('    Lmaj/Lmin = ' + str(np.mean(L_Major_Minor)) + ' (' + str(np.std(L_Major_Minor)) + ')')
+    branch_statistics[40] = np.mean(L_Major_Minor)
+    branch_statistics[41] = np.std(L_Major_Minor)
     print('\n')
 
-    # Find  Strahler Ratios: Rb, Rl, Rd
-    Num_Branches = values_by_order[:, 1]
-    Diameter_strahler = values_by_order[:, 4]
-    Length_strahler = values_by_order[:, 2]
-    Orders_strahler = values_by_order[:, 0]
 
-    print('Branching/length/diameter ratios: ')
-    print('..................................')
+    if  ordering_system == 'strahler':
+        # Find  Strahler Ratios: Rb, Rl, Rd
+        Num_Branches = values_by_order[0:num_orders, 1]
+        Diameter_strahler = values_by_order[0:num_orders, 4]
+        Length_strahler = values_by_order[0:num_orders, 2]
+        Orders_strahler = values_by_order[0:num_orders, 0]
 
-    [Rb, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Num_Branches)
-    print('Rb = ' + str(Rb) + ' Rsq = ' + str(r2))
-    [Rd, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Diameter_strahler)
-    print('Rd = ' + str(Rd) + ' Rsq = ' + str(r2))
-    [Rl, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Length_strahler)
-    print('Rl = ' + str(Rl) + ' Rsq = ' + str(r2))
+        print('Branching/length/diameter ratios: ')
+        print('..................................')
+
+        [Rb, r2] = pg_utilities.find_strahler_ratio(Orders_strahler, Num_Branches)
+        print('Rb = ' + str(Rb) + ' Rsq = ' + str(r2))
+        branch_statistics[42] = Rb
+        branch_statistics[43] = r2
+        [Rd, r2] = pg_utilities.find_strahler_ratio(Orders_strahler[Diameter_strahler>0], Diameter_strahler[Diameter_strahler>0])
+        print('Rd = ' + str(Rd) + ' Rsq = ' + str(r2))
+        branch_statistics[44] = Rd
+        branch_statistics[45] = r2
+        [Rl, r2] = pg_utilities.find_strahler_ratio(Orders_strahler[Length_strahler>0], Length_strahler[Length_strahler>0])
+        print('Rl = ' + str(Rl) + ' Rsq = ' + str(r2))
+        branch_statistics[46] = Rl
+        branch_statistics[47] = r2
 
     print('-------------')
     print('     |||||   ')
@@ -1696,8 +1840,10 @@ def summary_statistics(branchGeom, geom, orders, major_minor_results,ordering_sy
     print('      / \    ')
     print('     /   \   ')
     print('-------------')
+    
+    branch_statistics = np.transpose(branch_statistics)
 
-    return np.concatenate((values_by_order, values_overall),0)
+    return np.concatenate((values_by_order, values_overall),0),branch_statistics
 
 
 def smooth_on_sg(rectangular_mesh, non_empties, field):

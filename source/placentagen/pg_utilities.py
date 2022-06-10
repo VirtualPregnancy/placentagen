@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def rotation_matrix_3d(axis, angle_rot):
+    #Creates a 3D transformation that rotates by angle_rot around axis
     axis = axis / np.linalg.norm(axis)  # normalise just in case
     R = np.zeros((3, 3))
     R[0][0] = np.cos(angle_rot) + axis[0] ** 2 * (1 - np.cos(angle_rot))
@@ -19,6 +21,7 @@ def rotation_matrix_3d(axis, angle_rot):
 
 
 def calculate_ellipse_radii(volume, thickness, ellipticity):
+    #Calculates x,y,z radii of ellipse based on three parameters, volume, thickness and eliptcity
     pi = np.pi
     z_radius = thickness / 2.0
     x_radius = np.sqrt(volume * 3.0 / (4.0 * pi * ellipticity * z_radius))
@@ -28,11 +31,13 @@ def calculate_ellipse_radii(volume, thickness, ellipticity):
 
 
 def z_from_xy(x, y, x_radius, y_radius, z_radius):
+    #Calculates z point on elipse surface from x,y coordinates
     z = z_radius * np.sqrt(1.0 - (x / x_radius) ** 2 - (y / y_radius) ** 2)
     return z
 
 
 def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #checks the point x,y,z is in an ellipsoid
     in_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
     if coord_check < 1.0:
@@ -42,6 +47,7 @@ def check_in_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #Checks the point x,yz, is on the surface of an ellipsoid to some tolerance
     zero_tol = 1.e-10
     on_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
@@ -52,6 +58,7 @@ def check_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
+    #check if the point x,y, z is in OR on an ellipsoid
     zero_tol = 1.e-10
     in_ellipsoid = False  # default to false
     coord_check = (x / x_radius) ** 2. + (y / y_radius) ** 2. + (z / z_radius) ** 2.
@@ -64,6 +71,7 @@ def check_in_on_ellipsoid(x, y, z, x_radius, y_radius, z_radius):
 
 
 def angle_two_vectors(vector1, vector2):
+    #Finds the angle between vector 1 and vector 2
     vector1_u = vector1 / np.linalg.norm(vector1)
     vector2_u = vector2 / np.linalg.norm(vector2)
 
@@ -83,18 +91,21 @@ def angle_two_vectors(vector1, vector2):
 
 
 def element_connectivity_1D(node_loc, elems):
+    # Calculates element connectivity in a bifurcating array
     # Initialise connectivity arrays
     num_elems = len(elems)
-    elem_upstream = np.zeros((num_elems, 3), dtype=int)
-    elem_downstream = np.zeros((num_elems, 3), dtype=int)
+
     num_nodes = len(node_loc)
-    elems_at_node = np.zeros((num_nodes, 4), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 10), dtype=int) #allow up to 10-furcations
     # determine elements that are associated with each node
     for ne in range(0, num_elems):
         for nn in range(1, 3):
             nnod = elems[ne][nn]
             elems_at_node[nnod][0] = elems_at_node[nnod][0] + 1
             elems_at_node[nnod][elems_at_node[nnod][0]] = ne
+            
+    elem_upstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
+    elem_downstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
     # assign connectivity
     for ne in range(0, num_elems):
         nnod2 = elems[ne][2]  # second node in elem
@@ -109,7 +120,7 @@ def element_connectivity_1D(node_loc, elems):
     return {'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 def group_elem_parent(ne_parent, elem_downstream):
-
+    #Finds all the elements under a parent element
     ne_old = np.zeros(5000, dtype=int)
     ntemp_list = np.zeros(5000, dtype=int)
     ne_temp = np.zeros(5000, dtype=int)
@@ -165,6 +176,7 @@ def plane_from_3_pts(x0, x1, x2, normalise):
 
 
 def check_colinear(x0, x1, x2):
+    #Checks if three points are colinear
     colinear = False
     vector1 = (x1 - x0) / np.linalg.norm(x1 - x0)
     vector2 = (x1 - x2) / np.linalg.norm(x1 - x2)
@@ -332,115 +344,7 @@ def renumber_geom(nodes,elems):
 
     return {'total_elems': total_el, 'elems': el_array[0:total_el,:], 'total_nodes':total_nodes, 'nodes': nod_array}
 
-def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
-    new_parent_list = np.zeros(2,dtype = int)
-    continuing = False
-    elem = elems_at_node[first_node][1]
-    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
-    branch_starts_at = first_node
-    loop_parent = len(elems)+1
-    print('Assessing branch',branches, 'inlet node', first_node)
-
-    while connected_elems_no ==2 or inlet_branch: #continuing branch
-        check_for_changing = first_node
-        inlet_branch = False
-        if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
-            connected_elems_no=1
-            loop_parent = first_node
-        else:
-            for i in range(0, connected_elems_no):
-                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                if not seen_elements[elem]:
-                    branch_id[elem] = branches
-                    if elems[elem][1] != first_node:
-                        # swap nodes
-                        elems[elem][2] = elems[elem][1]
-                        elems[elem][1] = first_node
-                    seen_elements[elem] = True
-                    first_node = elems[elem][2]
-                    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
-                    if connected_elems_no == 3:
-                        new_parents = 0
-                        for i in range(0, connected_elems_no):
-                            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                            if not seen_elements[elem]:
-                                new_parent_list[new_parents] = elem
-                                new_parents = new_parents + 1
-                                branch_id[elem] = branches + new_parents
-                                if elems[elem][1] != first_node:
-                                    # swap nodes
-                                    elems[elem][2] = elems[elem][1]
-                                    elems[elem][1] = first_node
-                            seen_elements[elem] = True
-                            continuing = True
-                        break
-                    if connected_elems_no == 1:
-                        continuing = False
-                        break
-        if check_for_changing == first_node:
-            break
-    print('Finished branch', branches, 'inlet node', first_node)
-    return new_parent_list,continuing,loop_parent,elem
-
-def fix_elem_direction(inlet_node,nodes,elems):
-    # populate the elems_at_node array listing the elements connected to each node
-    num_nodes = len(nodes)
-    num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
-    for i in range(0, num_elems):
-        elems_at_node[elems[i][1]][0] = elems_at_node[elems[i][1]][0] + 1
-        j = elems_at_node[elems[i][1]][0]
-        elems_at_node[elems[i][1]][j] = elems[i][0]
-        elems_at_node[elems[i][2]][0] = elems_at_node[elems[i][2]][0] + 1
-        j = elems_at_node[elems[i][2]][0]
-        elems_at_node[elems[i][2]][j] = elems[i][0]
-
-    for i in range(0,num_nodes):
-        if np.all(nodes[i,1:4]== inlet_node):
-            first_node = i
-            print("FOUND FIRST NODE",i)
-    seen_elements = np.zeros((num_elems), dtype=bool)
-    branch_id = np.zeros((num_elems),dtype = int)
-    #first_node = inlet_node
-    branches = 1
-    continuing = True
-    old_parent_list = first_node
-    loop_list = np.zeros(1,dtype=int)
-    loop_list[0] = (num_elems+1)
-    branch_start = []
-    branch_end = []
-
-    branch_start = np.append(branch_start, elems_at_node[first_node,1])
-
-    [new_parent_list,continuing,loop_parent,branch_end_elem] = fix_branch_direction(first_node, elems_at_node, elems, seen_elements,branch_id,branches,old_parent_list,True)
-    branch_end = np.append(branch_end, branch_end_elem)
-    while len(new_parent_list)>0:
-        if len(new_parent_list) > 0:
-            new_parent_list2 = []
-            for parent in range(0,len(new_parent_list)):
-                second_node = elems[new_parent_list[parent],2]
-                if second_node not in loop_list:
-                    branches = branches + 1
-                    branch_start  = np.append(branch_start,new_parent_list[parent])
-                    branch_id[new_parent_list[parent]] = branches
-                    [branch_list, continuing,loop_parent,branch_end_elem] = fix_branch_direction(second_node, elems_at_node, elems, seen_elements,
-                                                           branch_id, branches,elems[new_parent_list,2],False)
-                    branch_end = np.append(branch_end, branch_end_elem)
-                else:
-                    print('the parent loop',second_node,loop_list)
-
-                if loop_parent< num_elems:
-                    loop_list = np.append(loop_list, [loop_parent], axis=0)
-                if continuing:
-                    new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
-
-            if(len(new_parent_list2)>0):
-                new_parent_list = new_parent_list2.astype(int)
-            else:
-                new_parent_list = []
-            print('new generation',new_parent_list)
-
-    return elems,branch_id,branch_start,branch_end
+    
 
 def remove_rows(main_array, arrays):
     ######
@@ -513,50 +417,6 @@ def is_member(v, matrix):
             return index
     return -1
 
-
-######
-# Function: Creates a 3D plot of branching tree
-# Inputs: nodes - an M x 3 array giving cartesian coordinates (x,y,z) for the node locations in the tree
-#         elems - an N x 3 array, the first colum in the element number, the second two columns are the index of the start and end node
-#         colour - an N x 1 array where value determines colour of corresponding element
-#         Nc - the maximum number of elements connected at a single node
-# Outputs: 3D plot of tree, with radius proportional to radii and colour depending on the input array
-######
-
-def plot_vasculature_3d(nodes, elems, colour, radii):
-    # initialize arrays
-    Ne = len(elems)
-    elems = elems[:, 1:3]
-    x = np.zeros([Ne, 2])
-    y = np.zeros([Ne, 2])
-    z = np.zeros([Ne, 2])
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    # scale colour and radii
-    colour = (colour - min(colour)) / max(colour) * 255.
-    radii = radii / max(radii) * 3.
-
-    for i in range(0, Ne):
-        # get start and end node
-        nN1 = int(elems[i, 0])
-        nN2 = int(elems[i, 1])
-
-        # get coordinates of nodes
-        x[i, 0] = nodes[nN1, 0]
-        y[i, 0] = nodes[nN1, 1]
-        z[i, 0] = nodes[nN1, 2]
-        x[i, 1] = nodes[nN2, 0]
-        y[i, 1] = nodes[nN2, 1]
-        z[i, 1] = nodes[nN2, 2]
-
-        colour_value = np.asarray(cm.jet(int(colour[i])))
-        ax.plot(np.squeeze(x[i, :]), np.squeeze(y[i, :]), np.squeeze(z[i, :]), c=colour_value[0:3], linewidth=radii[i])
-
-    plt.show()
-
-    return 0
 
 
 ######
@@ -632,28 +492,3 @@ def remove_rows(main_array, arrays):
 
     return main_array, arrays
 
-######
-# Function: Swaps 2 rows in an array
-# Inputs: array - a N x M array
-#         row1 & row2 - the indices of the two rows to be swapped
-# Outputs: array, with row1 and row2 swapped
-######
-
-def row_swap_2d(array, row1, row2):
-    placeholder = np.copy(array[row1, :])
-    array[row1, :] = array[row2, :]
-    array[row2, :] = placeholder
-    return array
-
-######
-# Function: Swaps 2 rows in an array
-# Inputs: array - a N x 1 array
-#         row1 & row2 - the indices of the two rows to be swapped
-# Outputs: array, with row1 and row2 swapped
-######
-
-def row_swap_1d(array, row1, row2):
-    placeholder = np.copy(array[row1])
-    array[row1] = array[row2]
-    array[row2] = placeholder
-    return array

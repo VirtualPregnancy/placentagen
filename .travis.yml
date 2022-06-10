@@ -1,12 +1,12 @@
 language: python
 sudo: false
-dist: trusty
+dist: focal
 python:
-  - "2.7"
   - "3.6"
+  - "3.9"
 install:
-  - pip install -r requirements.txt
   - pip install -U numpy
+  - pip install -r requirements.txt
   - python setup.py develop
 script:
   - nosetests --with-coverage --cover-package=placentagen
