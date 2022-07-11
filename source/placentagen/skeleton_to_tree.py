@@ -208,7 +208,7 @@ def find_inlet_auto(elems,nodes,radii,length_threshold):
     # populate the elems_at_node array listing the elements connected to each node
     num_nodes = len(nodes)
     num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     possible_inlets = []
     for i in range(0, num_elems):
         elems_at_node[elems[i,1],0] = elems_at_node[elems[i,1],0] + 1
@@ -393,7 +393,7 @@ def fix_elem_direction(inlet_node,elems,nodes):
     # populate the elems_at_node array listing the elements connected to each node
     num_nodes = len(nodes)
     num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     branch_id = np.zeros((num_elems),dtype = int)
     branch_start = []
     branch_end = []
@@ -537,7 +537,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     num_nodes = len(nodes)
     elem_numbers = elems[:,0]
     
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     for i in range(0, num_elems):
         elems_at_node[elems[i,1],0] = elems_at_node[elems[i,1],0] + 1
         j = elems_at_node[elems[i,1],0]
