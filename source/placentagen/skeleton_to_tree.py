@@ -336,7 +336,6 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
     branch_end_elem = elem
 
     if connected_elems_no>2: #Occasionally we have a single element branch, this is one of them
-        print("Single element branch",connected_elems_no)
         #create just the first element in each new branch which will give a seed of parents to give back to our main code
         branch_end_elem = elem
         new_parents = 0
@@ -603,6 +602,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     for nb in range(0,len(branch_start)):    
         if nb != first_branch:
             ne = int(branch_start[nb])
+            #print(nb,seen_elements[ne],len(elems[branch_id == nb+1]))
             if not seen_elements[ne]:
                 tmp_elems[kount_elems,0] = kount_elems
                 tmp_elems[kount_elems,1:3] = elems[ne,1:3]
@@ -622,9 +622,10 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
                     elem_map[kount_elems]=ne
                     kount_elems = kount_elems+1
                     seen_elements[ne]=True
-
+            #print(nb,internal_kount,kount_elems,branch_start[nb],branch_end[nb])
+    #print('kount_elems',kount_elems)
     
-    return tmp_elems,elem_map
+    return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
         
              
    
