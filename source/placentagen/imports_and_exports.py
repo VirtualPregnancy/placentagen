@@ -42,6 +42,34 @@ def export_ex_coords(data, groupname, filename, type):
     f.close()
 
 
+def export_ip_coords(data,name,filename):
+    # Write header
+    type = "ipnode"
+    data_num = len(data)
+    filename = filename + '.' + type
+    f = open(filename, 'w')
+    f.write(" CMISS Version 2.1  ipnode File Version 2\n")
+    f.write(" Heading: %s\n\n" % name)
+    f.write(" The number of nodes is [1]: %s \n" % int(data_num))
+    f.write(" Number of coordinates [3]: 3\n")
+    f.write(" Do you want prompting for different versions of nj=1 [N]? N\n")
+    f.write(" Do you want prompting for different versions of nj=2 [N]? N\n")
+    f.write(" Do you want prompting for different versions of nj=3 [N]? N\n")
+    f.write(" The number of derivatives for coordinate 1 is [0]: 0\n")
+    f.write(" The number of derivatives for coordinate 2 is [0]: 0\n")
+    f.write(" The number of derivatives for coordinate 3 is [0]: 0\n")
+
+    # Write element values
+    for x in range(0, data_num):
+        f.write(" Node number [    1]:     %s\n" % int(x + 1))
+        f.write(" The Xj(1) coordinate is [ 0.00000E+00]:  %s\n" % data[x][0])
+        f.write(" The Xj(2) coordinate is [ 0.00000E+00]:  %s\n" % data[x][1])
+        f.write(" The Xj(3) coordinate is [ 0.00000E+00]:  %s\n\n" % data[x][2])
+
+    f.close()
+
+    return 0
+
 def export_ex_field(data, groupname, fieldname, filename, type):
     # Exports field to exnode or exdata format
     # data = array of data
@@ -93,6 +121,28 @@ def export_nodal_rad_field(data, groupname, fieldname, filename, type, nodes, el
         f.write("          %s\n" % (node_rad[y]))
     f.close()
 
+def export_ipfiel(data,filename):
+    data_num = len(data)
+    # write the node radius to an ipfiel file
+    filename = filename + '.ipfiel'
+    f = open(filename, 'w')
+
+    f.write("CMISS Version 2.1  ipelem File Version 2\n")
+    f.write("Heading:\n")
+    f.write("\n")
+    f.write("The number of nodes is [     {0}]:      {1}\n".format(data_num, data_num))
+    f.write("Do you want prompting for different versions of field variable 1 [N]? Y\n")
+    f.write("The number of derivatives for field variable 1 is [0]: 0\n")
+
+    for n in range(0, data_num):
+        f.write("\n")
+        f.write("Node number [     {0}]:    {1}\n".format(n + 1, n + 1))
+        f.write("The number of versions for field variable 1 is [1]:  1\n")
+        # use scientific notation for radius values
+        f.write("The field variable 1 value is [ {0:.5e}]:  {1:.5e}\n".format(data[n], data[n]))
+
+    f.close()
+
 
 def export_exelem_1d(data, groupname, filename):
     # Exports element locations to exelem format
@@ -140,6 +190,31 @@ def export_exelem_1d(data, groupname, filename):
         f.write("   Scale factors:\n")
         f.write("       0.1000000000000000E+01   0.1000000000000000E+01\n")
     f.close()
+
+
+
+def export_ipelem_1d(data, name, filename):
+    # Write header
+    type = "ipelem"
+    data_num = len(data)
+    filename = filename + '.' + type
+    f = open(filename, 'w')
+    f.write(" CMISS Version 2.1  ipelem File Version 2\n")
+    f.write(" Heading: %s\n\n" % name)
+    f.write(" The number of elements is [1]: %s \n\n" % int(data_num))
+
+    # Write element values
+    for x in range(0, data_num):
+        f.write(" Element number [    1]:     %s\n" % int(x + 1))
+        f.write(" The number of geometric Xj-coordinates is [3]: 3\n")
+        f.write(" The basis function type for geometric variable 1 is [1]:  1\n")
+        f.write(" The basis function type for geometric variable 2 is [1]:  1\n")
+        f.write(" The basis function type for geometric variable 3 is [1]:  1\n")
+        f.write(" Enter the 2 global numbers for basis 1: %s %s\n\n" % (int(data[x][1] + 1), int(data[x][2] + 1)))
+
+    f.close()
+
+    return 0
 
 
 def export_exelem_3d_linear(data, groupname, filename):

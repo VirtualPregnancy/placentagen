@@ -208,7 +208,7 @@ def find_inlet_auto(elems,nodes,radii,length_threshold):
     # populate the elems_at_node array listing the elements connected to each node
     num_nodes = len(nodes)
     num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     possible_inlets = []
     for i in range(0, num_elems):
         elems_at_node[elems[i,1],0] = elems_at_node[elems[i,1],0] + 1
@@ -334,55 +334,72 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
     loop_parent = len(elems)+1
     cycle = False
     branch_end_elem = elem
-    
-    while connected_elems_no ==2 or inlet_branch: #continuing branch
-        inlet_branch = False #No longer an inlet branch, if it was
-        #Checking whether first node in an element is a parent, and its not where the branch starts (should be detecting loops)
-        if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
-            connected_elems_no=1
-            loop_parent = first_node
-        else:
-            if first_node == branch_starts_at and seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
-               connected_elems_no = 1                
-            for i in range(0, connected_elems_no): #Goes through elems
-                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                if not seen_elements[elem]:
-                    branch_id[elem] = branches #This is a new element and belongs in this branch
-                    if elems[elem][1] != first_node: #Swap nodes if going 'wrong way'
-                        # swap nodes
-                        elems[elem][2] = elems[elem][1]
-                        elems[elem][1] = first_node
-                    seen_elements[elem] = True
-                    first_node = elems[elem][2] #New first node is the second node of the element
-                    connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
-                    #Now we check if we've reached the end of a branch (either a branch point, a termination, or we have come back in a loop around)
-                    if connected_elems_no >= 3: #Bifurcation or morefication? point
-                        #create just the first element in each new branch which will give a seed of parents to give back to our main code
-                        branch_end_elem = elem
-                        new_parents = 0
-                        for i in range(0, connected_elems_no):
-                            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
-                            if not seen_elements[elem]:
-                                new_parent_list[new_parents] = elem
-                                new_parents = new_parents + 1
-                                branch_id[elem] = branches + new_parents
-                                if elems[elem][1] != first_node:
-                                    # swap nodes
-                                    elems[elem][2] = elems[elem][1]
-                                    elems[elem][1] = first_node
-                            seen_elements[elem] = True
-                            continuing = True #We are going to grow some more branches from here
-                    elif connected_elems_no == 1: #Terminal
-                        branch_end_elem = elem
-                        continuing = False #This branch does not continue beyond this point
-                        break
-                    elif connected_elems_no == 2: 
-                        branch_end_elem = elem
-                         #A check to see if a branch has looped back on itself or another existing branch. If it has we want to backtrack through the branch and break it in the middle. However, for now lets see what happens if we treat simply as a terminal.
-                        if seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
-                            continuing = False
-                            cycle = True
-                            connected_elems_no = 1 #trick into leaving main loop here
+
+    if connected_elems_no>2: #Occasionally we have a single element branch, this is one of them
+        #create just the first element in each new branch which will give a seed of parents to give back to our main code
+        branch_end_elem = elem
+        new_parents = 0
+        for i in range(0, connected_elems_no):
+            elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+            if not seen_elements[elem]:
+                new_parent_list[new_parents] = elem
+                new_parents = new_parents + 1
+                branch_id[elem] = branches + new_parents
+                if elems[elem][1] != first_node:
+                    # swap nodes
+                    elems[elem][2] = elems[elem][1]
+                    elems[elem][1] = first_node
+            seen_elements[elem] = True
+            continuing = True #We are going to grow some more branches from here
+    else:
+        while connected_elems_no ==2 or inlet_branch: #continuing branch
+            inlet_branch = False #No longer an inlet branch, if it was
+            #Checking whether first node in an element is a parent, and its not where the branch starts (should be detecting loops)
+            if first_node in np.asarray(old_parent_list) and first_node != branch_starts_at:
+                connected_elems_no=1
+                loop_parent = first_node
+            else:
+                if first_node == branch_starts_at and seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
+                    connected_elems_no = 1
+                for i in range(0, connected_elems_no): #Goes through elems
+                    elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                    if not seen_elements[elem]:
+                        branch_id[elem] = branches #This is a new element and belongs in this branch
+                        if elems[elem][1] != first_node: #Swap nodes if going 'wrong way'
+                            # swap nodes
+                            elems[elem][2] = elems[elem][1]
+                            elems[elem][1] = first_node
+                        seen_elements[elem] = True
+                        first_node = elems[elem][2] #New first node is the second node of the element
+                        connected_elems_no = elems_at_node[first_node][0]  # number of elements connected to this one
+                        #Now we check if we've reached the end of a branch (either a branch point, a termination, or we have come back in a loop around)
+                        if connected_elems_no >= 3: #Bifurcation or morefication? point
+                            #create just the first element in each new branch which will give a seed of parents to give back to our main code
+                            branch_end_elem = elem
+                            new_parents = 0
+                            for i in range(0, connected_elems_no):
+                                elem = elems_at_node[first_node][i + 1]  # elements start at column index 1
+                                if not seen_elements[elem]:
+                                    new_parent_list[new_parents] = elem
+                                    new_parents = new_parents + 1
+                                    branch_id[elem] = branches + new_parents
+                                    if elems[elem][1] != first_node:
+                                        # swap nodes
+                                        elems[elem][2] = elems[elem][1]
+                                        elems[elem][1] = first_node
+                                seen_elements[elem] = True
+                                continuing = True #We are going to grow some more branches from here
+                        elif connected_elems_no == 1: #Terminal
+                            branch_end_elem = elem
+                            continuing = False #This branch does not continue beyond this point
+                            break
+                        elif connected_elems_no == 2:
+                            branch_end_elem = elem
+                            #A check to see if a branch has looped back on itself or another existing branch. If it has we want to backtrack through the branch and break it in the middle. However, for now lets see what happens if we treat simply as a terminal.
+                            if seen_elements[elems_at_node[first_node][1:connected_elems_no+1]].all():
+                                continuing = False
+                                cycle = True
+                                connected_elems_no = 1 #trick into leaving main loop here
 
     if new_parents > 0:
        new_parent_list = new_parent_list[0:new_parents]    
@@ -393,7 +410,7 @@ def fix_elem_direction(inlet_node,elems,nodes):
     # populate the elems_at_node array listing the elements connected to each node
     num_nodes = len(nodes)
     num_elems = len(elems)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     branch_id = np.zeros((num_elems),dtype = int)
     branch_start = []
     branch_end = []
@@ -537,7 +554,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     num_nodes = len(nodes)
     elem_numbers = elems[:,0]
     
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int)
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int)
     for i in range(0, num_elems):
         elems_at_node[elems[i,1],0] = elems_at_node[elems[i,1],0] + 1
         j = elems_at_node[elems[i,1],0]
@@ -585,6 +602,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     for nb in range(0,len(branch_start)):    
         if nb != first_branch:
             ne = int(branch_start[nb])
+            #print(nb,seen_elements[ne],len(elems[branch_id == nb+1]))
             if not seen_elements[ne]:
                 tmp_elems[kount_elems,0] = kount_elems
                 tmp_elems[kount_elems,1:3] = elems[ne,1:3]
@@ -604,9 +622,10 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
                     elem_map[kount_elems]=ne
                     kount_elems = kount_elems+1
                     seen_elements[ne]=True
-
+            #print(nb,internal_kount,kount_elems,branch_start[nb],branch_end[nb])
+    #print('kount_elems',kount_elems)
     
-    return tmp_elems,elem_map
+    return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
         
              
    

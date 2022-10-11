@@ -96,7 +96,7 @@ def element_connectivity_1D(node_loc, elems):
     num_elems = len(elems)
 
     num_nodes = len(node_loc)
-    elems_at_node = np.zeros((num_nodes, 10), dtype=int) #allow up to 10-furcations
+    elems_at_node = np.zeros((num_nodes, 20), dtype=int) #allow up to 20-furcations
     # determine elements that are associated with each node
     for ne in range(0, num_elems):
         for nn in range(1, 3):
