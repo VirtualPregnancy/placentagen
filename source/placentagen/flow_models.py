@@ -203,8 +203,12 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
         if np.array(fit_flow_params).all() == 0:
             include_flow = False
 
-        if not include_myo and not include_flow:
-            diameter= bisection_method_diam(5.,500.,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
+        if not include_myo and not include_flow: #passive model
+            diameter= bisection_method_diam(5.,fit_passive_params[0]*1.10,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
+            if diameter <10.:
+                 lowest_sign = find_possible_roots(0.,fit_passive_params[0]*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                 diameter= bisection_method_diam(lowest_sign[0],lowest_sign[1],fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
+            
         else:
             diameter_pass = bisection_method_diam(5.,500.,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
             D0 = fit_passive_params[0]
