@@ -207,26 +207,25 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
         if not include_myo and not include_flow: #passive model
             diameter= bisection_method_diam(5.,fit_passive_params[0]*1.10,fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
             if diameter <10.:
-                 lowest_sign = find_possible_roots(0.,fit_passive_params[0]*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                 lowest_sign = find_possible_roots(0.,fit_passive_params[0]*2.0, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
                  diameter= bisection_method_diam(lowest_sign[0],lowest_sign[1],fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
-
         else:
-            diameter_pass = bisection_method_diam(5.,500.,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
+            diameter_pass = bisection_method_diam(5.,fit_passive_params[0]*1.10,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
             D0 = fit_passive_params[0]
             dp_blood = fixed_flow_params[2]
             reference_diameter = np.max([diameter_pass,D0])
             if(pressure>12.) or (dp_blood>0):
                 #Looks for a diameter between 5 um and 10% larger than the passive diameter at that transmural pressure as a possible root
-                lowest_sign = find_possible_roots(10.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                lowest_sign = find_possible_roots(10.,reference_diameter*2.0, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
             else:
-                lowest_sign=np.array([10.,reference_diameter*1.10])
+                lowest_sign=np.array([10.,reference_diameter*2.0])
 
             diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
             #if verbose:
             if diameter<10:
                 print('zero',pressure,dp_blood,lowest_sign,diameter_pass,reference_diameter)
-                lowest_sign = find_possible_roots(0.,reference_diameter*1.10, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                lowest_sign = find_possible_roots(0.,reference_diameter*2.0, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
                 diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
         return diameter
@@ -263,8 +262,7 @@ def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, 
                 samesign = False
             if(i==(discretise -1)) and samesign:
                 samesign = False
-        if verbose:
-            print('had to go again')
+
     lowest_signchange = np.zeros(2)
     lowest_signchange[0] = diameter_range[i]
     lowest_signchange[1] = diameter_range[i-1]
