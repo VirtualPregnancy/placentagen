@@ -626,6 +626,8 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     #print('kount_elems',kount_elems)
     
     return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
+    
+    
    # included to test remove multifurcations functionality   
      def check_multiple(elem_connect):
     up = elem_connect['elem_up']
