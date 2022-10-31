@@ -626,8 +626,59 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     #print('kount_elems',kount_elems)
     
     return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
-        
-             
+   # included to test remove multifurcations functionality   
+     def check_multiple(elem_connect):
+    up = elem_connect['elem_up']
+    down = elem_connect['elem_down']
+    for i in range(0, len(up)):
+        if up[i][0] > 2:
+            print ('element ', i, 'has >2 upstream elements')
+    max_down=0
+    count = 0
+    for i in range(0, len(down)):
+        if down[i][0] > 2:
+            print ('element ', i, 'has ', down[i][0], ' downstream elements')
+            if max_down < down[i][0]:
+                max_down=down[i][0]
+            count = count + 1
+
+    print ('number of elements with >2 down stream: ', count)
+
+    return max_down
+
+def extend_node(elem_i, geom):
+    nodes=geom['nodes']
+    elems=geom['elems']  # nodes and elems initiated
+    num_nodes = len(nodes)
+    print('original nodes are:', nodes)
+    dif = np.zeros(3)   #to store the difference between the two nodes(x,y,z) in a numpy array
+    print('dif old:', dif)
+    new_node = -1 * np.ones(3)  #new_node initiated
+    norm = np.ones(3)    # newly added by VS
+    print('new node and the dif array are:', new_node, dif )  #newly added by VS
+    print('number of nodes:',num_nodes)      #newly added by VS
+    node1 = int(elems[elem_i][1])
+    node2 = int(elems[elem_i][2])  # node at other end of the element
+
+    for i in range(0, 3):
+        # assuming nodes starts index = node number (start at 0)
+        #dif[i] = np.abs(nodes[node1][i] - nodes[node2][i])  # store difference of xyz
+        dif[i] = (nodes[node2][i] - nodes[node1][i])
+    print('storing the dif:',dif)    #newly added by VS
+
+    #for i in range(0, 3):
+    #norm[i] = np.linalg.norm(dif[i])  # newly added by VS
+    norm = np.linalg.norm(dif)
+    print('normalized vector:', norm)
+    #print('dif and norm product:', (dif*norm))
+    print('dif and norm division (unit vector):', (dif/norm))
+    new_node = (nodes[node2] + ((dif/norm)*1e-3))
+    print('new_node created at:', new_node)  # newly added by VS
+    nodes = np.vstack((nodes, new_node))  # new node created in the same axis as the old one
+    node2 = int(num_nodes)
+    print('nodes, node1 and node2:', nodes, node1, node2) #newly added by VS
+    return nodes, node2
+            
    
    
    
