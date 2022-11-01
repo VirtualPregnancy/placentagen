@@ -1032,8 +1032,6 @@ def dist_two_vectors(vector1, vector2):
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
-    print(ne_parent)
-    print(len(elem_downstream))
     parentlist = np.zeros(len(elem_downstream), dtype=int)
     ne_old = np.zeros(len(elem_downstream), dtype=int)
     ntemp_list = np.zeros(len(elem_downstream), dtype=int)
