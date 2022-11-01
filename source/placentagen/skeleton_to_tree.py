@@ -181,21 +181,15 @@ def extend_node(elem_i, geom):
     nodes = geom['nodes']
     elems = geom['elems']  # nodes and elems initiated
     num_nodes = len(nodes)
-    print('original nodes are:', nodes)
-    dif = np.zeros(3)  # to store the difference between the two nodes(x,y,z) in a numpy array
-    print('dif old:', dif)
-    new_node = -1 * np.ones(3)  # new_node initiated
-    norm = np.ones(3)  # normalized vector (i.e) unit vector
-    print('new node and the dif array are:', new_node, dif)  # newly added by VS
-    print('number of nodes:', num_nodes)  # newly added by VS
-    node1 = int(elems[elem_i][1])
-    node2 = int(elems[elem_i][2])  # node at other end of the element
-    dif = nodes[node2,:]-nodes[node1,:]
-    dif = dif/np.linalg.norm(dif)  # calculating unit vector for the element
-
-    new_node = (nodes[node2] + ((dif) * 1e-3)) #1/1000th of a mm from node 2 (1 micron)
+    new_node = np.ones(4)  # new_node initiated
+    node1 = int(elems[elem_i][1]) #start node of parent element
+    node2 = int(elems[elem_i][2])  # end node of parent element
+    dif = (nodes[node2,1:4]-nodes[node1,1:4]) #vector of parent element
+    dif=dif/np.linalg.norm(dif) #unit vector
+    new_node[0] = num_nodes #node number for new node
+    new_node[1:4] = (nodes[node2,1:4] + ((dif) * 1e-3)) #1/1000th of a mm from node 2 (1 micron)location of new node
     nodes = np.vstack((nodes, new_node))  # new node created in the same axis as the old one
-    node2 = int(num_nodes)
+    node2 = int(num_nodes) #new node number
     return nodes, node2
 
 
@@ -551,12 +545,11 @@ def remove_disconnected(elems, euclid_radii, branch_id, seen):
 
 
 
-def remove_multiple_elements(elems, nodes):
+def remove_multiple_elements(nodes,elems):
     ######
     # Function: Removes elements with more than 2 downstream elements by adding a new element of minimal length and
     #           reallocating down stream elements to this
-    # Inputs: geom - structure containing node and element information, radii, length etc.
-    #         elem_connect - structure containing information for up and downstream elements for each elem
+    # Inputs: elements and nodes
     # Outputs: geom - updated structure with elements having a maximum of 2 downstream elements
     ######
     geom = {}
@@ -571,18 +564,16 @@ def remove_multiple_elements(elems, nodes):
         for ne in range(0, len(elem_down)):
             if elem_down[ne][0] > 2:  # more than 2 connected downstream
                 geom['nodes'], node2 = extend_node(ne, geom)  # create new node
-                geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
+                geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old)
         elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
-
         max_down = check_multiple(elem_connect)
-    num_elems = len(geom['elems'])
     elem_down = elem_connect['elem_down']
     elem_up = elem_connect['elem_up']
     geom['elem_down'] = elem_down[:,0:3]
     geom['elem_up'] = elem_up[:,0:3]
 
 
-    return geom['elems'],geom['nodes']
+    return geom
     
 def remove_small_radius(elems,radii,branch_id,branch_start,threshold):
     #Creating a list of elements with radii less than the threshold
@@ -735,7 +726,7 @@ def update_elems(elem_i, node2, geom, elem_connect):
     nodes=geom['nodes']
 
     num_elem = len(elems)
-    new_elem = -1 * np.ones(3)
+    new_elem = np.ones(3,dtype=int)
     node1=int(elems[elem_i][2]) #node other end of elem
 
     # create new elem connecting node1 and new node2
@@ -753,17 +744,17 @@ def update_elems(elem_i, node2, geom, elem_connect):
 
     geom['elems']=elems
 
-    # add copy of node1 geom for node2 at end
-    for item in geom.keys():
-        current = geom[item]
-        if item == 'nodes' or item == 'elems':
-            continue #node and element already appended
-        elif item == 'length': #radii 1D array
-            new_length = find_length_single(nodes, node1, node2)
-            current = np.hstack((current, new_length))
-        else:
-            current = np.hstack((current, current[elem_i]))
-        geom[item]=current
+    ## add copy of node1 geom for node2 at end
+    #for item in geom.keys():
+    #    current = geom[item]
+    #    if item == 'nodes' or item == 'elems':
+    #        continue #node and element already appended
+    #    elif item == 'length': #radii 1D array
+    #        new_length = find_length_single(nodes, node1, node2)
+    #        current = np.hstack((current, new_length))
+    #    else:
+    #        current = np.hstack((current, current[elem_i]))
+    #    geom[item]=current
 
     return geom
              
