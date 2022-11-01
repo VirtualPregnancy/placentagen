@@ -714,7 +714,50 @@ def extend_node(elem_i, geom):
     return nodes, node2
             
    
+def update_elems(elem_i, node2, geom, elem_connect):
+    #unpack inputs
+    elem_up = elem_connect['elem_up']
+    elem_down = elem_connect['elem_down']
+    elems=geom['elems']
+    nodes=geom['nodes']
+
+    num_elem = len(elems)
+    new_elem = -1 * np.ones(3)
+    node1=int(elems[elem_i][2]) #node other end of elem
+
+    # create new elem connecting node1 and new node2
+    new_elem[0] = num_elem  # elem numbering starts from 0; [0 1 2] num_elem = 3; new elem = 3
+    new_elem[1] = node1
+    new_elem[2] = node2
+
+    # add new element to end
+    elems = np.vstack((elems, new_elem))
+
+    # update after second downstream element with new node
+    for i in range(2,elem_down[elem_i][0]+1):
+        old_elem = elem_down[elem_i][i]  # first down stream element
+        elems[old_elem][1] = node2  # change starting node of old_elem to new node2
+
+    geom['elems']=elems
+
+    # add copy of node1 geom for node2 at end
+    for item in geom.keys():
+        current = geom[item]
+        # print 'key:', item
+        #print 'current', current
+        # print 'current[ne]', current[ne]
+        if item == 'nodes' or item == 'elems':
+            continue #node and element already appended
+        elif item == 'length': #radii 1D array
+            new_length = find_length_single(nodes, node1, node2)
+            current = np.hstack((current, new_length))
+        else:
+            current = np.hstack((current, current[elem_i]))
+        geom[item]=current
+
+    return geom     
    
-   
+
+
    
 
