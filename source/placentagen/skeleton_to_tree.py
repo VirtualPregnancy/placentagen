@@ -10,6 +10,24 @@ from . import pg_utilities
 from . import analyse_tree
 from . import imports_and_exports
 
+def check_multiple(elem_connect):
+    up = elem_connect['elem_up']
+    down = elem_connect['elem_down']
+    for i in range(0, len(up)):
+        if up[i][0] > 2:
+            print ('element ', i, 'has >2 upstream elements')
+    max_down=0
+    count = 0
+    for i in range(0, len(down)):
+        if down[i][0] > 2:
+            print ('element ', i, 'has ', down[i][0], ' downstream elements')
+            if max_down < down[i][0]:
+                max_down=down[i][0]
+            count = count + 1
+
+    print ('number of elements with >2 down stream: ', count)
+
+    return max_down
 
 def create_graph_structure(pixel_graph, coordinates,dimensions,groupname,outputfile):
     mydegrees = np.zeros(len(coordinates), dtype=int)
@@ -137,10 +155,14 @@ def delete_unused_nodes(nodes,elems):
     for nn in range(0,len(nodes)):
        if nodes[nn,0] not in used_nodes:
           delete_list = np.append(delete_list,nn)
+          print(nn,nodes[nn,0])
        else:
           node_map[nn]=node_kount#maps old node, to current count 
           node_kount = node_kount+1
-    if delete_list != []:        
+    if delete_list is not []:
+        delete_list = delete_list.astype(int)
+        nodes = np.delete(nodes,delete_list,axis=0)
+    elif delete_list != []:
         delete_list = delete_list.astype(int)
         nodes = np.delete(nodes,delete_list,axis=0)
 
@@ -151,9 +173,32 @@ def delete_unused_nodes(nodes,elems):
             nn = elems[ne,nind] #Old node number
             elems[ne,nind] = int(node_map[nn])
 
-
+    print('DELETING NODES',delete_list)
     return nodes, elems
-    
+
+
+def extend_node(elem_i, geom):
+    nodes = geom['nodes']
+    elems = geom['elems']  # nodes and elems initiated
+    num_nodes = len(nodes)
+    print('original nodes are:', nodes)
+    dif = np.zeros(3)  # to store the difference between the two nodes(x,y,z) in a numpy array
+    print('dif old:', dif)
+    new_node = -1 * np.ones(3)  # new_node initiated
+    norm = np.ones(3)  # normalized vector (i.e) unit vector
+    print('new node and the dif array are:', new_node, dif)  # newly added by VS
+    print('number of nodes:', num_nodes)  # newly added by VS
+    node1 = int(elems[elem_i][1])
+    node2 = int(elems[elem_i][2])  # node at other end of the element
+    dif = nodes[node2,:]-nodes[node1,:]
+    dif = dif/np.linalg.norm(dif)  # calculating unit vector for the element
+
+    new_node = (nodes[node2] + ((dif) * 1e-3)) #1/1000th of a mm from node 2 (1 micron)
+    nodes = np.vstack((nodes, new_node))  # new node created in the same axis as the old one
+    node2 = int(num_nodes)
+    return nodes, node2
+
+
 def find_distances_using_normal(coord1, coord2, VolumeImage):
 
     # get centre line vector
@@ -285,6 +330,25 @@ def find_radius_euclidean(DistanceImage,elems,nodes):
     return radius
 
 
+def find_radius_euclidean_2d(DistanceImage, elems, nodes):
+    # Distance image contains a Euclidean distance map created from simple itk, so indexing is
+    # z, y, x
+
+    total_nodes = len(nodes)
+    total_elems = len(elems)
+    # In terms of node coordinates, y is up down
+    radius = np.zeros(total_elems)
+    for ne in range(0, total_elems):
+        nod1 = elems[ne, 1]
+        nod2 = elems[ne, 2]
+        radius1 = DistanceImage[int(nodes[nod1, 1]), int(nodes[nod1, 2])]
+        radius2 = DistanceImage[int(nodes[nod2, 1]), int(nodes[nod2, 2])]
+        radius[ne] = (radius1 + radius2) / 2.
+        if(ne<=10):
+            print(ne,nod1,nod2,radius[ne],DistanceImage[int(nodes[nod1, 1]), int(nodes[nod1, 2])])
+
+    return radius
+
 def find_radius_normal_projection(SegmentationImage, elems, nodes, euclid_radii):
     ######
     # Function: Find radius by normal projection
@@ -321,6 +385,7 @@ def find_radius_normal_projection(SegmentationImage, elems, nodes, euclid_radii)
     normal_radii[difference > cutoff] = euclid_radii[difference > cutoff]
 
     return normal_radii
+
     
 def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,branches,old_parent_list,inlet_branch):
     #This routine should correct branch direction correctly in a generated tree
@@ -483,6 +548,41 @@ def remove_disconnected(elems, euclid_radii, branch_id, seen):
         elems[ne,0] = ne
         
     return elems, euclid_radii,branch_id
+
+
+
+def remove_multiple_elements(elems, nodes):
+    ######
+    # Function: Removes elements with more than 2 downstream elements by adding a new element of minimal length and
+    #           reallocating down stream elements to this
+    # Inputs: geom - structure containing node and element information, radii, length etc.
+    #         elem_connect - structure containing information for up and downstream elements for each elem
+    # Outputs: geom - updated structure with elements having a maximum of 2 downstream elements
+    ######
+    geom = {}
+    geom['nodes']=nodes
+    geom['elems']=elems
+    elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
+    # unpackage information
+    max_down = check_multiple(elem_connect)
+
+    while max_down > 2:
+        elem_down = elem_connect['elem_down']
+        for ne in range(0, len(elem_down)):
+            if elem_down[ne][0] > 2:  # more than 2 connected downstream
+                geom['nodes'], node2 = extend_node(ne, geom)  # create new node
+                geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
+        elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
+
+        max_down = check_multiple(elem_connect)
+    num_elems = len(geom['elems'])
+    elem_down = elem_connect['elem_down']
+    elem_up = elem_connect['elem_up']
+    geom['elem_down'] = elem_down[:,0:3]
+    geom['elem_up'] = elem_up[:,0:3]
+
+
+    return geom['elems'],geom['nodes']
     
 def remove_small_radius(elems,radii,branch_id,branch_start,threshold):
     #Creating a list of elements with radii less than the threshold
@@ -626,94 +726,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     #print('kount_elems',kount_elems)
     
     return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
-    
-    
-######## included to test remove multifurcations functionality 
-  
-def remove_multiple_elements(geom, elem_connect, type):
-    # unpackage information
-    max_down = check_multiple(elem_connect)
 
-    while max_down > 2:
-        elem_down = elem_connect['elem_down']
-        for ne in range(0, len(elem_down)):
-            if elem_down[ne][0] > 2:  # more than 2 connected downstream
-                if type == 'subtree':
-                    geom['nodes'], node2 = extend_node_subtree(ne, geom)  # create new node
-                    geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
-                else:
-                    geom['nodes'], node2 = extend_node(ne, geom)  # create new node
-                    geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
-        if type == 'subtree':
-            elem_connect = element_connectivity_1D_subtree(geom['nodes'], geom['elems'], 6)
-        else:
-            elem_connect = element_connectivity_1D(geom['nodes'], geom['elems'], 6)
-
-        max_down = check_multiple(elem_connect)
-    num_elems = len(geom['elems'])
-    elem_down = elem_connect['elem_down']
-    elem_up = elem_connect['elem_up']
-    geom['elem_down'] = elem_down[:,0:3]
-    geom['elem_up'] = elem_up[:,0:3]
-
-
-    return geom, elem_connect   
-   
-   
-   
-def check_multiple(elem_connect):
-    up = elem_connect['elem_up']
-    down = elem_connect['elem_down']
-    for i in range(0, len(up)):
-        if up[i][0] > 2:
-            print ('element ', i, 'has >2 upstream elements')
-    max_down=0
-    count = 0
-    for i in range(0, len(down)):
-        if down[i][0] > 2:
-            print ('element ', i, 'has ', down[i][0], ' downstream elements')
-            if max_down < down[i][0]:
-                max_down=down[i][0]
-            count = count + 1
-
-    print ('number of elements with >2 down stream: ', count)
-
-    return max_down
-
-def extend_node(elem_i, geom):
-    nodes=geom['nodes']
-    elems=geom['elems']  # nodes and elems initiated
-    num_nodes = len(nodes)
-    print('original nodes are:', nodes)
-    dif = np.zeros(3)   #to store the difference between the two nodes(x,y,z) in a numpy array
-    print('dif old:', dif)
-    new_node = -1 * np.ones(3)  #new_node initiated
-    norm = np.ones(3)    # newly added by VS
-    print('new node and the dif array are:', new_node, dif )  #newly added by VS
-    print('number of nodes:',num_nodes)      #newly added by VS
-    node1 = int(elems[elem_i][1])
-    node2 = int(elems[elem_i][2])  # node at other end of the element
-
-    for i in range(0, 3):
-        # assuming nodes starts index = node number (start at 0)
-        #dif[i] = np.abs(nodes[node1][i] - nodes[node2][i])  # store difference of xyz
-        dif[i] = (nodes[node2][i] - nodes[node1][i])
-    print('storing the dif:',dif)    #newly added by VS
-
-    #for i in range(0, 3):
-    #norm[i] = np.linalg.norm(dif[i])  # newly added by VS
-    norm = np.linalg.norm(dif)
-    print('normalized vector:', norm)
-    #print('dif and norm product:', (dif*norm))
-    print('dif and norm division (unit vector):', (dif/norm))
-    new_node = (nodes[node2] + ((dif/norm)*1e-3))
-    print('new_node created at:', new_node)  # newly added by VS
-    nodes = np.vstack((nodes, new_node))  # new node created in the same axis as the old one
-    node2 = int(num_nodes)
-    print('nodes, node1 and node2:', nodes, node1, node2) #newly added by VS
-    return nodes, node2
-            
-   
 def update_elems(elem_i, node2, geom, elem_connect):
     #unpack inputs
     elem_up = elem_connect['elem_up']
@@ -743,9 +756,6 @@ def update_elems(elem_i, node2, geom, elem_connect):
     # add copy of node1 geom for node2 at end
     for item in geom.keys():
         current = geom[item]
-        # print 'key:', item
-        #print 'current', current
-        # print 'current[ne]', current[ne]
         if item == 'nodes' or item == 'elems':
             continue #node and element already appended
         elif item == 'length': #radii 1D array
@@ -755,9 +765,10 @@ def update_elems(elem_i, node2, geom, elem_connect):
             current = np.hstack((current, current[elem_i]))
         geom[item]=current
 
-    return geom     
+    return geom
+             
    
-
-
+   
+   
    
 
