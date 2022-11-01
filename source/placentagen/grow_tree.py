@@ -107,7 +107,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     numtb = 0  # count of terminals
 
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
-    print(parentlist)
     # Initialise LD array to map each seed point to a parent branch.
     # For a single parent, all seed points will initially be mapped to
     # it; for multiple parents data_to_mesh is called to calculate
@@ -127,7 +126,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                 map_seed_to_elem[nd] = 0
                 datapoints[nd][:] = 0
                 nd_for_parent = nd_for_parent + 1
-        print('nd for parent', nd_for_parent)
         datapoints = datapoints[np.nonzero(map_seed_to_elem)] #remove the datapoints you are currently analysing from master list
         map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)] #remove parent you are currently analysing from master list
         data_current_parent.resize(nd_for_parent, 3,refcheck=False)
@@ -362,7 +360,6 @@ def list_dataless_parents(datapoints, initial_geom,threshold):
 
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
     remove_elem = np.empty((0))
-    print(parentlist)
     # Initialise LD array to map each seed point to a parent branch.
     # For a single parent, all seed points will initially be mapped to
     # it; for multiple parents data_to_mesh is called to calculate
