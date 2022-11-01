@@ -1,7 +1,5 @@
 import os
 import placentagen as pg
-from placentaAnalysisFunctions import *
-from placentaAnalysis_utilities import *
 path = '/hpc/vsri355/Modelling/Modelling-files/test-inputs' #points to the folder containing the ex nodes and elem files
 os.chdir(path)
 file_name = "trialtree"  # file names of nodes and elems and takes in the node and elem files to be used
@@ -12,7 +10,7 @@ chorion_and_stem['elems'] = pg.import_exelem_tree(file_name+'.exelem')['elems']
 #populate element connectivity
 elem_connectivity = pg.element_connectivity_1D(chorion_and_stem['nodes'],chorion_and_stem['elems'])
 #removing multiple connections
-chorion_and_stem,elem_connectivity=remove_multiple_elements(chorion_and_stem,elem_connectivity,type=None)
+chorion_and_stem,elem_connectivity=pg.remove_multiple_elements(chorion_and_stem,elem_connectivity,type=None)
 output = 1  # set whether output exfiles are made
 if output == 1:
     # cmgui files to be exported

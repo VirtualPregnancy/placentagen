@@ -628,8 +628,40 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
     
     
-   # included to test remove multifurcations functionality   
-     def check_multiple(elem_connect):
+######## included to test remove multifurcations functionality 
+  
+def remove_multiple_elements(geom, elem_connect, type):
+    # unpackage information
+    max_down = check_multiple(elem_connect)
+
+    while max_down > 2:
+        elem_down = elem_connect['elem_down']
+        for ne in range(0, len(elem_down)):
+            if elem_down[ne][0] > 2:  # more than 2 connected downstream
+                if type == 'subtree':
+                    geom['nodes'], node2 = extend_node_subtree(ne, geom)  # create new node
+                    geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
+                else:
+                    geom['nodes'], node2 = extend_node(ne, geom)  # create new node
+                    geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old
+        if type == 'subtree':
+            elem_connect = element_connectivity_1D_subtree(geom['nodes'], geom['elems'], 6)
+        else:
+            elem_connect = element_connectivity_1D(geom['nodes'], geom['elems'], 6)
+
+        max_down = check_multiple(elem_connect)
+    num_elems = len(geom['elems'])
+    elem_down = elem_connect['elem_down']
+    elem_up = elem_connect['elem_up']
+    geom['elem_down'] = elem_down[:,0:3]
+    geom['elem_up'] = elem_up[:,0:3]
+
+
+    return geom, elem_connect   
+   
+   
+   
+def check_multiple(elem_connect):
     up = elem_connect['elem_up']
     down = elem_connect['elem_down']
     for i in range(0, len(up)):
