@@ -107,7 +107,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
     numtb = 0  # count of terminals
 
     parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
-
     # Initialise LD array to map each seed point to a parent branch.
     # For a single parent, all seed points will initially be mapped to
     # it; for multiple parents data_to_mesh is called to calculate
@@ -127,7 +126,6 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
                 map_seed_to_elem[nd] = 0
                 datapoints[nd][:] = 0
                 nd_for_parent = nd_for_parent + 1
-
         datapoints = datapoints[np.nonzero(map_seed_to_elem)] #remove the datapoints you are currently analysing from master list
         map_seed_to_elem = map_seed_to_elem[np.nonzero(map_seed_to_elem)] #remove parent you are currently analysing from master list
         data_current_parent.resize(nd_for_parent, 3,refcheck=False)
@@ -322,6 +320,70 @@ def grow_large_tree(angle_max, angle_min, fraction, min_length, point_limit, vol
 
     return {'nodes': node_loc, 'elems': elems, 'elem_up': elem_upstream, 'elem_down': elem_downstream, 'term_loc': tb_loc}
 
+def list_dataless_parents(datapoints, initial_geom,threshold):
+
+    # We can estimate the number of elements in the generated model based on the number of data (seed points) to
+    #  pre-allocate data arrays.
+    est_generation = int(np.ceil(np.log(len(datapoints)) / np.log(2)))
+    total_estimated = 0
+
+    for i in range(0, est_generation + 1):
+        total_estimated = total_estimated + 2 ** i
+
+    print('total_estimated', total_estimated)
+    # Define the total number of nodes and elements prior to growing, plus the new number expected
+    num_elems_old = len(initial_geom["elems"])
+    num_nodes_old = len(initial_geom["nodes"])
+    num_elems_new = num_elems_old + total_estimated
+    num_nodes_new = num_nodes_old + total_estimated
+    print('Number of existing elements ' + str(num_elems_old))
+    print('Number of existing nodes ' + str(num_nodes_old))
+    print('Expected number of elements after growing ', str(num_elems_new))
+    print('Expected number of nodes after growing ', str(num_nodes_new))
+
+    original_data_length = len(datapoints)
+    # Pre-allocation of data arrays
+    # elem_directions = np.zeros((num_elems_new, 3))
+    # elem_order = np.zeros((num_elems_new, 3))
+    node_loc = np.zeros((num_nodes_new, 4))
+    node_loc[0:num_nodes_old][:] = initial_geom["nodes"]
+    elems = np.zeros((num_elems_new, 3), dtype=int)
+    elems[0:num_elems_old][:] = initial_geom["elems"]
+    elem_upstream = np.zeros((num_elems_new, 3), dtype=int)
+    elem_upstream[0:num_elems_old][:] = initial_geom['elem_up']
+    elem_downstream = np.zeros((num_elems_new, 3), dtype=int)
+    elem_downstream[0:num_elems_old][:] = initial_geom['elem_down']
+
+    # local arrays
+    map_seed_to_elem = np.zeros(len(datapoints), dtype=int)  # seed to elem - initial array for groupings
+
+
+    parentlist = group_elem_parent_term(0, initial_geom['elem_down'])  # master parent list
+    remove_elem = np.empty((0))
+    # Initialise LD array to map each seed point to a parent branch.
+    # For a single parent, all seed points will initially be mapped to
+    # it; for multiple parents data_to_mesh is called to calculate
+    # the closest parent end-point to each seed point.
+    map_seed_to_elem = map_seed_to_elem + parentlist[0]
+    map_seed_to_elem = data_to_mesh(map_seed_to_elem, datapoints, parentlist, node_loc, elems)
+
+    for npar in range(0,len(parentlist)):
+        print('Generating children for parent ' + str(npar) + '(elem #' + str(parentlist[npar]) + ') of a total of ' + str(len(parentlist)))
+        current_parent = parentlist[npar]
+        num_next_parents = 1
+        data_current_parent = np.zeros((len(datapoints), 3))
+        nd_for_parent = 0
+        for nd in range(0, len(datapoints)):
+            if map_seed_to_elem[nd] == current_parent:
+                data_current_parent[nd_for_parent] = datapoints[nd][:]
+                map_seed_to_elem[nd] = 0
+                datapoints[nd][:] = 0
+                nd_for_parent = nd_for_parent + 1
+        if nd_for_parent <= threshold:
+            print('nd for parent', nd_for_parent)
+            remove_elem = np.append(remove_elem,[current_parent],axis=0)
+    print('remove_list',remove_elem)
+    return remove_elem
 
 def data_with_parent(current_parent, map_seed_to_elem, datapoints):
     new_datapoints = np.zeros((len(datapoints), 3))
@@ -970,10 +1032,10 @@ def dist_two_vectors(vector1, vector2):
 
 
 def group_elem_parent_term(ne_parent, elem_downstream):
-    parentlist = np.zeros(2000, dtype=int)
-    ne_old = np.zeros(2000, dtype=int)
-    ntemp_list = np.zeros(2000, dtype=int)
-    ne_temp = np.zeros(2000, dtype=int)
+    parentlist = np.zeros(len(elem_downstream), dtype=int)
+    ne_old = np.zeros(len(elem_downstream), dtype=int)
+    ntemp_list = np.zeros(len(elem_downstream), dtype=int)
+    ne_temp = np.zeros(len(elem_downstream), dtype=int)
 
     NT_BNS = 1 #Initialising to arbritary ne value
     ne_old[0] = ne_parent
