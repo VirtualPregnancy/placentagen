@@ -545,16 +545,16 @@ def remove_disconnected(elems, euclid_radii, branch_id, seen):
 
 
 
-def remove_multiple_elements(nodes,elems):
+def remove_multiple_elements(geom):
     ######
     # Function: Removes elements with more than 2 downstream elements by adding a new element of minimal length and
     #           reallocating down stream elements to this
-    # Inputs: elements and nodes
+    # Inputs: geom - current geometry structure
     # Outputs: geom - updated structure with elements having a maximum of 2 downstream elements
     ######
-    geom = {}
-    geom['nodes']=nodes
-    geom['elems']=elems
+    #geom = {}
+    #geom['nodes']=nodes
+    #geom['elems']=elems
     elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
     # unpackage information
     max_down = check_multiple(elem_connect)
@@ -744,17 +744,17 @@ def update_elems(elem_i, node2, geom, elem_connect):
 
     geom['elems']=elems
 
-    ## add copy of node1 geom for node2 at end
-    #for item in geom.keys():
-    #    current = geom[item]
-    #    if item == 'nodes' or item == 'elems':
-    #        continue #node and element already appended
+    # add copy of node1 geom for node2 at end
+    for item in geom.keys():
+        current = geom[item]
+        if item == 'nodes' or item == 'elems':
+            continue #node and element already appended
     #    elif item == 'length': #radii 1D array
     #        new_length = find_length_single(nodes, node1, node2)
     #        current = np.hstack((current, new_length))
-    #    else:
-    #        current = np.hstack((current, current[elem_i]))
-    #    geom[item]=current
+        else:
+            current = np.hstack((current, current[elem_i]))
+        geom[item]=current
 
     return geom
              
