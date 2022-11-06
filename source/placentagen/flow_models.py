@@ -211,21 +211,24 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
                  diameter= bisection_method_diam(lowest_sign[0],lowest_sign[1],fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params,pressure,verbose)
         else:
             diameter_pass = bisection_method_diam(5.,fit_passive_params[0]*1.10,fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
+            if diameter_pass <10.:
+                 lowest_sign = find_possible_roots(0.,fit_passive_params[0]*2.0, fit_passive_params,[0.,0.],[0.,0.],[0.,0.], pressure,verbose)
+                 diameter_pass= bisection_method_diam(lowest_sign[0],lowest_sign[1],fit_passive_params,[0.,0.],[0.,0.],[0.,0.],pressure,verbose)
             D0 = fit_passive_params[0]
             dp_blood = fixed_flow_params[2]
             reference_diameter = np.max([diameter_pass,D0])
-            if(pressure>12.) or (dp_blood>0):
+            if(pressure>12) or (dp_blood>0):
                 #Looks for a diameter between 5 um and 10% larger than the passive diameter at that transmural pressure as a possible root
-                lowest_sign = find_possible_roots(10.,reference_diameter*2.0, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                lowest_sign = find_possible_roots(5,reference_diameter*.5, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
             else:
-                lowest_sign=np.array([10.,reference_diameter*2.0])
+                lowest_sign=np.array([10.,reference_diameter*1])
 
             diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
             #if verbose:
             if diameter<10:
                 print('zero',pressure,dp_blood,lowest_sign,diameter_pass,reference_diameter)
-                lowest_sign = find_possible_roots(0.,reference_diameter*2.0, fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
+                lowest_sign = find_possible_roots(10,min(diameter_pass,D0), fit_passive_params, fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose)
                 diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
         return diameter
@@ -276,6 +279,7 @@ def tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flo
 
 
 def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,channel_rad):
+    printme =0
     # Calculates total resistance of the uterine arteries, outputs this resistance and a venous equivalent resistance (half of arterial resistance)
     resistance = np.zeros(np.size(vessels))
     flow = np.zeros(np.size(vessels) + 1)
@@ -297,10 +301,10 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
             uterine_index = i
         elif (vessels['vessel_type'][i] == 'Arcuate'):
             arcuate_index = i
-
-    print("==============================")
-    print("Resistance of each vessel type")
-    print("==============================")
+    if printme:
+        print("==============================")
+        print("Resistance of each vessel type")
+        print("==============================")
 
     above_anast_resistance = 0.0
     beyond_anast_resistance = 0.0
@@ -320,7 +324,6 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
         else:
             resistance[i] = calc_tube_resistance(mu,vessels['radius'][i],vessels['length'][i])/vessels['number'][i]
 
-        print(vessels['vessel_type'][i], resistance[i])
 
         if anast_index != 0:
             for i in range(0, np.size(vessels)):
@@ -331,12 +334,13 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
                         beyond_anast_resistance = beyond_anast_resistance + resistance[i]
                 else:
                     anast_resistance = resistance[i]
+    if printme:
+        print('Resistance, anastomosis',anast_resistance, 'above anast ',above_anast_resistance, 'beyond anast', beyond_anast_resistance)
 
-    print('Resistance, anastomosis',anast_resistance, 'above anast ',above_anast_resistance, 'beyond anast', beyond_anast_resistance)
-
-    print("=====================================")
-    print("------Calculating resistances--------")
-    print("=====================================")
+    if printme:
+        print("=====================================")
+        print("------Calculating resistances--------")
+        print("=====================================")
     uterine_resistance = resistance[uterine_index]
     feed_placenta_resistance = 0.0
     myometrial_resistance = terminals[3]
@@ -372,14 +376,17 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
     print(uterine_resistance,feed_placenta_resistance,myometrial_resistance,total_resistance)
     print(beyond_anast_resistance,terminals[0]/terminals[2],venous_beyond_anast, resistance[anast_index],parallel_resistance)
 
-    print("=====================================")
-    print("------Flow divisions (no units)-----")
-    print("=====================================")
+    if printme:
+        print("=====================================")
+        print("------Flow divisions (no units)-----")
+        print("=====================================")
 
     flow_prop_to_placenta = myometrial_resistance/(feed_placenta_resistance+myometrial_resistance)
-    print("Percentage flow to placenta = " + str(flow_prop_to_placenta*100.))
+    if printme:
+        print("Percentage flow to placenta = " + str(flow_prop_to_placenta*100.))
     flow_prop_to_myometrium = 1. - flow_prop_to_placenta
-    print("Percentage flow to myometrium = " + str(flow_prop_to_myometrium*100.))
+    if printme:    
+        print("Percentage flow to myometrium = " + str(flow_prop_to_myometrium*100.))
 
     temp_inlet_flow = 1.
 
@@ -394,20 +401,21 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
                             flow[i] = flow_prop_to_placenta* flow[i - 1] * vessels['number'][i - 1] / vessels['number'][i]
                         else:
                             flow[i] = flow[i - 1] * vessels['number'][i - 1] / vessels['number'][i] #If vesels branch you divide the flow
-
-                    print(str(vessels['vessel_type'][i]) + ' flow division: ' + str(flow[i]))
+                    if printme:
+                        print(str(vessels['vessel_type'][i]) + ' flow division: ' + str(flow[i]))
     else: #There is no anastomosis
         for i in range(0, np.size(vessels)):
             if i == 0:
                 flow[i] = temp_inlet_flow / vessels['number'][i]  # Assuming all arteries of a specific level are the same we just divide the flow
             else:
                 flow[i] = flow[i - 1] * vessels['number'][i - 1] / vessels['number'][i]
-
-            print(str(vessels['vessel_type'][i]) + ' flow division: ' + str(flow[i]))
+            if printme:
+                print(str(vessels['vessel_type'][i]) + ' flow division: ' + str(flow[i]))
 
     if (vessels['length'][anast_index] == 0.0) or (anast_index == 0): #No anastomosis
         flow[np.size(vessels)] = flow[np.size(vessels) - 2] #need to check, all flow should go through the IVS
-        print('Terminal  flow: ' + str(flow[np.size(vessels)]))
+        if printme:
+            print('Terminal  flow: ' + str(flow[np.size(vessels)]))
     else:
         flow[anast_index] = (1. - (resistance[anast_index]) / (resistance[anast_index]  + terminals[2] * terminals[
                 0] + beyond_anast_resistance+venous_beyond_anast)) * flow[anast_index - 1]
@@ -415,42 +423,72 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
         for j in range(0, np.size(vessels)):
             if (vessels['generation'][j] > vessels['generation'][anast_index]):
                 flow[j] = flow[np.size(vessels)] * terminals[2] * vessels['number'][anast_index - 1]/ vessels['number'][j]
-                print(str(vessels['vessel_type'][j]) + ' flow division: ' + str(flow[j]))# + ' mm^3/s ' + str(
-
-        print('Anastomosis flow division: ' + str(flow[anast_index]))# + ' mm^3/s ' + str(
-        print('Terminal  flow division: ' + str(flow[np.size(vessels)]))# + ' mm^3/s ' + str(
+                if printme:
+                    print(str(vessels['vessel_type'][j]) + ' flow division: ' + str(flow[j]))# + ' mm^3/s ' + str(
+        if printme:
+            print('Anastomosis flow division: ' + str(flow[anast_index]))# + ' mm^3/s ' + str(
+            print('Terminal  flow division: ' + str(flow[np.size(vessels)]))# + ' mm^3/s ' + str(
 
 
     if boundary_conds['bc_type'] == 'flow':
-        print(boundary_conds['bc_type'])
+        if printme:
+            print(boundary_conds['bc_type'])
         static_inlet_pressure = boundary_conds['inlet_p']  # Units of Pascals
         static_inlet_flow = boundary_conds['inlet_q'] * 1000. / 60.  # ml/min converted to mm^3/s
         static_outlet_pressure = static_inlet_pressure - static_inlet_flow *total_resistance
     elif boundary_conds['bc_type'] == 'pressure':
-        print(boundary_conds['bc_type'])
+        if printme:
+            print(boundary_conds['bc_type'])
         static_inlet_pressure = boundary_conds['inlet_p']  # Units of Pascals
         static_outlet_pressure = boundary_conds['outlet_p']  # Units of Pascals
         static_inlet_flow = (static_inlet_pressure-static_outlet_pressure)/total_resistance
+    elif boundary_conds['bc_type']=='flow_pout':
+        if printme:
+            print(boundary_conds['bc_type'])
+        static_inlet_flow = boundary_conds['inlet_q'] * 1000. / 60.  # ml/min converted to mm^3/s
+        static_outlet_pressure = boundary_conds['outlet_p'] #units of Pascals
+        static_inlet_pressure =    static_outlet_pressure + static_inlet_flow *total_resistance
 
-    print(flow)
+
+    
     flow = flow*static_inlet_flow
 
-    print(flow)
-    print("==================")
-    print("Flows (real units)")
-    print("==================")
+    if printme:
+        print("==================")
+        print("Flows (real units)")
+        print("==================")
 
     for j in range(0, np.size(vessels)):
-        print(str(vessels['vessel_type'][j]) + ' flow: ' + str(flow[j]) + ' mm^3/s ' + str(
+        if printme:
+            print(str(vessels['vessel_type'][j]) + ' flow: ' + str(flow[j]) + ' mm^3/s ' + str(
                     flow[j] * 60. / 1000.) + ' ml/min ' + str(flow[j] * 60.) + ' ul/min ')
-        print(str(vessels['vessel_type'][j]) + ' max velocity ' + str(2.*flow[j]/(np.pi*vessels['radius'][j]**2.)/1000.) + 'm/s')
+            print(str(vessels['vessel_type'][j]) + ' max velocity ' + str(2.*flow[j]/(np.pi*vessels['radius'][j]**2.)/1000.) + 'm/s')
     myometrial_flow = static_inlet_flow -flow[arcuate_index]*vessels['number'][arcuate_index]
-
-    print('Flow feeding myometrium ' + str(myometrial_flow) + ' mm^3/s ' + str(
+    if printme:
+        print('Flow feeding myometrium ' + str(myometrial_flow) + ' mm^3/s ' + str(
                     myometrial_flow * 60. / 1000.) + ' ml/min ' + str(myometrial_flow * 60.) + ' ul/min ')
-    print("===============")
-    print("Shear Stresses")
-    print("===============")
+
+    if printme:
+         print("=========================")
+         print("Calculating pressures")
+         print("=========================")
+
+    for j in range(0,np.size(vessels)):
+        print(str(vessels['vessel_type'][j]))
+        if vessels['vessel_type'][j] == 'Uterine':
+            pressure_out[j] = static_inlet_pressure - flow[j]*resistance[j]
+        elif j <= anast_index:
+            pressure_out[j] = pressure_out[j-1]- flow[j]*resistance[j]
+        elif j == anast_index + 1:
+            pressure_out[j] = pressure_out[j-2]- flow[j]*resistance[j]
+        else:
+            pressure_out[j] = pressure_out[j-1]- flow[j]*resistance[j]
+    pressure_out[np.size(vessels)]=pressure_out[np.size(vessels)-1]-flow[np.size(vessels)]*terminals[0]
+    print(pressure_out/133.)
+    if printme:
+        print("===============")
+        print("Shear Stresses")
+        print("===============")
     shear = np.zeros(np.size(vessels))
     for i in range(0, np.size(vessels)):
         if vessels['vessel_type'][i]=='Spiral_plug':
@@ -462,23 +500,23 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
             shear[i]=(calc_tube_shear(mu,vessels['radius'][i],flow[i]) + calc_tube_shear(mu,vessels['radius'][spiral_index],flow[i]) )/2.#mean shear should be mid-way between inlet and outlet shear, but not accuarate
         else:
             shear[i] = calc_tube_shear(mu,vessels['radius'][i],flow[i])
+        if printme:
+            print(str(vessels['vessel_type'][i]) + ' shear: ' + str(shear[i]) + ' Pa ')
+    if printme:
+        print("================")
+        print("Total Resistance")
+        print("================")
+        print(str(total_resistance) + "Pa.s/mm3")
+        print("=============================")
+        print("Total estimated pressure drop")
+        print("=============================")
+        print(str(total_resistance * static_inlet_flow) + " Pa, " + str(
+            total_resistance * static_inlet_flow / 133.) + " mmHg")
 
-        print(str(vessels['vessel_type'][i]) + ' shear: ' + str(shear[i]) + ' Pa ')
-
-    print("================")
-    print("Total Resistance")
-    print("================")
-    print(str(total_resistance) + "Pa.s/mm3")
-    print("=============================")
-    print("Total estimated pressure drop")
-    print("=============================")
-    print(str(total_resistance * static_inlet_flow) + " Pa, " + str(
-        total_resistance * static_inlet_flow / 133.) + " mmHg")
-
-    print("============")
-    print("Total flow")
-    print("============")
-    print( str(static_inlet_flow) + " mm3/s, " + str(static_inlet_flow *60./1000) + " ml/min")
+        print("============")
+        print("Total flow")
+        print("============")
+        print( str(static_inlet_flow) + " mm3/s, " + str(static_inlet_flow *60./1000) + " ml/min")
 
 
 
@@ -534,27 +572,53 @@ def rat_total_resistance(mu,NumberPlacentae,vessels,terminals,boundary_conds,pri
 
     if	printme:
     	print("=====================================")
-    	print("Flow and Pressure in each vessel type")
+    	print("Flow divisions (no units)")
     	print("=====================================")
     for i in range(0, np.size(vessels)):
         if vessels['vessel_type'][i]=='InUterine':
-            flow[i] = static_inlet_flow
-            pressure_out[i] = static_inlet_pressure - flow[i]*resistance[i]
+            flow[i] = 1.#static_inlet_flow
         elif vessels['vessel_type'][i] == 'Uterine':
             if (mu*vessels['length'][arcuate_index]==0.):
                 flow[i] = (rad_sp_can_resistance + terminal_resistance)/(rad_sp_can_resistance + terminal_resistance+uterine_segment_resistance)*flow[inlet_index]
             else:
                 flow[i] = (total_arc_resistance)/(total_arc_resistance+resistance[uterine_index])*flow[inlet_index]
-            pressure_out[i] = pressure_out[i-1] - flow[i] * resistance[i]
         elif vessels['vessel_type'][i] == 'Arcuate':
             if (mu*vessels['length'][arcuate_index]==0.):
                 flow[i] = (uterine_segment_resistance)/(rad_sp_can_resistance + terminal_resistance+uterine_segment_resistance)*flow[inlet_index]
-                pressure_out[i] = pressure_out[inlet_index] - flow[inlet_index] * uterine_segment_resistance
             else:
                 flow[i] = (resistance[uterine_index])/(total_arc_resistance+resistance[uterine_index])*flow[inlet_index]
-                pressure_out[i] = pressure_out[inlet_index]-total_arc_resistance*flow[i]
         else:
             flow[i] = flow[arcuate_index]/vessels['number'][i] #flow per vessel
+        if mu * vessels['length'][arcuate_index] == 0 and vessels['vessel_type'][i] == 'Arcuate':
+            print('No arcuate')
+        else:
+            if printme:
+            	print(str(vessels['vessel_type'][i]) + ' flow: ' + str(flow[i]))
+    flow[np.size(vessels)]=flow[arcuate_index]
+    if printme:
+    	print('Terminals ' + ' flow: ' + str(flow[np.size(vessels)]))
+    venous_resistance = 0.
+
+    total_resistance = resistance[inlet_index] + arc_and_ut_unit_resistance * NumberPlacentae
+    
+
+    flow = flow*static_inlet_flow
+
+    if	printme:
+    	print("=====================================")
+    	print("Pressures")
+    	print("=====================================")
+    for i in range(0, np.size(vessels)):
+        if vessels['vessel_type'][i]=='InUterine':
+            pressure_out[i] = static_inlet_pressure - flow[i]*resistance[i]
+        elif vessels['vessel_type'][i] == 'Uterine':
+            pressure_out[i] = pressure_out[i-1] - flow[i] * resistance[i]
+        elif vessels['vessel_type'][i] == 'Arcuate':
+            if (mu*vessels['length'][arcuate_index]==0.):
+                pressure_out[i] = pressure_out[inlet_index] - flow[inlet_index] * uterine_segment_resistance
+            else:
+                pressure_out[i] = pressure_out[inlet_index]-total_arc_resistance*flow[i]
+        else:
             if(i == radial_index):
                 if (mu * vessels['length'][arcuate_index] == 0.):
                     pressure_in = pressure_out[arcuate_index]
@@ -570,16 +634,23 @@ def rat_total_resistance(mu,NumberPlacentae,vessels,terminals,boundary_conds,pri
             	print(str(vessels['vessel_type'][i]) + ' flow: ' + str(flow[i]) + ' mm^3/s ' + str(flow[i]*60./1000.) + ' ml/min ' + str(flow[i]*60.) + ' ul/min ')
             	print(str(vessels['vessel_type'][i]) + ' pressure out: ' + str(pressure_out[i]) + ' Pa ' + str(
                 pressure_out[i]/133.) + ' mmHg ')
-    flow[np.size(vessels)]=flow[arcuate_index]
+
     pressure_out[np.size(vessels)] = pressure_out[np.size(vessels)-1]-terminal_resistance * flow[np.size(vessels)]
     if printme:
     	print('Terminals ' + ' flow: ' + str(flow[np.size(vessels)]) + ' mm^3/s ' + str(
         	flow[i] * 60. / 1000.) + ' ml/min ' + str(flow[np.size(vessels)] * 60.) + ' ul/min ')
     	print('Terminals '+ ' pressure out: ' + str(pressure_out[np.size(vessels)]) + ' Pa ' + str(
         pressure_out[np.size(vessels)] / 133.) + ' mmHg ')
-    venous_resistance = 0.
 
-    total_resistance = resistance[inlet_index] + arc_and_ut_unit_resistance * NumberPlacentae
+    if boundary_conds['bc_type']=='flow_pout':
+        if printme:        
+            print(boundary_conds['bc_type'])
+        static_outlet_pressure = boundary_conds['outlet_p'] #units of Pascals
+        pressure_term_diff = static_outlet_pressure - pressure_out[np.size(vessels)]
+        pressure_out = pressure_out + pressure_term_diff
+
+        
+
     if printme:
     	print("===============")
     	print("Shear Stresses")
