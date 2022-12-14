@@ -155,7 +155,6 @@ def delete_unused_nodes(nodes,elems):
     for nn in range(0,len(nodes)):
        if nodes[nn,0] not in used_nodes:
           delete_list = np.append(delete_list,nn)
-          print(nn,nodes[nn,0])
        else:
           node_map[nn]=node_kount#maps old node, to current count 
           node_kount = node_kount+1
@@ -338,8 +337,6 @@ def find_radius_euclidean_2d(DistanceImage, elems, nodes):
         radius1 = DistanceImage[int(nodes[nod1, 1]), int(nodes[nod1, 2])]
         radius2 = DistanceImage[int(nodes[nod2, 1]), int(nodes[nod2, 2])]
         radius[ne] = (radius1 + radius2) / 2.
-        if(ne<=10):
-            print(ne,nod1,nod2,radius[ne],DistanceImage[int(nodes[nod1, 1]), int(nodes[nod1, 2])])
 
     return radius
 
@@ -461,7 +458,11 @@ def fix_branch_direction(first_node,elems_at_node,elems,seen_elements,branch_id,
                                 connected_elems_no = 1 #trick into leaving main loop here
 
     if new_parents > 0:
-       new_parent_list = new_parent_list[0:new_parents]    
+       new_parent_list = new_parent_list[0:new_parents]
+    else:
+        new_parent_list = []
+        continuing = False
+
     return new_parent_list,cycle,continuing,loop_parent,branch_end_elem
     
 def fix_elem_direction(inlet_node,elems,nodes):
@@ -502,7 +503,6 @@ def fix_elem_direction(inlet_node,elems,nodes):
     [new_parent_list,cycle,continuing,loop_parent,branch_end_elem] = fix_branch_direction(first_node, elems_at_node, elems, seen_elements,branch_id,branches,old_parent_list,True)
     branch_end = np.append(branch_end, branch_end_elem)
     cycle_bool = np.append(cycle_bool, cycle)
-    
     while len(new_parent_list)>0:
         if len(new_parent_list) > 0:
             new_parent_list2 = []
@@ -522,7 +522,7 @@ def fix_elem_direction(inlet_node,elems,nodes):
                     loop_list = np.append(loop_list, [loop_parent], axis=0) #Removes simple loops
                 if continuing:
                     new_parent_list2 = np.append(new_parent_list2,branch_list,axis = 0)
-                #print(continuing,new_parent_list2)
+
             if(len(new_parent_list2)>0):
                 new_parent_list = new_parent_list2.astype(int)
             else:
@@ -552,10 +552,8 @@ def remove_multiple_elements(geom):
     # Inputs: geom - current geometry structure
     # Outputs: geom - updated structure with elements having a maximum of 2 downstream elements
     ######
-    #geom = {}
-    #geom['nodes']=nodes
-    #geom['elems']=elems
-    elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
+    geom_new = geom.copy()
+    elem_connect = pg_utilities.element_connectivity_1D(geom_new['nodes'], geom_new['elems'])
     # unpackage information
     max_down = check_multiple(elem_connect)
 
@@ -563,17 +561,17 @@ def remove_multiple_elements(geom):
         elem_down = elem_connect['elem_down']
         for ne in range(0, len(elem_down)):
             if elem_down[ne][0] > 2:  # more than 2 connected downstream
-                geom['nodes'], node2 = extend_node(ne, geom)  # create new node
-                geom = update_elems(ne, node2, geom, elem_connect)  # create new element and update old)
-        elem_connect = pg_utilities.element_connectivity_1D(geom['nodes'], geom['elems'])
+                geom_new['nodes'], node2 = extend_node(ne, geom_new)  # create new node
+                geom_new = update_elems(ne, node2, geom_new, elem_connect)  # create new element and update old)
+        elem_connect = pg_utilities.element_connectivity_1D(geom_new['nodes'], geom_new['elems'])
         max_down = check_multiple(elem_connect)
     elem_down = elem_connect['elem_down']
     elem_up = elem_connect['elem_up']
-    geom['elem_down'] = elem_down[:,0:3]
-    geom['elem_up'] = elem_up[:,0:3]
+    geom_new['elem_down'] = elem_down[:,0:3]
+    geom_new['elem_up'] = elem_up[:,0:3]
 
 
-    return geom
+    return geom_new
     
 def remove_small_radius(elems,radii,branch_id,branch_start,threshold):
     #Creating a list of elements with radii less than the threshold
@@ -670,13 +668,16 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
             
     tmp_elems =  np.zeros((num_elems, 3), dtype=int) #empty array to contain seen elements 
     kount_elems = 0
-        
+    if len(first_branch>0):
+        first_branch=first_branch[0]
+
     ne = int(branch_start[first_branch])
     tmp_elems[kount_elems,0] = kount_elems
     tmp_elems[kount_elems,1:3] = elems[ne,1:3]
     elem_map[kount_elems]=ne
     seen_elements[ne] = True
     kount_elems = kount_elems+1
+
     while ne != int(branch_end[first_branch]):
         if elems_at_node[elems[ne,2],1]==ne:
             ne = int(elems_at_node[elems[ne,2],2])
@@ -693,7 +694,6 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
     for nb in range(0,len(branch_start)):    
         if nb != first_branch:
             ne = int(branch_start[nb])
-            #print(nb,seen_elements[ne],len(elems[branch_id == nb+1]))
             if not seen_elements[ne]:
                 tmp_elems[kount_elems,0] = kount_elems
                 tmp_elems[kount_elems,1:3] = elems[ne,1:3]
@@ -713,8 +713,7 @@ def sort_from_inlet(inlet_node,nodes,elems,branch_id,branch_start,branch_end):#
                     elem_map[kount_elems]=ne
                     kount_elems = kount_elems+1
                     seen_elements[ne]=True
-            #print(nb,internal_kount,kount_elems,branch_start[nb],branch_end[nb])
-    #print('kount_elems',kount_elems)
+
     
     return tmp_elems[0:kount_elems,:],elem_map[0:kount_elems]
 
