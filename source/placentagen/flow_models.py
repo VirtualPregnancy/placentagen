@@ -339,7 +339,7 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
     print("=====================================")
     uterine_resistance = resistance[uterine_index]
     feed_placenta_resistance = 0.0
-    myometrial_resistance = terminals[3]
+    myometrial_resistance = terminals[2]
 
     if anast_index != 0:
         for i in range(0, np.size(vessels)):
@@ -363,14 +363,14 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
             if (vessels['generation'][j] > vessels['generation'][anast_index]):
                 beyond_anast_resistance = beyond_anast_resistance + resistance[j]
         venous_beyond_anast = beyond_anast_resistance / 2.
-        parallel_resistance = 1.0 / (1.0 / (resistance[anast_index]) + terminals[2] * 1.0 / (
-                    terminals[0] + (beyond_anast_resistance + venous_beyond_anast) * terminals[2]))
+        parallel_resistance = 1.0 / (1.0 / (resistance[anast_index]) + terminals[1] * 1.0 / (
+                    terminals[0] + (beyond_anast_resistance + venous_beyond_anast) * terminals[1]))
 
 
     feed_placenta_resistance = feed_placenta_resistance + parallel_resistance + venous_resistance
     total_resistance = uterine_resistance + 1./(1./feed_placenta_resistance + 1./myometrial_resistance) + uterine_resistance/2.
     print(uterine_resistance,feed_placenta_resistance,myometrial_resistance,total_resistance)
-    print(beyond_anast_resistance,terminals[0]/terminals[2],venous_beyond_anast, resistance[anast_index],parallel_resistance)
+    print(beyond_anast_resistance,terminals[0]/terminals[1],venous_beyond_anast, resistance[anast_index],parallel_resistance)
 
     print("=====================================")
     print("------Flow divisions (no units)-----")
@@ -409,12 +409,12 @@ def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,chann
         flow[np.size(vessels)] = flow[np.size(vessels) - 2] #need to check, all flow should go through the IVS
         print('Terminal  flow: ' + str(flow[np.size(vessels)]))
     else:
-        flow[anast_index] = (1. - (resistance[anast_index]) / (resistance[anast_index]  + terminals[2] * terminals[
+        flow[anast_index] = (1. - (resistance[anast_index]) / (resistance[anast_index]  + terminals[1] * terminals[
                 0] + beyond_anast_resistance+venous_beyond_anast)) * flow[anast_index - 1]
         flow[np.size(vessels)] = flow[anast_index - 1] - flow[anast_index]
         for j in range(0, np.size(vessels)):
             if (vessels['generation'][j] > vessels['generation'][anast_index]):
-                flow[j] = flow[np.size(vessels)] * terminals[2] * vessels['number'][anast_index - 1]/ vessels['number'][j]
+                flow[j] = flow[np.size(vessels)] * terminals[1] * vessels['number'][anast_index - 1]/ vessels['number'][j]
                 print(str(vessels['vessel_type'][j]) + ' flow division: ' + str(flow[j]))# + ' mm^3/s ' + str(
 
         print('Anastomosis flow division: ' + str(flow[anast_index]))# + ' mm^3/s ' + str(
