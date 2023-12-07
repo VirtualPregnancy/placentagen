@@ -487,7 +487,7 @@ def fix_elem_direction(inlet_node,elems,nodes):
     for i in range(0,num_nodes):
         if np.all(nodes[i,1:4]== inlet_node):
             first_node = i
-            print("FOUND FIRST NODE",i)
+            print("FOUND FIRST NODE",i,nodes[i,1:4])
             break
 
     ############
@@ -598,7 +598,7 @@ def remove_small_radius(elems,radii,branch_id,branch_start,threshold):
     return elems, radii
     
     
-def remove_order1(nodes,elems,branch_id, radii,length_threshold):
+def remove_order1(nodes,elems,branch_id, radii,length_threshold,ords_from_max):
     num_elems = len(elems)
     delete_list = []
     length = np.zeros(len(elems))
@@ -612,7 +612,7 @@ def remove_order1(nodes,elems,branch_id, radii,length_threshold):
     print("Evaluating orders") 
     orders = analyse_tree.evaluate_orders(nodes, elems)
     print("Number of Strahler Orders",np.max(orders['strahler'])) 
-    max_order = np.max(orders['strahler'])-1
+    max_order = np.max(orders['strahler'])-ords_from_max
     for ne in range(0,num_elems):
         num_upstream = elem_cnct['elem_up'][ne,0]
         if num_upstream == 1:
@@ -621,6 +621,7 @@ def remove_order1(nodes,elems,branch_id, radii,length_threshold):
             upstream_order = 0
         if orders['strahler'][ne]==1 and upstream_order>=max_order:
             branch_length = np.sum(length[branch_id == branch_id[ne]])
+            #print(ne, upstream_order,max_order,branch_length,length_threshold)
             if branch_length<length_threshold:
                 tmp_elems1 = tmp_elems[branch_id == branch_id[ne]]
                 delete_list = np.append(delete_list,tmp_elems1)
