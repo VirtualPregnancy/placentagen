@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 from scipy.spatial import Delaunay
+from scipy import spatial as sp
 
 from . import pg_utilities
 from . import imports_and_exports
@@ -85,6 +86,60 @@ def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     print('Data points within ellipsoid allocated. Total = ' + str(len(datapoints)))
 
     return datapoints
+    
+def equispaced_data_in_hull(n, geom):
+
+    hull = sp.ConvexHull(geom['nodes'][:, 1:4])
+    print(hull.volume)
+    #for i in range(0, len(hull.vertices)):
+    xmin= np.min(geom['nodes'][hull.vertices, 1])
+    xmax = np.max(geom['nodes'][hull.vertices, 1])
+    ymin= np.min(geom['nodes'][hull.vertices, 2])
+    ymax = np.max(geom['nodes'][hull.vertices, 2])
+    zmin= np.min(geom['nodes'][hull.vertices, 3])
+    zmax = np.max(geom['nodes'][hull.vertices, 3])
+    
+    cuboid_vol = (xmax-xmin)*(ymax-ymin)*(zmax-zmin) #cuboid volume
+    total_n = (cuboid_vol/hull.volume)*n
+    data_spacing = (cuboid_vol /total_n) ** (1.0 / 3.0)
+    
+    nd_x = np.floor((xmax - xmin)/ data_spacing)
+    nd_y = np.floor((ymax - ymin) / data_spacing)
+    nd_z = np.floor((zmax - zmin)/ data_spacing)
+    nd_x = int(nd_x)
+    nd_y = int(nd_y)
+    nd_z = int(nd_z)
+
+    
+    print(xmin,xmax,ymin,ymax,zmin,zmax,cuboid_vol,total_n,data_spacing)
+    # Set up edge node coordinates
+    x_coord = np.linspace(xmin, xmax, nd_x)
+    y_coord = np.linspace(ymin,ymax, nd_y)
+    z_coord = np.linspace(zmin, zmax, nd_z)
+
+    # Use these vectors to form a unifromly spaced grid
+    data_coords = np.vstack(np.meshgrid(x_coord, y_coord, z_coord)).reshape(3, -1).T
+
+    # Store nodes that lie within hull
+    num_data = 0  # zero the total number of data points
+    datapoints = np.zeros((nd_x * nd_y * nd_z, 3))
+    print((hull.vertices))
+    hull2=sp.Delaunay(geom['nodes'][hull.vertices,1:4])
+    for i in range(len(data_coords)):  # Loop through grid
+        print(hull2.find_simplex(data_coords[i]))
+        if hull2.find_simplex(data_coords[i]) > 0:
+            coord_check = True
+        else:
+            coord_check = False
+        if coord_check is True:  # Has to be strictly in the hull
+            datapoints[num_data, :] = data_coords[i, :]  # add to data array
+            num_data = num_data + 1
+    datapoints.resize(num_data, 3,refcheck=False)  # resize data array to correct size
+
+    print('Data points within hull allocated. Total = ' + str(len(datapoints)))
+
+    return datapoints
+    
 
 
 def uniform_data_on_ellipsoid(n, volume, thickness, ellipticity, random_seed):
@@ -244,7 +299,7 @@ def gen_ellip_mesh_tet(volume, thickness, ellipticity, n):
                 pg_utilities.z_from_xy(x_coord, y_coord, x_radius, y_radius, z_radius))
 
     # generate tetrahedral mesh
-    pyMesh = Delaunay(ellipsoid_node)
+    pyMesh = sp.Delaunay(ellipsoid_node)
 
     # Build arrays to pass into openCMISS conversion:
     node_loc = pyMesh.points

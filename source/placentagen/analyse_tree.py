@@ -1358,7 +1358,7 @@ def major_minor(geom, elem_down):
             d_min=100000
             d_max=0
             for j in range(1, numDown+1): #look throigh children and find widest & thinnest one
-                child=np.int(elem_down[i, j])
+                child=int(elem_down[i, j])
                 d_child=radii[child]
 
                 if d_child>=d_max:
