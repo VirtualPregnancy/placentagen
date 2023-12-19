@@ -14,6 +14,57 @@ from . import imports_and_exports
  
 """
 
+def equispaced_data_in_cuboid(n, x_dim, y_dim, z_dim):
+    """
+    :Function name: **equispaced_data_in_cuboid**
+
+    Generates equally spaced data points in a cuboid.
+
+    :inputs:
+       - n: Number of data points which we aim to generate
+       - x_dim: size of cuboid in x-direction
+       - y_dim: size of cuboid in x-direction
+       - z_dim
+
+    return:
+       - datapoints: A nx3 array of datapoints, with each point being defined by its x-,y-, and z- coordinates
+
+    A way you might want to use me is:
+
+    >>> n = 5000
+    >>> x_dim = 10 #mm
+    >>> y_dim = 10 #mm
+    >>> z_dim  = 10 #mm
+    >>> equispaced_data_in_cuboid(n, x_dim, x_dim, z_dim)
+    """
+    volume = x_dim*y_dim*z_dim
+    data_spacing = (volume / n) ** (1.0 / 3.0)
+    print('Generating data  approx' + str(data_spacing) + ' apart')
+    num_data = 0  # zero the total number of data points
+
+    ## Calculate the number of points that should lie in each dimension in a cube
+    nd_x = np.floor(x_dim / data_spacing)
+    nd_y = np.floor(y_dim / data_spacing)
+    nd_z = np.floor(z_dim / data_spacing)
+    nd_x = int(nd_x)
+    nd_y = int(nd_y)
+    nd_z = int(nd_z)
+
+    # Set up edge node coordinates
+    x_coord = np.linspace(-x_dim/2.0 + data_spacing / 2.0, x_dim/2.0 - data_spacing / 2.0, nd_x)
+    y_coord = np.linspace(-y_dim/2.0 + data_spacing / 2.0, y_dim/2.0 - data_spacing / 2.0, nd_y)
+    z_coord = np.linspace(-z_dim/2.0 + data_spacing / 2.0, z_dim/2.0 - data_spacing / 2.0, nd_z)
+
+
+    # Use these vectors to form a uniformly spaced grid
+    datapoints = np.vstack(np.meshgrid(x_coord, y_coord, z_coord)).reshape(3, -1).T
+
+    print('Data points within ellipsoid allocated. Total = ' + str(len(datapoints)))
+
+    print(datapoints)
+
+    return datapoints
+
 
 def equispaced_data_in_ellipsoid(n, volume, thickness, ellipticity):
     """
