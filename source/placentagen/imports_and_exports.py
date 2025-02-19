@@ -1044,7 +1044,7 @@ def convert_nx_to_geom(graph: nx.Graph, coords: np.array, radii: np.array = None
     # check inputs
     assert coords.shape[0] == graph.number_of_nodes(), "coords input needs to have as many rows as there are nodes in the graph structure to be converted"
     assert coords.shape[1] == 4, "coords needs to be a np.array N-nodes by 4 array of node_number, x, y, z coordinates"
-    if radii != None:
+    if isinstance(radii, np.ndarray):
         assert radii.shape[0] == graph.number_of_nodes(), "there needs to be a radius value for every node"
         elem_radii = np.zeros(graph.number_of_edges())
         for elem_index, edge in enumerate(graph.edges):
@@ -1053,7 +1053,7 @@ def convert_nx_to_geom(graph: nx.Graph, coords: np.array, radii: np.array = None
 
     geom = {}
     geom['nodes'] = coords
-    if radii != None:
+    if isinstance(radii, np.ndarray):
         geom['radii'] = elem_radii
 
     elem_numbers = np.arange(graph.number_of_edges()).reshape((graph.number_of_edges(),1))
