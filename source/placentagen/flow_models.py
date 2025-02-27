@@ -192,9 +192,7 @@ def calc_total_tension(fit_passive_params, fit_myo_params, fit_flow_params, fixe
 
     return Tmaxact,total_tension
 
-def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new):
-    ref_fetal_weight = 3.4 #KG
-
+def read_fetal_elems(input_data,header):
     elem_identifiers = np.empty(len(input_data), dtype=np.dtype('U10'))
     elems = np.empty((len(input_data), 3), dtype=int)
     group = np.empty(len(input_data), dtype=int)
@@ -211,6 +209,12 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new):
         L[i] = np.double(input_data[i][header.index('L')])
         K[i] = np.double(input_data[i][header.index('K')])
 
+    return elem_identifiers, elems, resistance, group, L, K
+
+
+def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new, export):
+    ref_fetal_weight = 3.025 #KG
+    elem_identifiers, elems, resistance, group, L, K =read_fetal_elems(input_data, header)
     # scaling inertance
     L = L * (ref_fetal_weight / weight_new) ** -0.33
     # scaling resistance
@@ -233,25 +237,32 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new):
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.88
         else:
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -1.33
+    if export:
+        export_ipelem_1d(elems, 'fetal', export_directory + '/fetal')
+        export_exfield_1d_linear(resistance, 'fetal', 'resistance', export_directory + '/R')
+        export_exfield_1d_linear(group, 'fetal', 'group', export_directory + '/group')
+        export_exfield_1d_linear(L, 'fetal', 'L', export_directory + '/L')
+        export_exfield_1d_linear(K, 'fetal', 'K', export_directory + '/K')
 
-    export_ipelem_1d(elems, 'fetal', export_directory + '/fetal')
-    export_exfield_1d_linear(resistance, 'fetal', 'resistance', export_directory + '/R')
-    export_exfield_1d_linear(group, 'fetal', 'group', export_directory + '/group')
-    export_exfield_1d_linear(L, 'fetal', 'L', export_directory + '/L')
-    export_exfield_1d_linear(K, 'fetal', 'K', export_directory + '/K')
+    return elem_identifiers, elems, resistance, group, K, L
 
-def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new):
-    ref_fetal_weight = 3.4 #KG
-
+def read_fetal_nodes(input_data, header):
     nodes = np.empty((len(input_data),4),dtype=np.dtype('d'))
     node_identifiers = np.empty(len(input_data),dtype=np.dtype('U10'))
+    fix = np.empty(len(input_data), dtype=np.dtype('int'))
     for i in range(0,len(input_data)):
         node_identifiers[i] = input_data[i][0]
         nodes[i,0]=np.double(input_data[i][1])-1
         nodes[i,1]=np.double(input_data[i][header.index('group')])
         nodes[i,2]=np.double(input_data[i][header.index('press')])
         nodes[i,3]=np.double(input_data[i][header.index('comp')])
+        fix[i] = input_data[i][header.index('fix')]
 
+    return node_identifiers, nodes, fix
+
+def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, export):
+    ref_fetal_weight = 3.025 #KG
+    node_identifiers, nodes, fix = read_fetal_nodes(input_data, header)
     #scaling compliance 
     for i in range(0,len(input_data)):
         if node_identifiers[i]=='RA' or node_identifiers[i]=='LA':
@@ -260,7 +271,10 @@ def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new):
         else:
             nodes[i,3] =nodes[i,3]*(ref_fetal_weight/weight_new)**1.33   
 
-    export_ip_coords(nodes[:,1:4], 'fetal', export_directory +'/fetal')
+    if export:
+        export_ip_coords(nodes[:,1:4], 'fetal', export_directory +'/fetal')
+
+    return node_identifiers, nodes, fix
 
 def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose):
         #Dp_blood is driving pressure (mmHg)
