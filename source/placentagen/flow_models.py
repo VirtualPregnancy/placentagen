@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import special
-
+from .imports_and_exports import export_ipelem_1d, export_exfield_1d_linear,export_ip_coords
 
 def bisection_method_diam(a, b, fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, pressure,verbose):
 
@@ -191,6 +191,76 @@ def calc_total_tension(fit_passive_params, fit_myo_params, fit_flow_params, fixe
         total_tension = Cpass * np.exp(Cpassdash * (diameter / D0 - 1.))  + A * Tmaxact
 
     return Tmaxact,total_tension
+
+def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new):
+    ref_fetal_weight = 3.4 #KG
+
+    elem_identifiers = np.empty(len(input_data), dtype=np.dtype('U10'))
+    elems = np.empty((len(input_data), 3), dtype=int)
+    group = np.empty(len(input_data), dtype=int)
+    resistance = np.empty(len(input_data), dtype=np.dtype('d'))
+    L = np.empty(len(input_data), dtype=np.dtype('d'))
+    K = np.empty(len(input_data), dtype=np.dtype('d'))
+    for i in range(0, len(input_data)):
+        elem_identifiers[i] = input_data[i][0]
+        elems[i, 0] = int(input_data[i][1]) - 1
+        elems[i, 1] = int(input_data[i][2]) - 1
+        elems[i, 2] = int(input_data[i][3]) - 1
+        resistance[i] = np.double(input_data[i][header.index('R')])
+        group[i] = int(input_data[i][header.index('group')])
+        L[i] = np.double(input_data[i][header.index('L')])
+        K[i] = np.double(input_data[i][header.index('K')])
+
+    # scaling inertance
+    L = L * (ref_fetal_weight / weight_new) ** -0.33
+    # scaling resistance
+    print(header)
+    for i in range(0, len(input_data)):
+        if elem_identifiers[i] == 'DuctusVenosus':
+            resistance[i] = resistance[i] * (ref_fetal_weight / weight_new) ** -0.55
+        else:
+            resistance[i] = resistance[i] * (ref_fetal_weight/ weight_new) ** -1
+            # scaling K (D=dissipation)
+    for i in range(0, len(input_data)):
+        if elem_identifiers[i] == 'FO':
+            print(i,elem_identifiers[i])
+            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.6
+        elif elem_identifiers[i] == 'DuctusA':
+            print(i,elem_identifiers[i])
+            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -2.5
+        elif elem_identifiers[i] == 'DuctusV':
+            print(i,elem_identifiers[i])
+            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.88
+        else:
+            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -1.33
+
+    export_ipelem_1d(elems, 'fetal', export_directory + '/fetal')
+    export_exfield_1d_linear(resistance, 'fetal', 'resistance', export_directory + '/R')
+    export_exfield_1d_linear(group, 'fetal', 'group', export_directory + '/group')
+    export_exfield_1d_linear(L, 'fetal', 'L', export_directory + '/L')
+    export_exfield_1d_linear(K, 'fetal', 'K', export_directory + '/K')
+
+def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new):
+    ref_fetal_weight = 3.4 #KG
+
+    nodes = np.empty((len(input_data),4),dtype=np.dtype('d'))
+    node_identifiers = np.empty(len(input_data),dtype=np.dtype('U10'))
+    for i in range(0,len(input_data)):
+        node_identifiers[i] = input_data[i][0]
+        nodes[i,0]=np.double(input_data[i][1])-1
+        nodes[i,1]=np.double(input_data[i][header.index('group')])
+        nodes[i,2]=np.double(input_data[i][header.index('press')])
+        nodes[i,3]=np.double(input_data[i][header.index('comp')])
+
+    #scaling compliance 
+    for i in range(0,len(input_data)):
+        if node_identifiers[i]=='RA' or node_identifiers[i]=='LA':
+            print(i,node_identifiers[i])
+            nodes[i,3]=nodes[i,3]*(ref_fetal_weight/weight_new)**0.5 
+        else:
+            nodes[i,3] =nodes[i,3]*(ref_fetal_weight/weight_new)**1.33   
+
+    export_ip_coords(nodes[:,1:4], 'fetal', export_directory +'/fetal')
 
 def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose):
         #Dp_blood is driving pressure (mmHg)
