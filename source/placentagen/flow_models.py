@@ -227,13 +227,10 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new, e
             # scaling K (D=dissipation)
     for i in range(0, len(input_data)):
         if elem_identifiers[i] == 'FO':
-            print(i,elem_identifiers[i])
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.6
         elif elem_identifiers[i] == 'DuctusA':
-            print(i,elem_identifiers[i])
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -2.5
         elif elem_identifiers[i] == 'DuctusV':
-            print(i,elem_identifiers[i])
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.88
         else:
             K[i] = K[i] * (ref_fetal_weight / weight_new) ** -1.33
@@ -247,16 +244,21 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new, e
     return elem_identifiers, elems, resistance, group, K, L
 
 def read_fetal_nodes(input_data, header):
-    nodes = np.empty((len(input_data),4),dtype=np.dtype('d'))
+    nodes = np.empty((len(input_data),5),dtype=np.dtype('d'))
     node_identifiers = np.empty(len(input_data),dtype=np.dtype('U10'))
     fix = np.empty(len(input_data), dtype=np.dtype('int'))
+    not_fix = -1
     for i in range(0,len(input_data)):
         node_identifiers[i] = input_data[i][0]
         nodes[i,0]=np.double(input_data[i][1])-1
         nodes[i,1]=np.double(input_data[i][header.index('group')])
         nodes[i,2]=np.double(input_data[i][header.index('press')])
         nodes[i,3]=np.double(input_data[i][header.index('comp')])
-        fix[i] = input_data[i][header.index('fix')]
+        fix[i] = int(input_data[i][header.index('fix')])
+        if fix[i] == 0:
+            not_fix = not_fix + 1
+            nodes[i, 4] = not_fix
+
 
     return node_identifiers, nodes, fix
 
@@ -266,8 +268,7 @@ def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, e
     #scaling compliance 
     for i in range(0,len(input_data)):
         if node_identifiers[i]=='RA' or node_identifiers[i]=='LA':
-            print(i,node_identifiers[i])
-            nodes[i,3]=nodes[i,3]*(ref_fetal_weight/weight_new)**0.5 
+            nodes[i,3]=nodes[i,3]*(ref_fetal_weight/weight_new)**0.5
         else:
             nodes[i,3] =nodes[i,3]*(ref_fetal_weight/weight_new)**1.33   
 
@@ -313,6 +314,47 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
                 diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
         return diameter
+
+
+def fetal_static(nodes, elems, resistance, fix):
+    matrix_size = len(elems) + len(nodes) - sum(fix)
+    non_fix_node = len(nodes) - sum(fix)
+
+    matrix = np.zeros((matrix_size, matrix_size))
+    rhs = np.zeros(matrix_size)
+    matrix_row = -1
+    for i in range(0, len(elems)):
+        matrix_row = matrix_row + 1
+        node1 = elems[i, 1]
+        node2 = elems[i, 2]
+        matrix[matrix_row, i + non_fix_node] = -resistance[i]
+        if resistance[i] <= 1.e-3:
+            matrix[matrix_row, i + non_fix_node] = -1.e-3
+        if fix[node1] == 1:
+            rhs[i] = -nodes[node1, 2]
+        elif fix[node1] == 0:
+            matrix[matrix_row, int(nodes[node1, 4])] = 1
+        if fix[node2] == 1:
+            rhs[i] = rhs[i] + nodes[node2, 2]
+        elif fix[node2] == 0:
+            matrix[matrix_row, int(nodes[node2, 4])] = -1
+
+    for j in range(0, len(nodes)):
+        if fix[int(nodes[j, 0])] == 0:
+            matrix_row = matrix_row + 1
+            where_in = np.where(elems[:, 1] == int(nodes[j, 0]))[0]
+            if len(where_in) > 0:
+                for k in range(0, len(where_in)):
+                    elem_num = where_in[k]
+                    matrix[matrix_row, non_fix_node + elem_num] = 1.0
+            where_out = np.where(elems[:, 2] == int(nodes[j, 0]))[0]
+            if len(where_out) > 0:
+                for k in range(0, len(where_out)):
+                    elem_num = where_out[k]
+                    matrix[matrix_row, non_fix_node + elem_num] = -1.0
+
+    solution = np.linalg.solve(matrix, rhs)
+    return solution, non_fix_node
 
 def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, pressure,verbose):
 
