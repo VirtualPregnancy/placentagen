@@ -261,7 +261,7 @@ def read_fetal_nodes(input_data, header):
 
     return node_identifiers, nodes, fix
 
-def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, export):
+def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, ref_fetal_weight, export):
     node_identifiers, nodes, fix = read_fetal_nodes(input_data, header)
     #scaling compliance 
     for i in range(0,len(input_data)):
