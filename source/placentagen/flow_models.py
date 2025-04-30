@@ -212,8 +212,7 @@ def read_fetal_elems(input_data,header):
     return elem_identifiers, elems, resistance, group, L, K
 
 
-def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new, export):
-    ref_fetal_weight = 3.025 #KG
+def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new,ref_fetal_weight, export):
     elem_identifiers, elems, resistance, group, L, K =read_fetal_elems(input_data, header)
     # scaling inertance
     L = L * (weight_new / ref_fetal_weight) ** -0.33
@@ -263,7 +262,6 @@ def read_fetal_nodes(input_data, header):
     return node_identifiers, nodes, fix
 
 def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, export):
-    ref_fetal_weight = 3.025 #KG
     node_identifiers, nodes, fix = read_fetal_nodes(input_data, header)
     #scaling compliance 
     for i in range(0,len(input_data)):
