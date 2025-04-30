@@ -216,24 +216,24 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new, e
     ref_fetal_weight = 3.025 #KG
     elem_identifiers, elems, resistance, group, L, K =read_fetal_elems(input_data, header)
     # scaling inertance
-    L = L * (ref_fetal_weight / weight_new) ** -0.33
+    L = L * (weight_new / ref_fetal_weight) ** -0.33
     # scaling resistance
     print(header)
     for i in range(0, len(input_data)):
         if elem_identifiers[i] == 'DuctusVenosus':
-            resistance[i] = resistance[i] * (ref_fetal_weight / weight_new) ** -0.55
+            resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -0.55
         else:
-            resistance[i] = resistance[i] * (ref_fetal_weight/ weight_new) ** -1
+            resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -1
             # scaling K (D=dissipation)
     for i in range(0, len(input_data)):
         if elem_identifiers[i] == 'FO':
-            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.6
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -0.6
         elif elem_identifiers[i] == 'DuctusA':
-            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -2.5
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -2.5
         elif elem_identifiers[i] == 'DuctusV':
-            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -0.88
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -0.88
         else:
-            K[i] = K[i] * (ref_fetal_weight / weight_new) ** -1.33
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -1.33
     if export:
         export_ipelem_1d(elems, 'fetal', export_directory + '/fetal')
         export_exfield_1d_linear(resistance, 'fetal', 'resistance', export_directory + '/R')
