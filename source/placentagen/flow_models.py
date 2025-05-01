@@ -219,7 +219,7 @@ def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new,re
     # scaling resistance
     print(header)
     for i in range(0, len(input_data)):
-        if elem_identifiers[i] == 'DuctusVenosus':
+        if elem_identifiers[i] == 'DuctusV':
             resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -0.55
         else:
             resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -1
@@ -266,9 +266,9 @@ def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, r
     #scaling compliance 
     for i in range(0,len(input_data)):
         if node_identifiers[i]=='RA' or node_identifiers[i]=='LA':
-            nodes[i,3]=nodes[i,3]*(ref_fetal_weight/weight_new)**0.5
+            nodes[i,3]=nodes[i,3]*(weight_new/ref_fetal_weight)**0.5
         else:
-            nodes[i,3] =nodes[i,3]*(ref_fetal_weight/weight_new)**1.33   
+            nodes[i,3] =nodes[i,3]*(weight_new/ref_fetal_weight)**1.33
 
     if export:
         export_ip_coords(nodes[:,1:4], 'fetal', export_directory +'/fetal')
