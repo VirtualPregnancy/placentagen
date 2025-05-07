@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_co, N_sa, verbose=False):
+def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_co, N_sa, D_t = 2,L_tv = 16.5*10**-6, verbose=False):
     """
     Parameters
     ----------
@@ -11,6 +11,8 @@ def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_
     C_fa Concentration in fetal arterial blood
     N_co Number of cotyledons
     N_sa Number of Spiral arteries
+    D_t Diffusion coefficient for terminal villous tissue in m^2/s
+    L_tv Length scale for TV geom, roughly exchange area divided by thickness, 15 - 18 mm
 
     Returns
     -------
@@ -18,10 +20,8 @@ def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_
     C_mv Concentration in maternal venous circulation
 
     """
+
     N_tv = N_co*N_sa
-    
-    D_t = 2 # Diffusion coefficient for terminal villous tissue in m^2/s
-    L_tv = 16.5*10**-6 # Length scale for TV geom, roughly exchange area divided by thickness, 15 - 18 mm
     F = lambda theta: 1 - np.e**(-1*theta)
 
     Damkohler_fetal = (D_t*L_tv*N_tv)/Q_f
@@ -35,7 +35,8 @@ def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_
     C_mv = (Q_m*C_ma - N_tot)/Q_m
     return C_fv, C_mv
 
-def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, N_co, N_sa, R_uta, R_utv, R_co, R_fpa, R_fpv, R_tv, verbose=False):
+def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, N_co, N_sa, R_uta, R_utv, R_co, R_fpa,
+                                                          R_fpv, R_tv, D_t = 2,L_tv = 16.5*10**-6,  verbose=False):
     """
     Parameters
     ----------
@@ -51,6 +52,8 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     R_fpa Resistance to flow in a typical fetal arterial network
     R_fpv Resistance to flow in a typical fetal venous network
     R_tv Resistance to flow of a single capillary network in a terminal villae
+    D_t Diffusion coefficient for terminal villous tissue in m^2/s
+    L_tv Length scale for TV geom, roughly exchange area divided by thickness, 15 - 18 mm
 
     Returns
     -------
@@ -63,8 +66,6 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     Q_m = P_m/(R_uta + R_co + R_utv)
     Q_f = P_f/(R_fpa + R_fpv + R_tv)
 
-    D_t = 2 # Diffusion coefficient for terminal villous tissue in m^2/s
-    L_tv = 16.5*10**-6 # Length scale for TV geom, roughly exchange area divided by thickness, 15 - 18 mm
     F = lambda theta: 1 - np.e**(-1*theta)
 
     Damkohler_fetal = (D_t*L_tv*N_tv)/Q_f
@@ -78,16 +79,17 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     C_mv = (Q_m*C_ma - N_tot)/Q_m
     return C_fv, C_mv
 
-def consumption(t, C):
+def consumption(t, C, Max_consumption = 0.1, K_m = 0.044):
     """
     :param t: time
     :param C: Concentration of Oxygen in Fetal circulation
+    :param Max_consumption, maximium rate of oxygen consumption by the fetus
+    :param K_m, substrate concentration at half Max_consumption
     :return: dodt - rate of change in fetal oxygen conctration with respect to time
     This function models the change in fetal oxygen concentration as a function of time using Michaelis-Menten mechanics
     TODD: properly parameterise Max_consumption and K_m
     """
-    Max_consumption = 0.1
-    K_m = 0.044#ml/ml
+
     dodt = -Max_consumption*C/(K_m + C) #ml/ml/aec
     if C<=0:
         dodt=0.0
@@ -104,9 +106,10 @@ def oxygen_consumption(C_fetal, cardiac_cyle_time):
     sol= sp.integrate.solve_ivp(consumption, [0, cardiac_cyle_time], [C_fetal,])
     return sol.t, sol.y
 
-def convert_po2_to_concentration(p_o2):
+def convert_po2_to_concentration(p_o2, C_Hb = 0.125):
     """
     :param po2: partial pressure of oxygen in blood
+    :param C_Hb, concentration of haemoglobin in the blood
     :return: C_o2, the concentration of oxygen in the blood in ml/ml
     """
     # concentration of oxygen in plasma given by 3 * 10^-5 * po2 (in mmhg) gives concentration in ml/ml
@@ -117,7 +120,6 @@ def convert_po2_to_concentration(p_o2):
     k3 = 0.371
     # o2_capacity = amout of oxygen that can be carried by haemoglobin (1.34 ml/g) * haemoglobin in the blood (~0.125 g/ml)
     Hb_cap = 1.34
-    C_Hb = 0.125
 
     # Concentration of oxygen bound to haemoglobin ( C_Hb)
     # = (S_hb * o2_capacity)/100
