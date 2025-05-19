@@ -79,7 +79,7 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     C_mv = (Q_m*C_ma - N_tot)/Q_m
     return C_fv, C_mv
 
-def consumption(t, C, Max_consumption = 0.1, K_m = 0.044):
+def michaelis_menten_oxygen_consumption(t, C, Max_consumption = 0.1, K_m = 0.044):
     """
     :param t: time
     :param C: Concentration of Oxygen in Fetal circulation
@@ -87,7 +87,7 @@ def consumption(t, C, Max_consumption = 0.1, K_m = 0.044):
     :param K_m, substrate concentration at half Max_consumption
     :return: dodt - rate of change in fetal oxygen conctration with respect to time
     This function models the change in fetal oxygen concentration as a function of time using Michaelis-Menten mechanics
-    TODD: properly parameterise Max_consumption and K_m
+    TODO: properly parameterise Max_consumption and K_m
     """
 
     dodt = -Max_consumption*C/(K_m + C) #ml/ml/aec
@@ -96,10 +96,11 @@ def consumption(t, C, Max_consumption = 0.1, K_m = 0.044):
 
     return dodt
 
-def oxygen_consumption(C_fetal, cardiac_cyle_time):
+def oxygen_consumption(C_fetal, cardiac_cyle_time, consumption):
     """
     :param C_fetal: Initial concentration of fetal oxygen
     :param cardiac_cyle_time: time it takes for the fetus to complete one cardiac cycle
+    :param consumption: function describing change in oxygen concentration wrt time
     :return: two array-like objects with indexed values representing the time course of fetal oxygen concentration, the
     first array is time, and the second is oxygen concentration
     """
@@ -118,8 +119,10 @@ def convert_po2_to_concentration(p_o2, C_Hb = 0.125, Hb_cap = 1.34):
     # log pO2 = k1 − k2(pH − 7.4) + k3log(SHb/(100 − SHb)), solve for S_hb
     k1 = 1.445
     k2 = 0.456
-    k3 = 0.371
-   
+    k3 = 0.371 # These constants are obtained by fitting the above equation to the dissociation curve derived by the
+    # mathematical model proposed by Dash and Bassingthwaighte (2010) - Erratum to: Blood HbO2 and HbCO2 dissociation
+    # curves at varied O2, CO2, pH, 2, 3-DPG and temperature levels. Annals of Biomedical Engineering
+
     # Concentration of oxygen bound to haemoglobin ( C_Hb)
     # = (S_hb * o2_capacity)/100
     w = p_o2 ** (1 / k3) + np.e ** (-k1 / k3)
