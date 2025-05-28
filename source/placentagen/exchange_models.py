@@ -59,8 +59,8 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     -------
     C_fv Concentration in fetal venous circulation
     C_mv Concentration in maternal venous circulation
-
     """
+
     N_tv = N_co*N_sa
 
     Q_m = P_m/(R_uta + R_co + R_utv)
