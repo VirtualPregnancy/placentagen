@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_co, N_sa, D_t = 2,L_tv = 16.5*10**-6, verbose=False):
+def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_tv, N_sa, D_t = 2.5e-6,L_tv = 16.5e-6, verbose=False):
     """
     Parameters
     ----------
@@ -21,7 +21,7 @@ def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_
 
     """
 
-    N_tv = N_co*N_sa
+    N_co= N_tv/N_sa
     F = lambda theta: 1 - np.e**(-1*theta)
 
     Damkohler_fetal = (D_t*L_tv*N_tv)/Q_f
@@ -35,8 +35,8 @@ def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_
     C_mv = (Q_m*C_ma - N_tot)/Q_m
     return C_fv, C_mv
 
-def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, N_co, N_sa, R_uta, R_utv, R_co, R_fpa,
-                                                          R_fpv, R_tv, D_t = 2,L_tv = 16.5*10**-6,  verbose=False):
+def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, N_tv, N_sa, R_uta, R_utv, R_co, R_fpa,
+                                                          R_fpv, R_tv, D_t = 2.5e-9,L_tv = 16.5*10**-6,  verbose=False):
     """
     Parameters
     ----------
@@ -61,7 +61,8 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     C_mv Concentration in maternal venous circulation
 
     """
-    N_tv = N_co*N_sa
+    #N_co is the number of terminal villi per cotyledon
+    N_co = N_tv/N_sa
 
     Q_m = P_m/(R_uta + R_co + R_utv)
     Q_f = P_f/(R_fpa + R_fpv + R_tv)
@@ -107,7 +108,7 @@ def oxygen_consumption(C_fetal, cardiac_cyle_time, consumption):
     sol= sp.integrate.solve_ivp(consumption, [0, cardiac_cyle_time], [C_fetal,])
     return sol.t, sol.y
 
-def convert_po2_to_concentration(p_o2, C_Hb = 0.125, Hb_cap = 1.34):
+def convert_po2_to_concentration(p_o2,k1,k3, C_Hb = 0.125, Hb_cap = 1.34):
     """
     :param po2: partial pressure of oxygen in blood
     :param C_Hb, concentration of haemoglobin in the blood (g/ml)
@@ -116,16 +117,14 @@ def convert_po2_to_concentration(p_o2, C_Hb = 0.125, Hb_cap = 1.34):
     """
     # concentration of oxygen in plasma given by 3 * 10^-5 * po2 (in mmhg) gives concentration in ml/ml
     C_o2_plasma = 3 * 10 ** -5 * p_o2
-    # log pO2 = k1 − k2(pH − 7.4) + k3log(SHb/(100 − SHb)), solve for S_hb
     k1 = 1.445
-    k2 = 0.456
     k3 = 0.371 # These constants are obtained by fitting the above equation to the dissociation curve derived by the
     # mathematical model proposed by Dash and Bassingthwaighte (2010) - Erratum to: Blood HbO2 and HbCO2 dissociation
     # curves at varied O2, CO2, pH, 2, 3-DPG and temperature levels. Annals of Biomedical Engineering
 
     # Concentration of oxygen bound to haemoglobin ( C_Hb)
     # = (S_hb * o2_capacity)/100
-    w = p_o2 ** (1 / k3) + np.e ** (-k1 / k3)
+    w = 10**((np.log10(p_o2)-k1)/k3)
     S_Hb = (100 * w) / (1 + w)  # Rearrangement of modified hills equation from Mabelle Lins thesis to solve for SH
 
     # o2_capacity = amout of oxygen that can be carried by haemoglobin (1.34 ml/g) * haemoglobin in the blood (~0.125 g/ml)
@@ -134,3 +133,16 @@ def convert_po2_to_concentration(p_o2, C_Hb = 0.125, Hb_cap = 1.34):
     C_o2_Hb = S_Hb * O2_cap * (1 / 100)
     C_o2 = C_o2_Hb + C_o2_plasma
     return C_o2
+
+
+def minimise_c_p(po2, *c):
+    C_new = convert_po2_to_concentration(po2[0], c[0][1],c[0][2],c[0][3],c[0][4])
+    fun = C_new - c[0][0]
+
+    return fun
+
+
+def convert_concentration_to_po2(c_o2, k1,k3,C_Hb, Hb_cap):
+    po2 = sp.optimize.fsolve(minimise_c_p, 10., args=[c_o2, k1,k3,C_Hb, Hb_cap])
+
+    return po2[0]
