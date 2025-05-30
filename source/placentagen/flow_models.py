@@ -211,7 +211,6 @@ def read_fetal_elems(input_data,header):
 
     return elem_identifiers, elems, resistance, group, L, K
 
-
 def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new,ref_fetal_weight, export):
     elem_identifiers, elems, resistance, group, L, K =read_fetal_elems(input_data, header)
     # scaling inertance
@@ -313,7 +312,6 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
                                                                                                      pressure,verbose)
         return diameter
 
-
 def fetal_static(nodes, elems, resistance, fix):
     matrix_size = len(elems) + len(nodes) - sum(fix)
     non_fix_node = len(nodes) - sum(fix)
@@ -397,7 +395,6 @@ def tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flo
     [Tmaxact,total_tension] = calc_total_tension(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params, diameter, pressure)
     f = total_tension - pressure * diameter / 2.
     return f
-
 
 def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,channel_rad):
     # Calculates total resistance of the uterine arteries, outputs this resistance and a venous equivalent resistance (half of arterial resistance)
@@ -739,5 +736,16 @@ def rat_total_resistance(mu,NumberPlacentae,vessels,terminals,boundary_conds,pri
         print(str(total_resistance) + "Pa.mm^3/s")
 
     return [total_resistance,venous_resistance,shear,resistance,flow,pressure_out] 
+
+def read_fetal_params(fetal_params_path):
+    """
+    :param fetal_params_path:
+    :return: A dictionary of key-value pairs, where the key is the parameter name as a string, and the value
+    
+    """
+    with open(fetal_params_path) as file:
+        params = csv.reader(file)
+        param_dict = {x[0] :float(x[1]) for x in params}
+    return param_dict
 
 
