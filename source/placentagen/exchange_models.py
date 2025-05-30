@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_tv, N_sa, D_t = 2.5e-6,L_tv = 16.5e-6, verbose=False):
+def exchange_maternal_fetal_oxygen_no_vessel_resistance(Q_m, Q_f, C_ma, C_fa, N_tv, N_sa, D_t = 2.5e-9,L_tv = 16.5e-6, verbose=False):
     """
     Parameters
     ----------

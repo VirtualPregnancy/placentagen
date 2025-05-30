@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import special
-
+from .imports_and_exports import export_ipelem_1d, export_exfield_1d_linear,export_ip_coords
 
 def bisection_method_diam(a, b, fit_passive_params, fit_myo_params, fit_flow_params, fixed_flow_params, pressure,verbose):
 
@@ -192,6 +192,88 @@ def calc_total_tension(fit_passive_params, fit_myo_params, fit_flow_params, fixe
 
     return Tmaxact,total_tension
 
+def read_fetal_elems(input_data,header):
+    elem_identifiers = np.empty(len(input_data), dtype=np.dtype('U10'))
+    elems = np.empty((len(input_data), 3), dtype=int)
+    group = np.empty(len(input_data), dtype=int)
+    resistance = np.empty(len(input_data), dtype=np.dtype('d'))
+    L = np.empty(len(input_data), dtype=np.dtype('d'))
+    K = np.empty(len(input_data), dtype=np.dtype('d'))
+    for i in range(0, len(input_data)):
+        elem_identifiers[i] = input_data[i][0]
+        elems[i, 0] = int(input_data[i][1]) - 1
+        elems[i, 1] = int(input_data[i][2]) - 1
+        elems[i, 2] = int(input_data[i][3]) - 1
+        resistance[i] = np.double(input_data[i][header.index('R')])
+        group[i] = int(input_data[i][header.index('group')])
+        L[i] = np.double(input_data[i][header.index('L')])
+        K[i] = np.double(input_data[i][header.index('K')])
+
+    return elem_identifiers, elems, resistance, group, L, K
+
+def create_reprosim_fetal_elems(input_data,header,export_directory,weight_new,ref_fetal_weight, export):
+    elem_identifiers, elems, resistance, group, L, K =read_fetal_elems(input_data, header)
+    # scaling inertance
+    L = L * (weight_new / ref_fetal_weight) ** -0.33
+    # scaling resistance
+    print(header)
+    for i in range(0, len(input_data)):
+        if elem_identifiers[i] == 'DuctusV':
+            resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -0.55
+        else:
+            resistance[i] = resistance[i] * (weight_new / ref_fetal_weight) ** -1
+            # scaling K (D=dissipation)
+    for i in range(0, len(input_data)):
+        if elem_identifiers[i] == 'FO':
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -0.6
+        elif elem_identifiers[i] == 'DuctusA':
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -2.5
+        elif elem_identifiers[i] == 'DuctusV':
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -0.88
+        else:
+            K[i] = K[i] * (weight_new / ref_fetal_weight) ** -1.33
+    if export:
+        export_ipelem_1d(elems, 'fetal', export_directory + '/fetal')
+        export_exfield_1d_linear(resistance, 'fetal', 'resistance', export_directory + '/R')
+        export_exfield_1d_linear(group, 'fetal', 'group', export_directory + '/group')
+        export_exfield_1d_linear(L, 'fetal', 'L', export_directory + '/L')
+        export_exfield_1d_linear(K, 'fetal', 'K', export_directory + '/K')
+
+    return elem_identifiers, elems, resistance, group, K, L
+
+def read_fetal_nodes(input_data, header):
+    nodes = np.empty((len(input_data),5),dtype=np.dtype('d'))
+    node_identifiers = np.empty(len(input_data),dtype=np.dtype('U10'))
+    fix = np.empty(len(input_data), dtype=np.dtype('int'))
+    not_fix = -1
+    for i in range(0,len(input_data)):
+        node_identifiers[i] = input_data[i][0]
+        nodes[i,0]=np.double(input_data[i][1])-1
+        nodes[i,1]=np.double(input_data[i][header.index('group')])
+        nodes[i,2]=np.double(input_data[i][header.index('press')])
+        nodes[i,3]=np.double(input_data[i][header.index('comp')])
+        fix[i] = int(input_data[i][header.index('fix')])
+        if fix[i] == 0:
+            not_fix = not_fix + 1
+            nodes[i, 4] = not_fix
+
+
+    return node_identifiers, nodes, fix
+
+def create_reprosim_fetal_nodes(input_data,header,export_directory,weight_new, ref_fetal_weight, export):
+    node_identifiers, nodes, fix = read_fetal_nodes(input_data, header)
+    #scaling compliance 
+    for i in range(0,len(input_data)):
+        if node_identifiers[i]=='RA' or node_identifiers[i]=='LA':
+            nodes[i,3]=nodes[i,3]*(weight_new/ref_fetal_weight)**0.5
+        else:
+            nodes[i,3] =nodes[i,3]*(weight_new/ref_fetal_weight)**1.33
+
+    if export:
+        export_ip_coords(nodes[:,1:4], 'fetal', export_directory +'/fetal')
+
+    return node_identifiers, nodes, fix
+
 def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, pressure,verbose):
         #Dp_blood is driving pressure (mmHg)
         #pressure is transmural pressure (kPa)
@@ -229,6 +311,46 @@ def diameter_from_pressure(fit_passive_params,fit_myo_params,fit_flow_params,fix
                 diameter = bisection_method_diam(lowest_sign[0], lowest_sign[1], fit_passive_params,fit_myo_params,fit_flow_params,fixed_flow_params, \
                                                                                                      pressure,verbose)
         return diameter
+
+def fetal_static(nodes, elems, resistance, fix):
+    matrix_size = len(elems) + len(nodes) - sum(fix)
+    non_fix_node = len(nodes) - sum(fix)
+
+    matrix = np.zeros((matrix_size, matrix_size))
+    rhs = np.zeros(matrix_size)
+    matrix_row = -1
+    for i in range(0, len(elems)):
+        matrix_row = matrix_row + 1
+        node1 = elems[i, 1]
+        node2 = elems[i, 2]
+        matrix[matrix_row, i + non_fix_node] = -resistance[i]
+        if resistance[i] <= 1.e-3:
+            matrix[matrix_row, i + non_fix_node] = -1.e-3
+        if fix[node1] == 1:
+            rhs[i] = -nodes[node1, 2]
+        elif fix[node1] == 0:
+            matrix[matrix_row, int(nodes[node1, 4])] = 1
+        if fix[node2] == 1:
+            rhs[i] = rhs[i] + nodes[node2, 2]
+        elif fix[node2] == 0:
+            matrix[matrix_row, int(nodes[node2, 4])] = -1
+
+    for j in range(0, len(nodes)):
+        if fix[int(nodes[j, 0])] == 0:
+            matrix_row = matrix_row + 1
+            where_in = np.where(elems[:, 1] == int(nodes[j, 0]))[0]
+            if len(where_in) > 0:
+                for k in range(0, len(where_in)):
+                    elem_num = where_in[k]
+                    matrix[matrix_row, non_fix_node + elem_num] = 1.0
+            where_out = np.where(elems[:, 2] == int(nodes[j, 0]))[0]
+            if len(where_out) > 0:
+                for k in range(0, len(where_out)):
+                    elem_num = where_out[k]
+                    matrix[matrix_row, non_fix_node + elem_num] = -1.0
+
+    solution = np.linalg.solve(matrix, rhs)
+    return solution, non_fix_node
 
 def find_possible_roots(low_diam,high_diam, fit_passive_params, fit_myo_params, fit_flow_params,fixed_flow_params, pressure,verbose):
 
@@ -273,7 +395,6 @@ def tension_balance(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flo
     [Tmaxact,total_tension] = calc_total_tension(fit_passive_params,fit_myo_params, fit_flow_params,fixed_flow_params, diameter, pressure)
     f = total_tension - pressure * diameter / 2.
     return f
-
 
 def human_total_resistance(mu,Dp,porosity,vessels,terminals,boundary_conds,channel_rad):
     # Calculates total resistance of the uterine arteries, outputs this resistance and a venous equivalent resistance (half of arterial resistance)
@@ -615,5 +736,16 @@ def rat_total_resistance(mu,NumberPlacentae,vessels,terminals,boundary_conds,pri
         print(str(total_resistance) + "Pa.mm^3/s")
 
     return [total_resistance,venous_resistance,shear,resistance,flow,pressure_out] 
+
+def read_fetal_params(fetal_params_path):
+    """
+    :param fetal_params_path:
+    :return: A dictionary of key-value pairs, where the key is the parameter name as a string, and the value
+    
+    """
+    with open(fetal_params_path) as file:
+        params = csv.reader(file)
+        param_dict = {x[0] :float(x[1]) for x in params}
+    return param_dict
 
 
