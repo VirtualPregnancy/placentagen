@@ -17,14 +17,18 @@ from . import imports_and_exports
 """
 
 def distributed_data_in_hull(n, geom, distribution_image: sitk.Image):
-
+    """
+    :param n:
+    :param geom:
+    :param distribution_image:
+    :return: ~n by 3 array of points within the hull
+    """
     p_field = np.array([2,2])
     field_modifier = 1
     iter_ind = 1
     while np.any(p_field > 1):
         print(f"Iterating over probability field for iteration: {iter_ind}, max value in field: {p_field.max()}")
         # create evaluation points
-        print(field_modifier)
         eval_points = equispaced_data_in_hull(int(n*field_modifier), geom)
         p_field = np.zeros(eval_points.shape[0])
 
