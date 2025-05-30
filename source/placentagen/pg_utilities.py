@@ -103,6 +103,7 @@ def element_connectivity_1D(node_loc, elems):
             nnod = elems[ne][nn]
             elems_at_node[nnod][0] = elems_at_node[nnod][0] + 1
             elems_at_node[nnod][elems_at_node[nnod][0]] = ne
+
             
     elem_upstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
     elem_downstream = np.zeros((num_elems, int(np.max(elems_at_node[:,0]))), dtype=int)
@@ -116,7 +117,6 @@ def element_connectivity_1D(node_loc, elems):
                 elem_upstream[ne2][elem_upstream[ne2][0]] = ne
                 elem_downstream[ne][0] = elem_downstream[ne][0] + 1
                 elem_downstream[ne][elem_downstream[ne][0]] = ne2
-
     return {'elem_up': elem_upstream, 'elem_down': elem_downstream}
 
 def group_elem_parent(ne_parent, elem_downstream):

@@ -17,7 +17,12 @@ from . import imports_and_exports
 """
 
 def distributed_data_in_hull(n, geom, distribution_image: sitk.Image):
-
+    """
+    :param n:
+    :param geom:
+    :param distribution_image:
+    :return: ~n by 3 array of points within the hull
+    """
     p_field = np.array([2,2])
     field_modifier = 1
     iter_ind = 1

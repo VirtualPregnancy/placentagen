@@ -59,8 +59,8 @@ def exchange_maternal_fetal_oxygen_with_vessel_resistance(P_m, P_f, C_ma, C_fa, 
     -------
     C_fv Concentration in fetal venous circulation
     C_mv Concentration in maternal venous circulation
-
     """
+
     N_tv = N_co*N_sa
 
     Q_m = P_m/(R_uta + R_co + R_utv)
@@ -107,30 +107,38 @@ def oxygen_consumption(C_fetal, cardiac_cyle_time, consumption):
     sol= sp.integrate.solve_ivp(consumption, [0, cardiac_cyle_time], [C_fetal,])
     return sol.t, sol.y
 
-def convert_po2_to_concentration(p_o2, C_Hb = 0.125, Hb_cap = 1.34):
+
+def convert_po2_to_concentration(p_o2,type, C_Hb = 0.125, Hb_cap = 1.34, k1=1.445, k2=0.456, k3=0.371):
     """
     :param po2: partial pressure of oxygen in blood
+    :param type: 'mat','fet'
     :param C_Hb, concentration of haemoglobin in the blood (g/ml)
     :param Hb_cap, amout of oxygen that can be carried by haemoglobin (ml/g)
+    :param k1
+    :param k2
+    :param k3 These constants are obtained by fitting the above equation to the dissociation curve derived by the
+    # mathematical model proposed by Dash and Bassingthwaighte (2010) - Erratum to: Blood HbO2 and HbCO2 dissociation
+    # curves at varied O2, CO2, pH, 2, 3-DPG and temperature levels. Annals of Biomedical Engineering
+
     :return: C_o2, the concentration of oxygen in the blood in ml/ml
     """
     # concentration of oxygen in plasma given by 3 * 10^-5 * po2 (in mmhg) gives concentration in ml/ml
     C_o2_plasma = 3 * 10 ** -5 * p_o2
     # log pO2 = k1 − k2(pH − 7.4) + k3log(SHb/(100 − SHb)), solve for S_hb
-    k1 = 1.445
-    k2 = 0.456
-    k3 = 0.371 # These constants are obtained by fitting the above equation to the dissociation curve derived by the
-    # mathematical model proposed by Dash and Bassingthwaighte (2010) - Erratum to: Blood HbO2 and HbCO2 dissociation
-    # curves at varied O2, CO2, pH, 2, 3-DPG and temperature levels. Annals of Biomedical Engineering
+
+
 
     # Concentration of oxygen bound to haemoglobin ( C_Hb)
-    # = (S_hb * o2_capacity)/100
-    w = p_o2 ** (1 / k3) + np.e ** (-k1 / k3)
+    w = 10**((np.log10(p_o2)-k1)/k3)
     S_Hb = (100 * w) / (1 + w)  # Rearrangement of modified hills equation from Mabelle Lins thesis to solve for SH
-
     # o2_capacity = amout of oxygen that can be carried by haemoglobin (1.34 ml/g) * haemoglobin in the blood (~0.125 g/ml)
-    O2_cap = Hb_cap * C_Hb
 
+    O2_cap = Hb_cap * C_Hb
     C_o2_Hb = S_Hb * O2_cap * (1 / 100)
-    C_o2 = C_o2_Hb + C_o2_plasma
-    return C_o2
+    C_o2 = C_o2_Hb + C_o2_plasma #ml/ml
+
+    return C_o2, C_o2_Hb, C_o2_plasma, S_Hb
+
+
+
+
